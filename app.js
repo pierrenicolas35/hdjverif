@@ -86,19 +86,40 @@ function render(isForward = true) {
   if (node.result) {
     questionDiv.style.display = "none";
     examplesBlock.style.display = "none";
-    answersDiv.style.display = "flex"; // Utilisé pour le bouton Recommencer
+    answersDiv.style.display = "flex"; 
     resultDiv.style.display = "block";
     resultDiv.innerHTML = node.result;
 
-    // Application du code couleur
+    // Code couleur
     if (node.result.includes("NON ÉLIGIBLE")) resultDiv.className = "danger";
     else if (node.result.includes("PARTIELLE")) resultDiv.className = "warning";
     else resultDiv.className = "success";
 
-    const restartBtn = createButton("🔄 Recommencer l'évaluation");
+    // Bouton de copie pour le DPI
+    const exportBtn = createButton("📋 Copier la synthèse DPI");
+    exportBtn.style.background = "#0284c7";
+    exportBtn.style.color = "white";
+    exportBtn.onclick = () => {
+        const date = new Date().toLocaleDateString('fr-FR');
+        const textToCopy = `Évaluation PMSI - Éligibilité HDJ du ${date}\nDécision : ${node.result}`;
+        
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            exportBtn.textContent = "✅ Copié !";
+            exportBtn.style.background = "#16a34a";
+            setTimeout(() => {
+                exportBtn.textContent = "📋 Copier la synthèse DPI";
+                exportBtn.style.background = "#0284c7";
+            }, 3000);
+        }).catch(err => console.error('Erreur de copie', err));
+    };
+
+    // Bouton Recommencer
+    const restartBtn = createButton("🔄 Nouvelle évaluation");
     restartBtn.style.background = "#475569";
     restartBtn.style.color = "white";
     restartBtn.onclick = initApp;
+
+    answersDiv.appendChild(exportBtn);
     answersDiv.appendChild(restartBtn);
     return;
   }
