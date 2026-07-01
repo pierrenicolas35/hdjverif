@@ -1,302 +1,287 @@
-alert("app.js chargé");
 // =====================================================
 // VARIABLES
 // =====================================================
 
-let tree = {};
+let rules = {};
 let currentNode = null;
 
 const questionDiv = document.getElementById("question");
 const helpDiv = document.getElementById("help");
 const resultDiv = document.getElementById("result");
 
-const examplesYesDiv = document.getElementById("examples-yes");
-const examplesNoDiv = document.getElementById("examples-no");
-
 const answersDiv = document.getElementById("answers");
-const progressBar = document.getElementById("progress");
+
+const explicationDiv = document.getElementById("explication");
+const referenceDiv = document.getElementById("reference");
+const citationDiv = document.getElementById("citation");
+const examplesDiv = document.getElementById("practical-examples");
 
 // =====================================================
 // CHARGEMENT DU JSON
 // =====================================================
 
 async function loadRules() {
+  try {
+    const response = await fetch("rules.json");
 
-    try {
-
-        const response = await fetch("rules.json");
-
-        if (!response.ok) {
-            throw new Error("Impossible de charger rules.json");
-        }
-
-        tree = await response.json();
-
-        currentNode = tree.start;
-
-        render();
-
-    } catch (error) {
-
-        console.error(error);
-
-        questionDiv.innerHTML =
-            "Erreur lors du chargement des règles.";
-
+    if (!response.ok) {
+      throw new Error(
+        "Impossible de charger le fichier rules.json"
+      );
     }
+
+    rules = await response.json();
+
+    currentNode = rules.start;
+
+    render();
+
+  } catch (error) {
+
+    questionDiv.innerHTML =
+      "Erreur de chargement de rules.json";
+
+    console.error(error);
+
+  }
 }
 
 // =====================================================
-// AFFICHAGE
+// CREATION BOUTON
+// =====================================================
+
+function createButton(label) {
+
+  const btn =
+    document.createElement("button");
+
+  btn.textContent = label;
+
+  return btn;
+
+}
+
+// =====================================================
+// AFFICHAGE QUESTION
 // =====================================================
 
 function render() {
 
-    const node = tree[currentNode];
+  const node = rules[currentNode];
 
-    if (!node) {
-        questionDiv.innerHTML =
-            "Erreur : nœud introuvable.";
-        return;
-    }
+  if (!node) {
+    questionDiv.innerHTML =
+      "Erreur : question introuvable";
+    return;
+  }
 
-    // =================================================
-    // RESULTAT FINAL
-    // =================================================
+  // =======================================
+  // RESULTAT FINAL
+  // =======================================
 
-    if (node.result) {
+  if (node.result) {
 
-        questionDiv.style.display = "none";
+    questionDiv.style.display = "none";
 
-        const help = document.getElementById("help");
-        const examples = document.getElementById("examples");
+    document.getElementById("examples")
+      .style.display = "none";
 
-        if (help) help.style.display = "none";
-        if (examples) examples.style.display = "none";
+    answersDiv.style.display = "none";
 
-        answersDiv.style.display = "none";
+    resultDiv.style.display = "block";
 
-        resultDiv.style.display = "block";
-        resultDiv.innerHTML = `<strong>${node.result}</strong>`;
+    resultDiv.innerHTML = node.result;
 
-        return;
-    }
+    return;
+  }
 
-    // =================================================
-    // QUESTION
-    // =================================================
+  // =======================================
+  // QUESTION
+  // =======================================
 
-    questionDiv.style.display = "block";
+  questionDiv.style.display = "block";
 
-    resultDiv.style.display = "none";
+  document.getElementById("examples")
+    .style.display = "block";
 
-    document.getElementById("help").style.display =
-        "block";
+  answersDiv.style.display = "flex";
 
-    document.getElementById("examples").style.display =
-        "block";
+  resultDiv.style.display = "none";
 
-    answersDiv.style.display = "flex";
+  questionDiv.textContent =
+    node.text || "";
 
-    questionDiv.textContent = node.text || "";
+  // =======================================
+  // INFO REGLEMENTAIRE
+  // =======================================
 
-    helpDiv.textContent = node.help || "";
+  if (node.info) {
 
-    // =================================================
-    // EXEMPLES
-    // =================================================
+    explicationDiv.innerHTML =
+      node.info.explication || "";
 
-    examplesYesDiv.innerHTML = "";
+    referenceDiv.innerHTML =
+      node.info.reference || "";
 
-    (node.examples_yes || []).forEach(item => {
+    citationDiv.innerHTML =
+      node.info.citation || "";
 
-        examplesYesDiv.innerHTML +=
-            `<li>${item}</li>`;
+    examplesDiv.innerHTML = "";
 
+    (node.info.exemples || [])
+      .forEach(item => {
+
+        examplesDiv.innerHTML +=
+          `<li>${item}</li>`;
+
+      });
+
+  }
+
+  // =======================================
+  // RESET REPONSES
+  // =======================================
+
+  answersDiv.innerHTML = "";
+
+  // =======================================
+  // BOOLEAN
+  // =======================================
+
+  if (node.type === "boolean") {
+
+    const yesButton =
+      createButton("✅ Oui");
+
+    const noButton =
+      createButton("❌ Non");
+
+    yesButton.onclick = () => {
+
+      currentNode = node.yes;
+
+      render();
+    };
+
+    noButton.onclick = () => {
+
+      currentNode = node.no;
+
+      render();
+    };
+
+    answersDiv.appendChild(
+      yesButton
+    );
+
+    answersDiv.appendChild(
+      noButton
+    );
+  }
+
+  // =======================================
+  // CHOICE
+  // =======================================
+
+  else if (node.type === "choice") {
+
+    Object.entries(node.choices)
+      .forEach(([label, next]) => {
+
+        const btn =
+          createButton(label);
+
+        btn.onclick = () => {
+
+          currentNode = next;
+
+          render();
+
+        };
+
+        answersDiv.appendChild(btn);
+
+      });
+  }
+
+  // =======================================
+  // MULTISELECT
+  // =======================================
+
+  else if (
+    node.type === "multiselect"
+  ) {
+
+    const wrapper =
+      document.createElement("div");
+
+    wrapper.style.width = "100%";
+
+    node.choices.forEach(choice => {
+
+      const row =
+        document.createElement("div");
+
+      row.style.marginBottom =
+        "10px";
+
+      const checkbox =
+        document.createElement("input");
+
+      checkbox.type = "checkbox";
+
+      const label =
+        document.createElement("label");
+
+      label.style.marginLeft =
+        "10px";
+
+      label.textContent =
+        choice;
+
+      row.appendChild(
+        checkbox
+      );
+
+      row.appendChild(
+        label
+      );
+
+      wrapper.appendChild(
+        row
+      );
     });
 
-    examplesNoDiv.innerHTML = "";
+    const nextButton =
+      createButton("Suivant ➜");
 
-    (node.examples_no || []).forEach(item => {
+    nextButton.style.marginTop =
+      "20px";
 
-        examplesNoDiv.innerHTML +=
-            `<li>${item}</li>`;
+    nextButton.onclick = () => {
 
-    });
+      currentNode =
+        node.next;
 
-    // =================================================
-    // REPONSES
-    // =================================================
+      render();
 
-    answersDiv.innerHTML = "";
+    };
 
-    // ---------------------------------------------
-    // BOOLEAN
-    // ---------------------------------------------
+    wrapper.appendChild(
+      nextButton
+    );
 
-    if (node.type === "boolean") {
-
-        const yesBtn =
-            createButton("✅ Oui");
-
-        const noBtn =
-            createButton("❌ Non");
-
-        yesBtn.onclick = () => {
-
-            currentNode = node.yes;
-            render();
-
-        };
-
-        noBtn.onclick = () => {
-
-            currentNode = node.no;
-            render();
-
-        };
-
-        answersDiv.appendChild(yesBtn);
-        answersDiv.appendChild(noBtn);
-
-    }
-
-    // ---------------------------------------------
-    // CHOICE
-    // ---------------------------------------------
-
-    else if (node.type === "choice") {
-
-        Object.entries(node.choices)
-            .forEach(([label, nextNode]) => {
-
-                const btn =
-                    createButton(label);
-
-                btn.onclick = () => {
-
-                    currentNode = nextNode;
-
-                    render();
-
-                };
-
-                answersDiv.appendChild(btn);
-
-            });
-
-    }
-
-    // ---------------------------------------------
-    // MULTISELECT
-    // ---------------------------------------------
-
-    else if (node.type === "multiselect") {
-
-        const form =
-            document.createElement("div");
-
-        form.style.width = "100%";
-
-        const selected = [];
-
-        node.choices.forEach(choice => {
-
-            const container =
-                document.createElement("div");
-
-            container.style.marginBottom =
-                "10px";
-
-            const checkbox =
-                document.createElement("input");
-
-            checkbox.type = "checkbox";
-
-            checkbox.value = choice;
-
-            checkbox.addEventListener(
-                "change",
-                () => {
-
-                    if (checkbox.checked) {
-
-                        selected.push(choice);
-
-                    } else {
-
-                        const index =
-                            selected.indexOf(
-                                choice
-                            );
-
-                        if (index > -1) {
-
-                            selected.splice(
-                                index,
-                                1
-                            );
-
-                        }
-
-                    }
-
-                }
-            );
-
-            const label =
-                document.createElement("label");
-
-            label.style.marginLeft = "8px";
-
-            label.textContent = choice;
-
-            container.appendChild(checkbox);
-            container.appendChild(label);
-
-            form.appendChild(container);
-
-        });
-
-        const nextBtn =
-            createButton("➡️ Suivant");
-
-        nextBtn.style.marginTop = "15px";
-
-        nextBtn.onclick = () => {
-
-            currentNode = node.next;
-
-            render();
-
-        };
-
-        form.appendChild(nextBtn);
-
-        answersDiv.appendChild(form);
-
-    }
-
-}
-
-// =====================================================
-// BOUTON
-// =====================================================
-
-function createButton(text) {
-
-    const btn =
-        document.createElement("button");
-
-    btn.innerHTML = text;
-
-    btn.classList.add("dynamic-btn");
-
-    return btn;
+    answersDiv.appendChild(
+      wrapper
+    );
+  }
 }
 
 // =====================================================
 // DEMARRAGE
 // =====================================================
 
-loadRules();
+window.addEventListener(
+  "DOMContentLoaded",
+  loadRules
+);
