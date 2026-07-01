@@ -4,13 +4,37 @@
   "Q1": {
     "type": "boolean",
     "text": "Le séjour répond-il à un objectif médical clairement défini avant la venue du patient ?",
+    "info": {
+      "explication": "Une hospitalisation de jour doit être organisée autour d'un objectif médical identifié avant l'admission.",
+      "reference": "Guide méthodologique PMSI MCO - Hospitalisation de jour",
+      "citation": "La prise en charge doit correspondre à un projet diagnostique, thérapeutique, évaluatif ou de surveillance préalablement défini.",
+      "exemples": [
+        "Chimiothérapie programmée",
+        "Bilan mémoire",
+        "Bilan maladie rare",
+        "Évaluation pré-greffe",
+        "Bilan gériatrique"
+      ]
+    },
     "yes": "Q2",
     "no": "NON_ELIGIBLE"
   },
 
   "Q2": {
     "type": "choice",
-    "text": "Quel est l'objectif principal du séjour ?",
+    "text": "Quelle est la finalité principale du séjour ?",
+    "info": {
+      "explication": "La finalité du séjour permet de vérifier qu'il s'inscrit dans le champ des prises en charge potentiellement éligibles à l'HDJ.",
+      "reference": "ATIH - Hospitalisation de jour",
+      "citation": "Les hospitalisations de jour peuvent répondre à un objectif thérapeutique, diagnostique, de surveillance, d'évaluation ou d'éducation thérapeutique.",
+      "exemples": [
+        "Traitement",
+        "Diagnostic",
+        "Surveillance",
+        "Évaluation",
+        "Éducation thérapeutique"
+      ]
+    },
     "choices": {
       "Traitement": "Q_TRAITEMENT",
       "Diagnostic": "Q_DIAGNOSTIC",
@@ -22,106 +46,124 @@
 
   "Q_TRAITEMENT": {
     "type": "boolean",
-    "text": "Le traitement nécessite-t-il une administration, une préparation ou une surveillance hospitalière spécifique ?",
-    "yes": "Q_PROFESSIONNELS",
+    "text": "Le traitement nécessite-t-il une administration, une préparation ou une surveillance justifiant une organisation hospitalière ?",
+    "info": {
+      "explication": "Certains traitements nécessitent des ressources hospitalières spécifiques ou une surveillance rapprochée.",
+      "reference": "Guide méthodologique PMSI MCO",
+      "citation": "Les traitements nécessitant une organisation de soins ou une surveillance particulière peuvent justifier un séjour en HDJ.",
+      "exemples": [
+        "Chimiothérapie",
+        "Immunothérapie",
+        "Biothérapie",
+        "Transfusion",
+        "Perfusion complexe"
+      ]
+    },
+    "yes": "Q_VALEUR_AJOUTEE",
     "no": "Q_ACTE_ISOLE"
   },
 
   "Q_DIAGNOSTIC": {
     "type": "boolean",
-    "text": "Plusieurs examens ou investigations sont-ils programmés et coordonnés pendant le séjour ?",
-    "yes": "Q_SYNTHESE",
+    "text": "Le projet diagnostique prévoit-il plusieurs examens, évaluations ou investigations coordonnés au cours du même séjour ?",
+    "info": {
+      "explication": "Un simple examen isolé ne relève généralement pas d'une hospitalisation de jour.",
+      "reference": "Doctrine de pertinence des hospitalisations de jour",
+      "citation": "La coordination de plusieurs investigations contribue à la valeur ajoutée hospitalière du séjour.",
+      "exemples": [
+        "Bilan mémoire",
+        "Bilan maladie rare",
+        "Bilan pré-thérapeutique",
+        "Bilan oncologique coordonné"
+      ]
+    },
+    "yes": "Q_VALEUR_AJOUTEE",
     "no": "Q_ACTE_ISOLE"
   },
 
   "Q_SURVEILLANCE": {
     "type": "boolean",
-    "text": "Le patient nécessite-t-il une surveillance clinique ou thérapeutique organisée au cours du séjour ?",
-    "yes": "Q_PROFESSIONNELS",
-    "no": "Q_ACTE_ISOLE"
+    "text": "Le patient nécessite-t-il une surveillance clinique ou thérapeutique organisée pendant le séjour ?",
+    "info": {
+      "explication": "La surveillance doit être programmée et médicalement justifiée.",
+      "reference": "Guide PMSI MCO",
+      "citation": "La surveillance clinique ou thérapeutique constitue un motif potentiel d'hospitalisation de jour lorsqu'elle mobilise des moyens hospitaliers.",
+      "exemples": [
+        "Surveillance après transfusion",
+        "Tolérance d'un traitement",
+        "Surveillance post-perfusion",
+        "Surveillance d'effets indésirables"
+      ]
+    },
+    "yes": "Q_VALEUR_AJOUTEE",
+    "no": "NON_ELIGIBLE"
   },
 
   "Q_EVALUATION": {
     "type": "boolean",
-    "text": "L'évaluation du patient implique-t-elle plusieurs compétences professionnelles complémentaires ?",
-    "yes": "Q_PROFESSIONNELS",
+    "text": "L'évaluation implique-t-elle plusieurs dimensions ou compétences professionnelles complémentaires ?",
+    "info": {
+      "explication": "Les évaluations multidimensionnelles sont souvent organisées en HDJ.",
+      "reference": "ATIH - Pertinence de l'hospitalisation de jour",
+      "citation": "L'évaluation coordonnée par plusieurs professionnels peut justifier une organisation en hospitalisation de jour.",
+      "exemples": [
+        "Bilan gériatrique",
+        "Bilan mémoire",
+        "Évaluation douleur",
+        "Évaluation de réadaptation"
+      ]
+    },
+    "yes": "Q_VALEUR_AJOUTEE",
     "no": "Q_ACTE_ISOLE"
   },
 
   "Q_ETP": {
     "type": "boolean",
-    "text": "L'éducation thérapeutique est-elle intégrée à un programme structuré et tracé ?",
-    "yes": "Q_PROFESSIONNELS",
+    "text": "L'éducation thérapeutique est-elle réalisée dans un programme structuré avec objectifs et traçabilité ?",
+    "info": {
+      "explication": "Une simple information délivrée au patient ne suffit pas.",
+      "reference": "Programme d'Éducation Thérapeutique du Patient",
+      "citation": "L'activité doit s'inscrire dans une démarche structurée et organisée.",
+      "exemples": [
+        "Programme ETP diabète",
+        "Programme insuffisance cardiaque",
+        "Programme BPCO"
+      ]
+    },
+    "yes": "Q_VALEUR_AJOUTEE",
     "no": "NON_ELIGIBLE"
   },
 
-  "Q_PROFESSIONNELS": {
-    "type": "multiselect",
-    "text": "Quels professionnels interviennent au cours du séjour ?",
-    "choices": [
-      "Médecin",
-      "Interne",
-      "Infirmier(ère)",
-      "Cadre de santé",
-      "Aide-soignant(e)",
-      "Diététicien(ne)",
-      "Psychologue",
-      "Neuropsychologue",
-      "Kinésithérapeute",
-      "Ergothérapeute",
-      "Orthophoniste",
-      "Psychomotricien(ne)",
-      "Assistant(e) social(e)",
-      "Pharmacien(ne)",
-      "Manipulateur radio",
-      "Technicien laboratoire",
-      "Équipe douleur",
-      "Équipe mobile gériatrique",
-      "Équipe ETP",
-      "Équipe soins palliatifs",
-      "Autre"
-    ],
-    "next": "Q_ACTIVITES"
-  },
-
-  "Q_ACTIVITES": {
-    "type": "multiselect",
-    "text": "Quelles activités sont réalisées pendant le séjour ?",
-    "choices": [
-      "Consultation médicale",
-      "Consultation paramédicale",
-      "Administration de traitement",
-      "Perfusion",
-      "Transfusion",
-      "Chimiothérapie",
-      "Immunothérapie",
-      "Biothérapie",
-      "Prélèvements biologiques",
-      "Imagerie",
-      "Exploration fonctionnelle",
-      "Éducation thérapeutique",
-      "Bilan cognitif",
-      "Bilan nutritionnel",
-      "Bilan de réadaptation",
-      "Entretien psychologique",
-      "Surveillance clinique",
-      "Surveillance post-traitement",
-      "Adaptation thérapeutique",
-      "Réunion de synthèse"
-    ],
-    "next": "Q_COORDINATION"
+  "Q_VALEUR_AJOUTEE": {
+    "type": "boolean",
+    "text": "La prise en charge apporte-t-elle une valeur ajoutée organisationnelle ou médicale qui ne pourrait pas être obtenue lors d'une consultation standard ?",
+    "info": {
+      "explication": "C'est l'un des critères fondamentaux de justification de l'HDJ.",
+      "reference": "Instruction DGOS relative à la pertinence des hospitalisations de jour",
+      "citation": "L'hospitalisation de jour doit apporter une valeur ajoutée médicale ou organisationnelle.",
+      "exemples": [
+        "Parcours coordonné",
+        "Traitement sous surveillance",
+        "Évaluation multidisciplinaire"
+      ]
+    },
+    "yes": "Q_COORDINATION",
+    "no": "NON_ELIGIBLE"
   },
 
   "Q_COORDINATION": {
     "type": "boolean",
-    "text": "Le parcours comprend-il plusieurs étapes de soins coordonnées au sein du même séjour ?",
-    "yes": "Q_COORDINATION2",
-    "no": "Q_ACTE_ISOLE"
-  },
-
-  "Q_COORDINATION2": {
-    "type": "boolean",
-    "text": "Le séjour comporte-t-il au moins trois temps distincts de prise en charge (évaluation, acte, surveillance, synthèse...) ?",
+    "text": "Le séjour comporte-t-il plusieurs séquences de prise en charge coordonnées au sein d'une même organisation hospitalière ?",
+    "info": {
+      "explication": "L'enchaînement coordonné de plusieurs temps de soins renforce la légitimité de l'HDJ.",
+      "reference": "Guide de pertinence des prises en charge ambulatoires",
+      "citation": "La coordination de plusieurs interventions ou actes constitue un argument fort en faveur de l'HDJ.",
+      "exemples": [
+        "Accueil IDE → consultation → traitement → surveillance",
+        "Consultation → bilan → synthèse",
+        "Évaluation → examens → restitution"
+      ]
+    },
     "yes": "Q_SURVEILLANCE2",
     "no": "Q_SURVEILLANCE2"
   },
@@ -129,58 +171,139 @@
   "Q_SURVEILLANCE2": {
     "type": "boolean",
     "text": "Une surveillance infirmière ou médicale est-elle prévue pendant ou après les soins réalisés ?",
-    "yes": "Q_ADAPTATION",
-    "no": "Q_ADAPTATION"
+    "info": {
+      "explication": "La surveillance programmée est un critère fréquent de justification en HDJ.",
+      "reference": "Guide méthodologique PMSI MCO",
+      "citation": "La surveillance des traitements ou des patients à risque peut justifier l'hospitalisation de jour.",
+      "exemples": [
+        "Surveillance post-thérapeutique",
+        "Contrôle de tolérance",
+        "Suivi clinique rapproché"
+      ]
+    },
+    "yes": "Q_DECISION",
+    "no": "Q_DECISION"
   },
 
-  "Q_ADAPTATION": {
+  "Q_DECISION": {
     "type": "boolean",
-    "text": "Les résultats du séjour peuvent-ils conduire à une adaptation thérapeutique, une décision médicale ou une orientation du projet de soins ?",
-    "yes": "Q_SYNTHESE",
-    "no": "Q_SYNTHESE"
+    "text": "Les informations recueillies durant le séjour peuvent-elles conduire à une adaptation thérapeutique, une décision médicale ou une modification du projet de soins ?",
+    "info": {
+      "explication": "Le séjour doit contribuer à la prise de décision médicale.",
+      "reference": "Documentation PMSI MCO",
+      "citation": "Les évaluations réalisées doivent pouvoir influencer la prise en charge du patient.",
+      "exemples": [
+        "Modification d'un traitement",
+        "Décision d'une intervention",
+        "Orientation diagnostique"
+      ]
+    },
+    "yes": "Q_PROFESSIONNELS",
+    "no": "Q_PROFESSIONNELS"
+  },
+
+  "Q_PROFESSIONNELS": {
+    "type": "multiselect",
+    "text": "Quels professionnels participent effectivement au séjour ?",
+    "info": {
+      "explication": "La participation coordonnée de plusieurs professionnels peut renforcer la justification du séjour.",
+      "reference": "Doctrine nationale de pertinence des HDJ",
+      "citation": "L'intervention de plusieurs professionnels doit apporter une contribution clinique identifiable.",
+      "exemples": [
+        "Médecin + Infirmier",
+        "Médecin + Psychologue",
+        "Médecin + Kinésithérapeute + Ergothérapeute"
+      ]
+    },
+    "choices": [
+      "Médecin",
+      "Infirmier",
+      "Aide-soignant",
+      "Psychologue",
+      "Neuropsychologue",
+      "Diététicien",
+      "Kinésithérapeute",
+      "Ergothérapeute",
+      "Orthophoniste",
+      "Psychomotricien",
+      "Pharmacien",
+      "Assistant social",
+      "Manipulateur radio",
+      "Technicien laboratoire",
+      "Équipe douleur",
+      "Équipe mobile gériatrique",
+      "Équipe ETP",
+      "Équipe soins palliatifs"
+    ],
+    "next": "Q_SYNTHESE"
   },
 
   "Q_SYNTHESE": {
     "type": "boolean",
-    "text": "Une synthèse médicale ou multidisciplinaire des informations recueillies est-elle prévue ?",
+    "text": "Une synthèse médicale ou pluriprofessionnelle des informations recueillies est-elle prévue ?",
+    "info": {
+      "explication": "La synthèse participe à l'intégration des données du séjour dans le projet de soins.",
+      "reference": "Guide méthodologique PMSI",
+      "citation": "La synthèse médicale constitue un élément important des parcours coordonnés.",
+      "exemples": [
+        "Synthèse gériatrique",
+        "Restitution bilan mémoire",
+        "Réunion de concertation"
+      ]
+    },
     "yes": "Q_ACTE_ISOLE",
     "no": "Q_ACTE_ISOLE"
   },
 
   "Q_ACTE_ISOLE": {
     "type": "boolean",
-    "text": "La prise en charge pourrait-elle être réalisée sous forme d'une consultation ou d'un acte isolé sans perte de qualité ou de sécurité ?",
+    "text": "La prise en charge pourrait-elle être réalisée sous forme d'un acte, d'un examen ou d'une consultation isolée sans perte de qualité ou de sécurité ?",
+    "info": {
+      "explication": "Cette question constitue le principal filtre d'exclusion des faux HDJ.",
+      "reference": "Contrôles Assurance Maladie et doctrine ATIH",
+      "citation": "Les consultations améliorées et actes isolés ne relèvent pas de l'hospitalisation de jour.",
+      "exemples": [
+        "Consultation seule",
+        "IRM seule",
+        "Scanner seul",
+        "Prise de sang seule",
+        "ECG seul"
+      ]
+    },
     "yes": "NON_ELIGIBLE",
-    "no": "Q_COMPLEXITE"
+    "no": "Q_CLASSIFICATION"
   },
 
-  "Q_COMPLEXITE": {
-    "type": "boolean",
-    "text": "Le séjour présente-t-il au moins un critère majeur de justification hospitalière (surveillance, coordination, traitement à risque, multidisciplinarité ou synthèse médicale) ?",
-    "yes": "Q_TYPE_HDJ",
-    "no": "NON_ELIGIBLE"
-  },
-
-  "Q_TYPE_HDJ": {
+  "Q_CLASSIFICATION": {
     "type": "choice",
-    "text": "Quel est le niveau d'organisation prévu pour la prise en charge ?",
+    "text": "Quelle situation décrit le mieux l'organisation prévue du séjour ?",
+    "info": {
+      "explication": "Cette question permet de distinguer une HDJ centrée sur un traitement/surveillance d'un parcours multidisciplinaire complet.",
+      "reference": "Organisation effective du séjour",
+      "citation": "Le niveau de structuration et de coordination du parcours influence la qualification du séjour.",
+      "exemples": [
+        "Traitement avec surveillance",
+        "Parcours de bilan complexe",
+        "Évaluation pluridisciplinaire"
+      ]
+    },
     "choices": {
-      "Un professionnel ou une seule activité structurante": "HDJ_PARTIELLE",
-      "Deux professionnels ou plusieurs activités coordonnées": "HDJ_PARTIELLE",
-      "Trois professionnels ou plus avec évaluation coordonnée": "HDJ_COMPLETE",
-      "Parcours multidisciplinaire avec synthèse": "HDJ_COMPLETE"
+      "Traitement ou surveillance nécessitant une organisation hospitalière mais avec parcours limité": "HDJ_PARTIELLE",
+      "Médecin et infirmier intervenant dans un parcours thérapeutique simple": "HDJ_PARTIELLE",
+      "Parcours coordonné avec plusieurs professionnels et plusieurs évaluations": "HDJ_COMPLETE",
+      "Parcours multidisciplinaire avec synthèse médicale intégrée": "HDJ_COMPLETE"
     }
   },
 
   "HDJ_PARTIELLE": {
-    "result": "ÉLIGIBLE : le programme de soins paraît compatible avec une hospitalisation de jour partielle."
+    "result": "ÉLIGIBLE HDJ PARTIELLE : la prise en charge justifie une hospitalisation de jour mais repose principalement sur un traitement, une surveillance ou un parcours limité."
   },
 
   "HDJ_COMPLETE": {
-    "result": "ÉLIGIBLE : le programme de soins paraît compatible avec une hospitalisation de jour complète."
+    "result": "ÉLIGIBLE HDJ COMPLÈTE : la prise en charge repose sur un parcours coordonné, multidisciplinaire ou intégrant plusieurs évaluations et une synthèse médicale."
   },
 
   "NON_ELIGIBLE": {
-    "result": "NON ÉLIGIBLE : la prise en charge prévue ne présente pas les caractéristiques suffisantes pour justifier une hospitalisation de jour."
+    "result": "NON ÉLIGIBLE : la prise en charge prévue ne présente pas les caractéristiques justifiant une hospitalisation de jour et s'apparente à une consultation ou à un acte isolé."
   }
 }
