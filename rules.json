@@ -5,11 +5,11 @@
     "type": "boolean",
     "text": "Le séjour répond-il à un objectif médical clairement défini avant la venue du patient ?",
     "info": {
-      "reference": "Ministère des Solidarités et de la Santé. Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour.",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
       "citation": "« La notion d'hospitalisation de jour nécessite (...) la programmation de la prise en charge (le patient est convoqué dans un but précis thérapeutique ou d'investigation diagnostique). »",
       "exemples": [
-        "Administration de chimiothérapie programmée selon un protocole validé",
-        "Bilan initial pluridisciplinaire d'un pied diabétique complexe",
+        "Bilan initial pluridisciplinaire programmé d'un pied diabétique complexe",
+        "Administration de chimiothérapie selon un protocole validé",
         "Bilan pré-opératoire lourd (ex: chirurgie bariatrique)"
       ]
     },
@@ -21,11 +21,11 @@
     "type": "choice",
     "text": "Quelle est la finalité principale du séjour ?",
     "info": {
-      "reference": "Agence technique de l'information sur l'hospitalisation (ATIH). Guide méthodologique de production des informations en MCO, Fascicule \"Règles générales de recueil\", Édition 2024.",
+      "reference": "Agence technique de l'information sur l'hospitalisation (ATIH). Guide méthodologique de production des informations relatives à l'activité médicale et à sa facturation en médecine, chirurgie, obstétrique et odontologie. Lyon: ATIH; 2024 (Bulletin officiel n° 2024/22).",
       "citation": "« L'hospitalisation de jour est une hospitalisation de moins de 24 heures (...) pour y subir des investigations, des traitements ou des soins médicaux, chirurgicaux ou de réadaptation. »",
       "exemples": [
         "Traitement : Administration d'anticorps monoclonaux",
-        "Diagnostic : Ponction lombaire et IRM programmées dans la même journée",
+        "Diagnostic : Échographie thyroïdienne, cytoponction et biologie programmées sur la demi-journée",
         "Surveillance : Monitorage rapproché après l'introduction d'un nouveau traitement"
       ]
     },
@@ -42,12 +42,12 @@
     "type": "boolean",
     "text": "Le traitement nécessite-t-il une administration, une préparation ou une surveillance justifiant une organisation hospitalière ?",
     "info": {
-      "reference": "Ministère de la Santé. Circulaire frontière N° DGOS/R3/2010/201 du 10 juin 2010.",
+      "reference": "Ministère de la Santé et des Sports (France). Instruction N° DGOS/R/2010/201 du 15 juin 2010 relative aux conditions de facturation d'un groupe homogène de séjour (GHS) pour les prises en charge hospitalières de moins d'une journée. Paris: Ministère de la Santé; 2010.",
       "citation": "« La réalisation d'un traitement ou d'un acte technique (...) nécessitant, soit la mise à disposition de moyens lourds, soit une anesthésie, soit une surveillance médicale et paramédicale prolongée. »",
       "exemples": [
-        "Perfusion d'Infliximab sur 2 heures avec surveillance des constantes vitales",
+        "Mise sous pompe à insuline nécessitant un paramétrage et une surveillance initiale",
         "Transfusion de produits sanguins labiles (ex: 2 culots globulaires)",
-        "Cure de fer par voie intraveineuse avec risque de choc anaphylactique"
+        "Perfusion de fer intraveineux avec risque de choc anaphylactique"
       ]
     },
     "yes": "Q_VALEUR_AJOUTEE",
@@ -58,11 +58,11 @@
     "type": "boolean",
     "text": "Le projet diagnostique prévoit-il plusieurs examens, évaluations ou investigations coordonnés au cours du même séjour ?",
     "info": {
-      "reference": "Ministère des Solidarités et de la Santé. Instruction N° DGOS/R3/2015/269 du 2 septembre 2015.",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
       "citation": "« La réalisation de plusieurs examens, bilans ou consultations d'investigation (...) qui doivent être impérativement coordonnés et réalisés de manière regroupée dans la journée. »",
       "exemples": [
         "Bilan exhaustif des complications du diabète (Fond d'œil, Écho-Doppler, ECG, Consultation de synthèse)",
-        "Bilan d'extension oncologique multidisciplinaire",
+        "Épreuve d'effort coordonnée avec une échocardiographie de stress",
         "Bilan cognitif complet (Tests neuropsychologiques, IRM, Consultation gériatrique)"
       ]
     },
@@ -74,10 +74,10 @@
     "type": "boolean",
     "text": "Le patient nécessite-t-il une surveillance clinique ou thérapeutique organisée pendant le séjour ?",
     "info": {
-      "reference": "Ministère de la Santé. Circulaire frontière N° DGOS/R3/2010/201 du 10 juin 2010.",
+      "reference": "Ministère de la Santé et des Sports (France). Instruction N° DGOS/R/2010/201 du 15 juin 2010 relative aux conditions de facturation d'un groupe homogène de séjour (GHS) pour les prises en charge hospitalières de moins d'une journée. Paris: Ministère de la Santé; 2010.",
       "citation": "« Un temps d'observation ou de surveillance médicale et paramédicale, impliquant l'utilisation de locaux et de matériels adaptés. »",
       "exemples": [
-        "Surveillance continue d'un potentiel syndrome de relargage cytokinique post-injection",
+        "Surveillance d'un test dynamique en endocrinologie (ex: test de jeûne, HGPO)",
         "Surveillance prolongée des constantes et de la diurèse post-geste invasif",
         "Évaluation clinique de la tolérance à une première dose de thérapie ciblée"
       ]
@@ -90,12 +90,12 @@
     "type": "boolean",
     "text": "L'évaluation implique-t-elle plusieurs dimensions ou compétences professionnelles complémentaires ?",
     "info": {
-      "reference": "Haute Autorité de Santé (HAS). Recommandations de bonnes pratiques : Évaluation multidimensionnelle gériatrique, 2020.",
+      "reference": "Haute Autorité de Santé (HAS). Guide Parcours de soins de la personne âgée en risque de perte d'autonomie. Saint-Denis La Plaine: HAS; 2015.",
       "citation": "« L'évaluation implique une démarche interdisciplinaire, standardisée et multidimensionnelle aboutissant à un plan de soins personnalisé. »",
       "exemples": [
         "Évaluation Gériatrique Standardisée (EGS) impliquant médecin, IDE et assistant social",
         "Évaluation complexe des troubles de la déglutition (ORL, Orthophoniste, Diététicien)",
-        "Évaluation multidisciplinaire de l'autonomie et de la sécurité à domicile"
+        "Évaluation de l'observance et de l'adaptation nutritionnelle par le binôme Médecin/Diététicien"
       ]
     },
     "yes": "Q_VALEUR_AJOUTEE",
@@ -106,12 +106,12 @@
     "type": "boolean",
     "text": "L'éducation thérapeutique est-elle réalisée dans un programme structuré avec objectifs et traçabilité ?",
     "info": {
-      "reference": "Code de la Santé Publique, Article L1161-2.",
+      "reference": "France. Code de la santé publique. Article L1161-2. Créé par la Loi n°2009-879 du 21 juillet 2009. Paris: Journal Officiel de la République Française; 2009.",
       "citation": "« Les programmes d'éducation thérapeutique du patient sont conformes à un cahier des charges national (...) et font l'objet d'une déclaration auprès de l'agence régionale de santé. »",
       "exemples": [
-        "Séance dans le cadre du programme validé par l'ARS : 'Vivre avec son diabète de type 1'",
+        "Séance dans le cadre d'un programme ETP ARS : 'Insulinothérapie fonctionnelle'",
         "Ateliers collectifs d'ETP obésité (Diététique, Activité Physique Adaptée, Psychologie)",
-        "Évaluation des compétences acquises en fin de programme d'Insuffisance Cardiaque"
+        "Évaluation de synthèse des compétences acquises (Bilan éducatif partagé)"
       ]
     },
     "yes": "Q_VALEUR_AJOUTEE",
@@ -122,12 +122,12 @@
     "type": "boolean",
     "text": "La prise en charge apporte-t-elle une valeur ajoutée organisationnelle ou médicale qui ne pourrait pas être obtenue lors d'une consultation standard ?",
     "info": {
-      "reference": "Cour des Comptes. Rapport sur l'application des lois de financement de la sécurité sociale, Chapitre \"Le contrôle des hôpitaux de jour\", 2020.",
+      "reference": "Cour des comptes. Rapport sur l'application des lois de financement de la sécurité sociale : Le développement et le contrôle des hôpitaux de jour. Paris: Cour des comptes; 2020. p. 285-312.",
       "citation": "« Il ne peut y avoir de facturation d'un GHS d'hospitalisation de jour que si la prise en charge présente une intensité et une complexité supérieures à de simples soins externes. »",
       "exemples": [
-        "Mise à disposition immédiate d'un plateau technique lourd en cas de complication",
-        "Concentration de compétences rares au lit du patient",
-        "Mise en jeu de la responsabilité d'un médecin coordonnateur pilotant la journée"
+        "Coordination des flux évitant au patient de multiplier les venues sur plusieurs semaines",
+        "Concentration de compétences paramédicales expertes (IDE d'éducation, Diététicienne) au lit du patient",
+        "Prise de décision thérapeutique collégiale le jour même"
       ]
     },
     "yes": "Q_COORDINATION",
@@ -138,11 +138,11 @@
     "type": "boolean",
     "text": "Le séjour comporte-t-il plusieurs séquences de prise en charge coordonnées au sein d'une même organisation hospitalière ?",
     "info": {
-      "reference": "Ministère des Solidarités et de la Santé. Instruction N° DGOS/R3/2015/269 du 2 septembre 2015.",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
       "citation": "« L'hospitalisation de jour se caractérise par la coordination d'interventions de plusieurs professionnels de santé. »",
       "exemples": [
         "Accueil IDE → Examens exploratoires → Traitement → Synthèse finale avec le patient",
-        "Prélèvement sanguin ciblé → Attente du résultat au sein de l'unité → Traitement conditionné administré le jour même"
+        "Prélèvement sanguin ciblé → Attente du résultat au sein de l'unité → Ajustement du traitement le jour même"
       ]
     },
     "yes": "Q_SURVEILLANCE2",
@@ -153,12 +153,12 @@
     "type": "boolean",
     "text": "Une surveillance infirmière ou médicale est-elle prévue pendant ou après les soins réalisés ?",
     "info": {
-      "reference": "Arrêté du 19 février 2015 relatif aux forfaits alloués aux établissements de santé (Article 4).",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Arrêté du 19 février 2015 relatif aux forfaits alloués aux établissements de santé mentionnés à l'article L. 162-22-6 du code de la sécurité sociale. Paris: Journal Officiel de la République Française; 2015.",
       "citation": "« Les forfaits de type (...) GHS ne peuvent être facturés que si le patient est admis dans une structure d'hospitalisation nécessitant des moyens en locaux, en matériel et en personnel. »",
       "exemples": [
-        "Monitoring ECG continu prescrit sur 2 heures après administration médicamenteuse",
-        "Validation explicite de l'absence de saignement post-biopsie hépatique avant autorisation de sortie",
-        "Évaluation de l'état de conscience et des réflexes toutes les 15 minutes post-sédation"
+        "Surveillance glycémique capillaire toutes les 30 minutes lors d'un test d'hypoglycémie",
+        "Validation explicite de l'absence de saignement post-biopsie avant autorisation de sortie",
+        "Monitoring ECG continu prescrit post-administration médicamenteuse"
       ]
     },
     "yes": "Q_DECISION",
@@ -169,11 +169,11 @@
     "type": "boolean",
     "text": "Les informations recueillies durant le séjour conduisent-elles à une adaptation thérapeutique, une décision médicale ou une modification du projet de soins ?",
     "info": {
-      "reference": "ATIH. Guide méthodologique de production des informations en MCO, Règles de recueil, Édition 2024.",
+      "reference": "Agence technique de l'information sur l'hospitalisation (ATIH). Guide méthodologique de production des informations relatives à l'activité médicale et à sa facturation en médecine, chirurgie, obstétrique et odontologie. Lyon: ATIH; 2024 (Bulletin officiel n° 2024/22).",
       "citation": "« La prise en charge donne lieu à la rédaction d'un compte-rendu d'hospitalisation de jour intégré au dossier du patient. »",
       "exemples": [
-        "Modification posologique immédiate du schéma insulinique suite à la lecture du Holter",
-        "Validation de l'inscription du patient sur liste d'attente de greffe",
+        "Modification posologique immédiate du schéma insulinique",
+        "Validation de l'indication d'une chirurgie réparatrice sur plaie chronique",
         "Changement de ligne de chimiothérapie décidé et acté le jour même"
       ]
     },
@@ -185,12 +185,12 @@
     "type": "multiselect",
     "text": "Quels professionnels participent effectivement au séjour ?",
     "info": {
-      "reference": "Ministère des Solidarités et de la Santé. Instruction N° DGOS/R3/2015/269.",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
       "citation": "« La nécessité de l'intervention de professionnels de spécialités différentes (...) constitue un critère d'éligibilité. »",
       "exemples": [
-        "Binôme systématique Médecin + IDE (Base d'un traitement HDJ)",
+        "Binôme systématique Médecin + IDE (Base légale d'un traitement HDJ)",
         "Action croisée : Diététicien + IDE d'éducation + Médecin spécialiste",
-        "Action d'expertise : Neuropsychologue + Gériatre + Équipe mobile"
+        "Action d'expertise : Podologue + IDE Plaies et cicatrisation + Diabétologue"
       ]
     },
     "choices": [
@@ -200,6 +200,7 @@
       "Psychologue",
       "Neuropsychologue",
       "Diététicien",
+      "Podologue",
       "Kinésithérapeute",
       "Ergothérapeute",
       "Orthophoniste",
@@ -220,12 +221,12 @@
     "type": "boolean",
     "text": "Une synthèse médicale ou pluriprofessionnelle des informations recueillies est-elle prévue et tracée ?",
     "info": {
-      "reference": "Code de la Santé Publique, Article R1112-2.",
+      "reference": "France. Code de la santé publique. Article R1112-2. Modifié par le Décret n°2021-1243 du 28 septembre 2021. Paris: Journal Officiel de la République Française; 2021.",
       "citation": "« Un document médical de synthèse (...) est établi par le médecin qui a pris en charge le patient lors de son hospitalisation. »",
       "exemples": [
-        "Rédaction et validation d'un Compte-Rendu d'Hospitalisation (CRH) intégrant un plan d'action",
+        "Rédaction et validation d'un Compte-Rendu d'Hospitalisation (CRH) dans le DPI",
         "Transmission structurée envoyée au médecin traitant le jour de la sortie (Lettre de liaison)",
-        "Validation d'une Réunion de Concertation Pluridisciplinaire (RCP) tracée dans le DPI"
+        "Validation d'une Réunion de Concertation Pluridisciplinaire (RCP)"
       ]
     },
     "yes": "Q_ACTE_ISOLE",
@@ -236,12 +237,12 @@
     "type": "boolean",
     "text": "La prise en charge pourrait-elle être réalisée sous forme d'un acte, d'un examen ou d'une consultation isolée sans perte de qualité ou de sécurité ?",
     "info": {
-      "reference": "Assurance Maladie. Charte du contrôle de l'activité des établissements de santé, 2021.",
+      "reference": "Caisse Nationale de l'Assurance Maladie (CNAM). Charte du contrôle de l'activité des établissements de santé. Paris: CNAM; 2021.",
       "citation": "« Un acte isolé ou une simple addition d'actes qui pourraient être réalisés de manière échelonnée en ville ou en soins externes ne justifient pas une facturation en HDJ. »",
       "exemples": [
-        "Une IRM cérébrale seule ne justifie pas une HDJ (=> Facturation acte externe)",
+        "Une IRM cérébrale seule (=> Facturation acte externe)",
         "Une prise de sang suivie d'une consultation médicale classique (=> Facturation acte externe)",
-        "Une consultation spécialisée, même très prolongée (=> Facturation acte externe / Consultation complexe)"
+        "Une consultation spécialisée, même très prolongée (=> Facturation consultation complexe/très complexe)"
       ]
     },
     "yes": "NON_ELIGIBLE",
@@ -252,10 +253,10 @@
     "type": "choice",
     "text": "Quelle situation décrit le mieux l'organisation effective du séjour ?",
     "info": {
-      "reference": "ATIH. Notice technique PMSI MCO - Précisions sur les modalités de codage des HDJ.",
+      "reference": "Agence technique de l'information sur l'hospitalisation (ATIH). Notice technique PMSI MCO - Campagne tarifaire et budgétaire. Lyon: ATIH; 2024.",
       "citation": "« L'établissement de santé doit être en mesure de justifier le niveau de complexité de l'organisation mise en place au regard des règles de facturation applicables. »",
       "exemples": [
-        "Traitement itératif lourd avec stricte surveillance infirmière",
+        "Traitement itératif lourd avec stricte surveillance infirmière (ex: biothérapie)",
         "Parcours d'investigation complexe mobilisant 3 professionnels sur la demi-journée",
         "Bilan pluridisciplinaire concluant à une synthèse collégiale"
       ]
