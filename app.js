@@ -4,13 +4,12 @@
 let rules = {};
 let currentNode = null;
 let historyStack = []; 
-const MAX_STEPS = 8; 
+const MAX_STEPS = 9; 
 
 const questionDiv = document.getElementById("question");
 const helpDiv = document.getElementById("help");
 const resultDiv = document.getElementById("result");
 const answersDiv = document.getElementById("answers");
-const explicationDiv = document.getElementById("explication");
 const referenceDiv = document.getElementById("reference");
 const citationDiv = document.getElementById("citation");
 const examplesDiv = document.getElementById("practical-examples");
@@ -24,12 +23,12 @@ const progressText = document.getElementById("progress-text");
 async function loadRules() {
   try {
     const response = await fetch("rules.json");
-    if (!response.ok) throw new Error("Impossible de charger le fichier rules.json");
+    if (!response.ok) throw new Error("Erreur HTTP: " + response.status);
     rules = await response.json();
     initApp();
   } catch (error) {
     questionDiv.innerHTML = "Erreur de chargement des règles métier.";
-    console.error(error);
+    console.error("Erreur détaillée :", error); // Permet de voir la vraie erreur dans la console F12
   }
 }
 
@@ -80,9 +79,7 @@ function render(isForward = true) {
   updateProgress();
   answersDiv.innerHTML = "";
 
-  // =======================================
   // 1. GESTION DU RÉSULTAT FINAL ET EXPORTS
-  // =======================================
   if (node.result) {
     questionDiv.style.display = "none";
     examplesBlock.style.display = "none";
@@ -90,16 +87,13 @@ function render(isForward = true) {
     resultDiv.style.display = "block";
     resultDiv.innerHTML = node.result;
 
-    // Code couleur PMSI
     if (node.result.includes("NON ÉLIGIBLE")) resultDiv.className = "danger";
     else if (node.result.includes("PARTIELLE")) resultDiv.className = "warning";
     else resultDiv.className = "success";
 
-    // Date du jour pour les exports
     const date = new Date().toLocaleDateString('fr-FR');
     const exportText = `Évaluation PMSI - Éligibilité HDJ du ${date}\nDécision : ${node.result}`;
 
-    // Bouton 1 : Copie DPI
     const copyBtn = createButton("📋 Copier pour le DPI");
     copyBtn.style.background = "#0284c7";
     copyBtn.style.color = "white";
@@ -114,7 +108,6 @@ function render(isForward = true) {
         }).catch(err => console.error('Erreur de copie', err));
     };
 
-    // Bouton 2 : Export TXT
     const downloadBtn = createButton("💾 Télécharger (.txt)");
     downloadBtn.style.background = "#0f172a";
     downloadBtn.style.color = "white";
@@ -128,7 +121,6 @@ function render(isForward = true) {
         URL.revokeObjectURL(url);
     };
 
-    // Bouton 3 : Recommencer
     const restartBtn = createButton("🔄 Nouvelle évaluation");
     restartBtn.style.background = "#475569";
     restartBtn.style.color = "white";
@@ -140,17 +132,15 @@ function render(isForward = true) {
     return;
   }
 
-  // =======================================
   // 2. GESTION DES QUESTIONS
-  // =======================================
   questionDiv.style.display = "block";
   examplesBlock.style.display = "block";
   answersDiv.style.display = "flex";
   resultDiv.style.display = "none";
   questionDiv.textContent = node.text || "";
 
+  // Retrait de la ligne explicationDiv.innerHTML pour éviter le crash
   if (node.info) {
-    explicationDiv.innerHTML = node.info.explication || "";
     referenceDiv.innerHTML = node.info.reference || "";
     citationDiv.innerHTML = node.info.citation || "";
     examplesDiv.innerHTML = "";
@@ -209,7 +199,6 @@ function render(isForward = true) {
     answersDiv.appendChild(wrapper);
   }
 
-  // Bouton de retour dans l'historique
   if (historyStack.length > 0) {
       const backBtn = createButton("↩ Retour");
       backBtn.style.background = "#e2e8f0";
@@ -221,5 +210,4 @@ function render(isForward = true) {
   }
 }
 
-// Démarrage
 window.addEventListener("DOMContentLoaded", loadRules);
