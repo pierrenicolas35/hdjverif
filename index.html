@@ -1,15 +1,266 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <title>Eligibilité Hôpital de jour</title>
-</head>
-<body>
-  <div id="question"></div>
-  <button id="btn-yes">Oui</button>
-  <button id="btn-no">Non</button>
-  <div id="result"></div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Éligibilité HDJ</title>
+
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0066cc, #0099ff);
+            color: white;
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+        }
+
+        .header p {
+            opacity: 0.95;
+            margin-top: 8px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .progress-container {
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 10px;
+            width: 100%;
+            background: #e7edf5;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .progress {
+            height: 10px;
+            width: 0%;
+            background: linear-gradient(90deg, #00b894, #00d084);
+            transition: 0.4s;
+        }
+
+        #question {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        #help {
+            color: #64748b;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .examples {
+            background: #f8fafc;
+            border-left: 5px solid #0099ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .examples h4 {
+            margin-bottom: 10px;
+            color: #0f172a;
+        }
+
+        .examples ul {
+            padding-left: 20px;
+        }
+
+        .examples li {
+            margin-bottom: 6px;
+            color: #475569;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+
+        #btn-yes {
+            background: #16a34a;
+            color: white;
+        }
+
+        #btn-yes:hover {
+            background: #15803d;
+        }
+
+        #btn-no {
+            background: #dc2626;
+            color: white;
+        }
+
+        #btn-no:hover {
+            background: #b91c1c;
+        }
+
+        #result {
+            margin-top: 25px;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            display: none;
+        }
+
+        .success {
+            background: #dcfce7;
+            color: #166534;
+            border-left: 6px solid #16a34a;
+        }
+
+        .warning {
+            background: #fff7ed;
+            color: #9a3412;
+            border-left: 6px solid #f97316;
+        }
+
+        .danger {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 6px solid #dc2626;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.4rem;
+            }
+
+            #question {
+                font-size: 1.1rem;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <div class="header">
+            <h1>
+                <i class="fas fa-hospital-user"></i>
+                Vérification de l'éligibilité HDJ
+            </h1>
+            <p>
+                Outil d'aide à la décision pour les prescripteurs, cadres de santé et TIM.
+            </p>
+        </div>
+
+        <div class="card">
+
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="progress" class="progress"></div>
+                </div>
+            </div>
+
+            <div id="question">
+                Chargement...
+            </div>
+
+            <div id="help"></div>
+
+            <div id="examples" class="examples">
+                <h4>
+                    <i class="fas fa-lightbulb"></i>
+                    Exemples
+                </h4>
+
+                <strong>Situations favorables</strong>
+                <ul id="examples-yes"></ul>
+
+                <br>
+
+                <strong>Situations défavorables</strong>
+                <ul id="examples-no"></ul>
+            </div>
+
+            <div class="buttons">
+                <button id="btn-yes">
+                    <i class="fas fa-check-circle"></i>
+                    Oui
+                </button>
+
+                <button id="btn-no">
+                    <i class="fas fa-times-circle"></i>
+                    Non
+                </button>
+            </div>
+
+            <div id="result"></div>
+
+        </div>
+
+        <div class="footer">
+            Version HDJ • Aide au raisonnement médico-administratif
+        </div>
+
+    </div>
+
+    <script
