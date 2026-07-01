@@ -1,249 +1,186 @@
 {
+  "start": "Q1",
+
   "Q1": {
-    "text": "L'objectif médical du séjour est-il clairement identifié et formalisé ?",
-    "help": "Le séjour doit répondre à un objectif médical précis connu avant l'admission.",
-    "examples_yes": [
-      "Chimiothérapie programmée",
-      "Bilan diagnostique de maladie rare",
-      "Bilan mémoire",
-      "Adaptation d'un traitement immunosuppresseur",
-      "Évaluation pré-greffe",
-      "Bilan gériatrique multidimensionnel",
-      "Programme d'éducation thérapeutique"
-    ],
-    "examples_no": [
-      "Consultation de suivi simple",
-      "Renouvellement d'ordonnance",
-      "Avis spécialisé isolé",
-      "Contrôle annuel sans programme défini"
-    ]
+    "type": "boolean",
+    "text": "Le séjour répond-il à un objectif médical clairement défini avant la venue du patient ?",
+    "yes": "Q2",
+    "no": "NON_ELIGIBLE"
   },
 
   "Q2": {
-    "text": "Quel est le motif principal du séjour ?",
-    "help": "Choisir la finalité dominante de la prise en charge.",
-    "options": [
-      "Traitement",
-      "Diagnostic",
-      "Évaluation multidisciplinaire",
-      "Surveillance",
-      "Éducation thérapeutique"
-    ]
+    "type": "choice",
+    "text": "Quel est l'objectif principal du séjour ?",
+    "choices": {
+      "Traitement": "Q_TRAITEMENT",
+      "Diagnostic": "Q_DIAGNOSTIC",
+      "Surveillance": "Q_SURVEILLANCE",
+      "Évaluation multidisciplinaire": "Q_EVALUATION",
+      "Éducation thérapeutique": "Q_ETP"
+    }
   },
 
   "Q_TRAITEMENT": {
-    "text": "Le traitement nécessite-t-il une préparation, une administration ou une surveillance hospitalière spécifique ?",
-    "help": "Le traitement mobilise des ressources hospitalières qui dépassent une simple consultation.",
-    "examples_yes": [
-      "Chimiothérapie IV",
-      "Immunothérapie",
-      "Biothérapie",
-      "Transfusion",
-      "Perfusion complexe",
-      "Ferrothérapie IV avec surveillance",
-      "Désensibilisation allergologique",
-      "Administration de médicaments nécessitant une surveillance rapprochée"
-    ],
-    "examples_no": [
-      "Injection sous-cutanée simple",
-      "Prescription d'un traitement oral",
-      "Renouvellement de traitement",
-      "Vaccination isolée"
-    ]
-  },
-
-  "Q_TRAITEMENT2": {
-    "text": "Une surveillance clinique, biologique ou des effets indésirables est-elle prévue pendant ou après le traitement ?",
-    "help": "Évaluer l'existence d'un risque nécessitant un suivi hospitalier.",
-    "examples_yes": [
-      "Surveillance d'une réaction allergique",
-      "Monitorage tensionnel après perfusion",
-      "Contrôle biologique post-thérapeutique",
-      "Surveillance d'une toxicité liée à une chimiothérapie"
-    ],
-    "examples_no": [
-      "Aucune surveillance particulière prévue",
-      "Retour immédiat à domicile après l'acte"
-    ]
+    "type": "boolean",
+    "text": "Le traitement nécessite-t-il une administration, une préparation ou une surveillance hospitalière spécifique ?",
+    "yes": "Q_PROFESSIONNELS",
+    "no": "Q_ACTE_ISOLE"
   },
 
   "Q_DIAGNOSTIC": {
-    "text": "Le diagnostic repose-t-il sur plusieurs investigations coordonnées au cours de la même journée ?",
-    "help": "Le parcours diagnostique doit dépasser un examen unique.",
-    "examples_yes": [
-      "Consultation + biologie + imagerie + synthèse",
-      "Bilan maladie rare",
-      "Bilan d'extension oncologique",
-      "Explorations neurologiques multiples"
-    ],
-    "examples_no": [
-      "IRM seule",
-      "Scanner seul",
-      "Prise de sang seule",
-      "Endoscopie isolée"
-    ]
-  },
-
-  "Q_DIAGNOSTIC2": {
-    "text": "Les résultats doivent-ils être interprétés de manière globale afin de prendre une décision médicale le jour même ?",
-    "help": "Recherche d'une valeur ajoutée liée à la coordination hospitalière.",
-    "examples_yes": [
-      "Annonce diagnostique",
-      "Décision thérapeutique multidisciplinaire",
-      "Orientation vers une chirurgie",
-      "Validation d'un protocole de traitement"
-    ],
-    "examples_no": [
-      "Examens réalisés sans synthèse prévue",
-      "Résultats transmis ultérieurement"
-    ]
-  },
-
-  "Q_EVALUATION": {
-    "text": "Plusieurs professionnels réalisent-ils des évaluations distinctes au cours du séjour ?",
-    "help": "Les évaluations doivent contribuer à une appréciation globale du patient.",
-    "examples_yes": [
-      "Médecin + IDE",
-      "Médecin + psychologue",
-      "Médecin + diététicien",
-      "Médecin + kinésithérapeute",
-      "Équipe mémoire",
-      "Équipe douleur"
-    ],
-    "examples_no": [
-      "Consultation médicale isolée",
-      "Évaluation par un seul professionnel"
-    ]
-  },
-
-  "Q_EVALUATION2": {
-    "text": "Une synthèse intégrant les résultats des différentes évaluations est-elle prévue ?",
-    "help": "La coordination des intervenants doit produire une décision ou un projet de soins.",
-    "examples_yes": [
-      "RCP",
-      "Synthèse gériatrique",
-      "Plan personnalisé de soins",
-      "Projet de réadaptation"
-    ],
-    "examples_no": [
-      "Interventions juxtaposées sans conclusion commune"
-    ]
+    "type": "boolean",
+    "text": "Plusieurs examens ou investigations sont-ils programmés et coordonnés pendant le séjour ?",
+    "yes": "Q_SYNTHESE",
+    "no": "Q_ACTE_ISOLE"
   },
 
   "Q_SURVEILLANCE": {
-    "text": "Le patient présente-t-il un risque qui nécessite une surveillance organisée durant la journée ?",
-    "help": "La surveillance doit être prévue avant l'admission.",
-    "examples_yes": [
-      "Tolérance d'un traitement",
-      "Suivi post-transfusionnel",
-      "Suivi d'une pathologie instable",
-      "Surveillance après geste invasif"
-    ],
-    "examples_no": [
-      "Absence de risque particulier identifié"
-    ]
+    "type": "boolean",
+    "text": "Le patient nécessite-t-il une surveillance clinique ou thérapeutique organisée au cours du séjour ?",
+    "yes": "Q_PROFESSIONNELS",
+    "no": "Q_ACTE_ISOLE"
   },
 
-  "Q_SURVEILLANCE2": {
-    "text": "Cette surveillance peut-elle conduire à une adaptation thérapeutique ou à une décision médicale ?",
-    "help": "La surveillance doit avoir une finalité clinique.",
-    "examples_yes": [
-      "Modification de dose",
-      "Arrêt d'un traitement",
-      "Décision d'examen complémentaire",
-      "Réévaluation médicale"
-    ],
-    "examples_no": [
-      "Observation passive sans impact attendu sur la prise en charge"
-    ]
+  "Q_EVALUATION": {
+    "type": "boolean",
+    "text": "L'évaluation du patient implique-t-elle plusieurs compétences professionnelles complémentaires ?",
+    "yes": "Q_PROFESSIONNELS",
+    "no": "Q_ACTE_ISOLE"
   },
 
   "Q_ETP": {
-    "text": "L'éducation thérapeutique est-elle structurée et intégrée à un programme de soins ?",
-    "help": "Une simple information au patient n'est généralement pas suffisante.",
-    "examples_yes": [
-      "Programme ETP diabète",
-      "Programme insuffisance cardiaque",
-      "Programme BPCO",
-      "Programme stomathérapie"
-    ],
-    "examples_no": [
-      "Remise d'une brochure",
-      "Conseil isolé au cours d'une consultation"
-    ]
+    "type": "boolean",
+    "text": "L'éducation thérapeutique est-elle intégrée à un programme structuré et tracé ?",
+    "yes": "Q_PROFESSIONNELS",
+    "no": "NON_ELIGIBLE"
   },
 
-  "Q_ETP2": {
-    "text": "Plusieurs intervenants participent-ils au programme éducatif ?",
-    "help": "L'interdisciplinarité renforce la justification de l'HDJ.",
-    "examples_yes": [
-      "Médecin + IDE",
-      "IDE + diététicien",
-      "Médecin + pharmacien",
-      "Équipe ETP complète"
+  "Q_PROFESSIONNELS": {
+    "type": "multiselect",
+    "text": "Quels professionnels interviennent au cours du séjour ?",
+    "choices": [
+      "Médecin",
+      "Interne",
+      "Infirmier(ère)",
+      "Cadre de santé",
+      "Aide-soignant(e)",
+      "Diététicien(ne)",
+      "Psychologue",
+      "Neuropsychologue",
+      "Kinésithérapeute",
+      "Ergothérapeute",
+      "Orthophoniste",
+      "Psychomotricien(ne)",
+      "Assistant(e) social(e)",
+      "Pharmacien(ne)",
+      "Manipulateur radio",
+      "Technicien laboratoire",
+      "Équipe douleur",
+      "Équipe mobile gériatrique",
+      "Équipe ETP",
+      "Équipe soins palliatifs",
+      "Autre"
     ],
-    "examples_no": [
-      "Intervention unique d'un seul professionnel"
-    ]
+    "next": "Q_ACTIVITES"
+  },
+
+  "Q_ACTIVITES": {
+    "type": "multiselect",
+    "text": "Quelles activités sont réalisées pendant le séjour ?",
+    "choices": [
+      "Consultation médicale",
+      "Consultation paramédicale",
+      "Administration de traitement",
+      "Perfusion",
+      "Transfusion",
+      "Chimiothérapie",
+      "Immunothérapie",
+      "Biothérapie",
+      "Prélèvements biologiques",
+      "Imagerie",
+      "Exploration fonctionnelle",
+      "Éducation thérapeutique",
+      "Bilan cognitif",
+      "Bilan nutritionnel",
+      "Bilan de réadaptation",
+      "Entretien psychologique",
+      "Surveillance clinique",
+      "Surveillance post-traitement",
+      "Adaptation thérapeutique",
+      "Réunion de synthèse"
+    ],
+    "next": "Q_COORDINATION"
   },
 
   "Q_COORDINATION": {
-    "text": "Une coordination organisée entre plusieurs séquences de soins est-elle prévue ?",
-    "help": "Rechercher un véritable parcours hospitalier.",
-    "examples_yes": [
-      "Accueil IDE → consultation médicale → traitement → surveillance",
-      "Biologie → imagerie → consultation → synthèse",
-      "Évaluation pluriprofessionnelle → réunion de synthèse"
-    ],
-    "examples_no": [
-      "Acte unique sans autre intervention"
-    ]
+    "type": "boolean",
+    "text": "Le parcours comprend-il plusieurs étapes de soins coordonnées au sein du même séjour ?",
+    "yes": "Q_COORDINATION2",
+    "no": "Q_ACTE_ISOLE"
   },
 
   "Q_COORDINATION2": {
-    "text": "Le séjour comporte-t-il au moins trois temps distincts de prise en charge ?",
-    "help": "L'enchaînement des étapes est un argument fort pour l'HDJ.",
-    "examples_yes": [
-      "Évaluation → traitement → surveillance",
-      "Consultation → examens → synthèse",
-      "Accueil → bilan → adaptation thérapeutique"
-    ],
-    "examples_no": [
-      "Consultation + acte unique"
-    ]
+    "type": "boolean",
+    "text": "Le séjour comporte-t-il au moins trois temps distincts de prise en charge (évaluation, acte, surveillance, synthèse...) ?",
+    "yes": "Q_SURVEILLANCE2",
+    "no": "Q_SURVEILLANCE2"
   },
 
-  "Q_ACTES": {
-    "text": "La prise en charge se limite-t-elle principalement à un acte technique ou à une consultation réalisable isolément ?",
-    "help": "Ces situations sont fréquemment requalifiées en activité externe.",
-    "examples_yes": [
-      "IRM seule",
-      "Scanner seul",
-      "Prise de sang seule",
-      "Consultation spécialisée seule",
-      "ECG seul",
-      "Endoscopie simple"
-    ],
-    "examples_no": [
-      "Parcours coordonné de plusieurs soins",
-      "Bilan complexe",
-      "Traitement avec surveillance"
-    ]
+  "Q_SURVEILLANCE2": {
+    "type": "boolean",
+    "text": "Une surveillance infirmière ou médicale est-elle prévue pendant ou après les soins réalisés ?",
+    "yes": "Q_ADAPTATION",
+    "no": "Q_ADAPTATION"
+  },
+
+  "Q_ADAPTATION": {
+    "type": "boolean",
+    "text": "Les résultats du séjour peuvent-ils conduire à une adaptation thérapeutique, une décision médicale ou une orientation du projet de soins ?",
+    "yes": "Q_SYNTHESE",
+    "no": "Q_SYNTHESE"
+  },
+
+  "Q_SYNTHESE": {
+    "type": "boolean",
+    "text": "Une synthèse médicale ou multidisciplinaire des informations recueillies est-elle prévue ?",
+    "yes": "Q_ACTE_ISOLE",
+    "no": "Q_ACTE_ISOLE"
+  },
+
+  "Q_ACTE_ISOLE": {
+    "type": "boolean",
+    "text": "La prise en charge pourrait-elle être réalisée sous forme d'une consultation ou d'un acte isolé sans perte de qualité ou de sécurité ?",
+    "yes": "NON_ELIGIBLE",
+    "no": "Q_COMPLEXITE"
   },
 
   "Q_COMPLEXITE": {
-    "text": "Le parcours comporte-t-il au moins deux critères majeurs de complexité ?",
-    "help": "Les critères majeurs incluent coordination, surveillance, risque thérapeutique, multidisciplinarité, synthèse médicale, plateau technique spécialisé.",
-    "examples_yes": [
-      "Chimiothérapie + surveillance",
-      "Bilan mémoire multidisciplinaire",
-      "Bilan pré-greffe",
-      "Traitement biologique avec monitorage",
-      "Évaluation douleur complexe"
-    ],
-    "examples_no": [
-      "Consultation avec prise de sang",
-      "Imagerie avec restitution simple"
-    ]
+    "type": "boolean",
+    "text": "Le séjour présente-t-il au moins un critère majeur de justification hospitalière (surveillance, coordination, traitement à risque, multidisciplinarité ou synthèse médicale) ?",
+    "yes": "Q_TYPE_HDJ",
+    "no": "NON_ELIGIBLE"
+  },
+
+  "Q_TYPE_HDJ": {
+    "type": "choice",
+    "text": "Quel est le niveau d'organisation prévu pour la prise en charge ?",
+    "choices": {
+      "Un professionnel ou une seule activité structurante": "HDJ_PARTIELLE",
+      "Deux professionnels ou plusieurs activités coordonnées": "HDJ_PARTIELLE",
+      "Trois professionnels ou plus avec évaluation coordonnée": "HDJ_COMPLETE",
+      "Parcours multidisciplinaire avec synthèse": "HDJ_COMPLETE"
+    }
+  },
+
+  "HDJ_PARTIELLE": {
+    "result": "ÉLIGIBLE : le programme de soins paraît compatible avec une hospitalisation de jour partielle."
+  },
+
+  "HDJ_COMPLETE": {
+    "result": "ÉLIGIBLE : le programme de soins paraît compatible avec une hospitalisation de jour complète."
+  },
+
+  "NON_ELIGIBLE": {
+    "result": "NON ÉLIGIBLE : la prise en charge prévue ne présente pas les caractéristiques suffisantes pour justifier une hospitalisation de jour."
   }
 }
