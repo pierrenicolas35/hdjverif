@@ -120,17 +120,22 @@
             flex-wrap: wrap;
         }
 
-        button {
-            flex: 1;
-            min-width: 120px;
-            padding: 15px;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: 0.3s;
-        }
+ button {
+    flex: 1;
+    min-width: 120px;
+    padding: 15px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: 0.3s;
+    /* AJOUTS POUR CORRIGER LE DÉBORDEMENT */
+    white-space: normal; 
+    word-wrap: break-word;
+    height: auto;
+    line-height: 1.3;
+}
 
         #btn-yes {
             background: #16a34a;
