@@ -235,7 +235,7 @@
 
   "Q_ACTE_ISOLE": {
     "type": "boolean",
-    "text": "La prise en charge pourrait-elle être réalisée sous forme d'un acte, d'un examen ou d'une consultation isolée sans perte de qualité ou de sécurité ?",
+    "text": "En l'absence de facteurs liés au patient, cette prise en charge pourrait-elle être réalisée sous forme d'un acte ou d'une consultation isolée en externe ?",
     "info": {
       "reference": "Caisse Nationale de l'Assurance Maladie (CNAM). Charte du contrôle de l'activité des établissements de santé. Paris: CNAM; 2021.",
       "citation": "« Un acte isolé ou une simple addition d'actes qui pourraient être réalisés de manière échelonnée en ville ou en soins externes ne justifient pas une facturation en HDJ. »",
@@ -245,8 +245,24 @@
         "Une consultation spécialisée, même très prolongée (=> Facturation consultation complexe/très complexe)"
       ]
     },
-    "yes": "NON_ELIGIBLE",
+    "yes": "Q_VULNERABILITE",
     "no": "Q_CLASSIFICATION"
+  },
+
+  "Q_VULNERABILITE": {
+    "type": "boolean",
+    "text": "L'état clinique, cognitif ou social du patient présente-t-il une vulnérabilité imposant un encadrement hospitalier pour la réalisation de ce soin ?",
+    "info": {
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
+      "citation": "« L'état du patient (par exemple : fragilité, perte d'autonomie, polypathologies) peut justifier une prise en charge en milieu hospitalier pour des actes habituellement réalisés en ville. »",
+      "exemples": [
+        "Patient atteint de troubles cognitifs sévères nécessitant l'intervention de deux soignants pour la réalisation d'un soin",
+        "Patient polyhandicapé nécessitant une logistique spécifique (lève-malade, aide au positionnement)",
+        "Patient âgé avec troubles du comportement opposants nécessitant un environnement sécurisé"
+      ]
+    },
+    "yes": "HDJ_PARTIELLE",
+    "no": "NON_ELIGIBLE"
   },
 
   "Q_CLASSIFICATION": {
@@ -270,7 +286,7 @@
   },
 
   "HDJ_PARTIELLE": {
-    "result": "ÉLIGIBLE HDJ PARTIELLE : la prise en charge justifie une hospitalisation de jour mais repose principalement sur un traitement, une surveillance ou un parcours limité."
+    "result": "ÉLIGIBLE HDJ PARTIELLE : la prise en charge justifie une hospitalisation de jour mais repose principalement sur un traitement, une surveillance, une vulnérabilité spécifique du patient ou un parcours limité."
   },
 
   "HDJ_COMPLETE": {
