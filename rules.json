@@ -1,0 +1,67 @@
+{
+  "start": "Q1",
+
+  "Q1": {
+    "text": "La prise en charge dure-t-elle moins d'une journée (sans nuit passée) ?",
+    "answers": {
+      "oui": "Q2",
+      "non": "R_NO_DAY"
+    }
+  },
+
+  "Q2": {
+    "text": "Le patient est-il accueilli dans une structure d'hospitalisation à temps partiel conforme (HDJ / HTJ) ?",
+    "answers": {
+      "oui": "Q3",
+      "non": "R_STRUCTURE_NON_CONFORME"
+    }
+  },
+
+  "Q3": {
+    "text": "La prise en charge correspond-elle à des actes ou activités éligibles (séances, explorations, traitements programmés) ?",
+    "answers": {
+      "oui": "Q4",
+      "non": "R_ACTE_NON_ELIGIBLE"
+    }
+  },
+
+  "Q4": {
+    "text": "Un médecin a-t-il formalisé une décision d'admission en hospitalisation de jour ?",
+    "answers": {
+      "oui": "Q5",
+      "non": "R_ADMISSION_NON_FORMALISEE"
+    }
+  },
+
+  "Q5": {
+    "text": "La prise en charge nécessite-t-elle une présence coordonnée de plusieurs professionnels ou un plateau technique ?",
+    "answers": {
+      "oui": "R_ELIGIBLE",
+      "non": "R_COMPLEXITE_INSUFFISANTE"
+    }
+  },
+
+  "R_ELIGIBLE": {
+    "result": "Éligible à une facturation en hôpital de jour (sous réserve du codage GHM/GHS conforme)."
+  },
+
+  "R_NO_DAY": {
+    "result": "Séjour avec nuit : ce n'est pas une hospitalisation de jour."
+  },
+
+  "R_STRUCTURE_NON_CONFORME": {
+    "result": "Structure non conforme aux critères d'hospitalisation à temps partiel."
+  },
+
+  "R_ACTE_NON_ELIGIBLE": {
+    "result": "Les actes réalisés ne relèvent pas d'une activité facturable en hôpital de jour."
+  },
+
+  "R_ADMISSION_NON_FORMALISEE": {
+    "result": "L'admission en HDJ doit être formalisée par un médecin."
+  },
+
+  "R_COMPLEXITE_INSUFFISANTE": {
+    "result": "La prise en charge ne justifie pas une hospitalisation de jour (complexité insuffisante)."
+  }
+}
