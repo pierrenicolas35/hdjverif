@@ -1,3 +1,11 @@
+const progressFill =
+    document.getElementById("progress-fill");
+
+const progressText =
+    document.getElementById("progress-text");
+``
+
+
 // =====================================================
 // VARIABLES
 // =====================================================
