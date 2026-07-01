@@ -3,7 +3,7 @@
 // =====================================================
 let rules = {};
 let currentNode = null;
-let historyStack = []; 
+let historyStack = []; // Stocke : { id, question, reponse }
 const MAX_STEPS = 9; 
 
 const questionDiv = document.getElementById("question");
@@ -18,7 +18,7 @@ const progressFill = document.getElementById("progress-fill");
 const progressText = document.getElementById("progress-text");
 
 // =====================================================
-// CHARGEMENT DU JSON
+// CHARGEMENT DU JSON (SÉPARATION DES CONCERNES)
 // =====================================================
 async function loadRules() {
   try {
@@ -28,7 +28,7 @@ async function loadRules() {
     initApp();
   } catch (error) {
     questionDiv.innerHTML = "Erreur de chargement des règles métier.";
-    console.error("Erreur détaillée :", error); // Permet de voir la vraie erreur dans la console F12
+    console.error("Erreur détaillée :", error);
   }
 }
 
@@ -40,7 +40,7 @@ function initApp() {
 }
 
 // =====================================================
-// FONCTIONS UTILITAIRES
+// FONCTIONS UTILITAIRES DE NAVIGATION
 // =====================================================
 function createButton(label, className = "") {
   const btn = document.createElement("button");
@@ -58,13 +58,19 @@ function updateProgress() {
 
 function goBack() {
     if (historyStack.length > 0) {
-        currentNode = historyStack.pop();
+        const lastState = historyStack.pop();
+        currentNode = lastState.id; 
         render(false);
     }
 }
 
-function navigateTo(nextNode) {
-    historyStack.push(currentNode);
+function navigateTo(nextNode, userResponse = "") {
+    const node = rules[currentNode];
+    historyStack.push({
+        id: currentNode,
+        question: node.text,
+        reponse: userResponse
+    });
     currentNode = nextNode;
     render();
 }
@@ -79,7 +85,9 @@ function render(isForward = true) {
   updateProgress();
   answersDiv.innerHTML = "";
 
-  // 1. GESTION DU RÉSULTAT FINAL ET EXPORTS
+  // ---------------------------------------------------
+  // A. GESTION DU RÉSULTAT FINAL ET EXPORTS
+  // ---------------------------------------------------
   if (node.result) {
     questionDiv.style.display = "none";
     examplesBlock.style.display = "none";
@@ -92,9 +100,23 @@ function render(isForward = true) {
     else resultDiv.className = "success";
 
     const date = new Date().toLocaleDateString('fr-FR');
-    const exportText = `Évaluation PMSI - Éligibilité HDJ du ${date}\nDécision : ${node.result}`;
+    
+    // Génération de la traçabilité
+    let tracabilite = historyStack.map((step, index) => 
+      `${index + 1}. ${step.question}\n   ➜ ${step.reponse}`
+    ).join("\n\n");
 
-    const copyBtn = createButton("📋 Copier pour le DPI");
+    const exportText = 
+`ÉVALUATION PMSI - ÉLIGIBILITÉ HDJ
+Date : ${date}
+
+DÉCISION CLINIQUE :
+${node.result}
+
+TRAÇABILITÉ DE L'ÉVALUATION :
+${tracabilite}`;
+
+    const copyBtn = createButton("📋 Copier la synthèse (DPI)");
     copyBtn.style.background = "#0284c7";
     copyBtn.style.color = "white";
     copyBtn.onclick = () => {
@@ -102,13 +124,13 @@ function render(isForward = true) {
             copyBtn.textContent = "✅ Copié !";
             copyBtn.style.background = "#16a34a";
             setTimeout(() => {
-                copyBtn.textContent = "📋 Copier pour le DPI";
+                copyBtn.textContent = "📋 Copier la synthèse (DPI)";
                 copyBtn.style.background = "#0284c7";
             }, 3000);
         }).catch(err => console.error('Erreur de copie', err));
     };
 
-    const downloadBtn = createButton("💾 Télécharger (.txt)");
+    const downloadBtn = createButton("💾 Archiver (.txt)");
     downloadBtn.style.background = "#0f172a";
     downloadBtn.style.color = "white";
     downloadBtn.onclick = () => {
@@ -132,31 +154,34 @@ function render(isForward = true) {
     return;
   }
 
-  // 2. GESTION DES QUESTIONS
+  // ---------------------------------------------------
+  // B. AFFICHAGE DES QUESTIONS
+  // ---------------------------------------------------
   questionDiv.style.display = "block";
   examplesBlock.style.display = "block";
   answersDiv.style.display = "flex";
   resultDiv.style.display = "none";
   questionDiv.textContent = node.text || "";
 
-  // Retrait de la ligne explicationDiv.innerHTML pour éviter le crash
   if (node.info) {
-    referenceDiv.innerHTML = node.info.reference || "";
-    citationDiv.innerHTML = node.info.citation || "";
-    examplesDiv.innerHTML = "";
-    (node.info.exemples || []).forEach(item => {
-      examplesDiv.innerHTML += `<li>${item}</li>`;
-    });
+    if(referenceDiv) referenceDiv.innerHTML = node.info.reference || "";
+    if(citationDiv) citationDiv.innerHTML = node.info.citation || "";
+    if(examplesDiv) {
+        examplesDiv.innerHTML = "";
+        (node.info.exemples || []).forEach(item => {
+          examplesDiv.innerHTML += `<li>${item}</li>`;
+        });
+    }
   }
 
   if (node.type === "boolean") {
     const yesButton = createButton("✅ Oui");
     yesButton.id = "btn-yes";
-    yesButton.onclick = () => navigateTo(node.yes);
+    yesButton.onclick = () => navigateTo(node.yes, "Oui");
     
     const noButton = createButton("❌ Non");
     noButton.id = "btn-no";
-    noButton.onclick = () => navigateTo(node.no);
+    noButton.onclick = () => navigateTo(node.no, "Non");
 
     answersDiv.appendChild(yesButton);
     answersDiv.appendChild(noButton);
@@ -167,37 +192,10 @@ function render(isForward = true) {
       btn.style.background = "#f1f5f9";
       btn.style.color = "#1e293b";
       btn.style.border = "1px solid #cbd5e1";
-      btn.onclick = () => navigateTo(next);
+      btn.onclick = () => navigateTo(next, label);
       answersDiv.appendChild(btn);
     });
   } 
-  else if (node.type === "multiselect") {
-    const wrapper = document.createElement("div");
-    wrapper.style.width = "100%";
-
-    node.choices.forEach(choice => {
-      const row = document.createElement("div");
-      row.style.marginBottom = "10px";
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.value = choice;
-      const label = document.createElement("label");
-      label.style.marginLeft = "10px";
-      label.textContent = choice;
-      row.appendChild(checkbox);
-      row.appendChild(label);
-      wrapper.appendChild(row);
-    });
-
-    const nextButton = createButton("Suivant ➜");
-    nextButton.style.marginTop = "20px";
-    nextButton.style.background = "#0066cc";
-    nextButton.style.color = "white";
-    nextButton.onclick = () => navigateTo(node.next);
-    
-    wrapper.appendChild(nextButton);
-    answersDiv.appendChild(wrapper);
-  }
 
   if (historyStack.length > 0) {
       const backBtn = createButton("↩ Retour");
@@ -210,4 +208,5 @@ function render(isForward = true) {
   }
 }
 
+// Démarrage par chargement du fichier externe
 window.addEventListener("DOMContentLoaded", loadRules);
