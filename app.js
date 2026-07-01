@@ -3,10 +3,9 @@
 // =====================================================
 let rules = {};
 let currentNode = null;
-let historyStack = []; // Permet la fonction "Retour"
-const MAX_STEPS = 8; // Estimation pour la barre de progression
+let historyStack = []; 
+const MAX_STEPS = 8; 
 
-// DOM Elements
 const questionDiv = document.getElementById("question");
 const helpDiv = document.getElementById("help");
 const resultDiv = document.getElementById("result");
@@ -53,8 +52,7 @@ function createButton(label, className = "") {
 
 function updateProgress() {
     let percent = Math.min(Math.round((historyStack.length / MAX_STEPS) * 100), 100);
-    if (rules[currentNode]?.result) percent = 100; // Si résultat atteint, 100%
-    
+    if (rules[currentNode]?.result) percent = 100; 
     if(progressFill) progressFill.style.width = `${percent}%`;
     if(progressText) progressText.innerText = `${percent}%`;
 }
@@ -82,7 +80,9 @@ function render(isForward = true) {
   updateProgress();
   answersDiv.innerHTML = "";
 
-  // 1. GESTION DU RÉSULTAT FINAL
+  // =======================================
+  // 1. GESTION DU RÉSULTAT FINAL ET EXPORTS
+  // =======================================
   if (node.result) {
     questionDiv.style.display = "none";
     examplesBlock.style.display = "none";
@@ -90,48 +90,65 @@ function render(isForward = true) {
     resultDiv.style.display = "block";
     resultDiv.innerHTML = node.result;
 
-    // Code couleur
+    // Code couleur PMSI
     if (node.result.includes("NON ÉLIGIBLE")) resultDiv.className = "danger";
     else if (node.result.includes("PARTIELLE")) resultDiv.className = "warning";
     else resultDiv.className = "success";
 
-    // Bouton de copie pour le DPI
-    const exportBtn = createButton("📋 Copier la synthèse DPI");
-    exportBtn.style.background = "#0284c7";
-    exportBtn.style.color = "white";
-    exportBtn.onclick = () => {
-        const date = new Date().toLocaleDateString('fr-FR');
-        const textToCopy = `Évaluation PMSI - Éligibilité HDJ du ${date}\nDécision : ${node.result}`;
-        
-        navigator.clipboard.writeText(textToCopy).then(() => {
-            exportBtn.textContent = "✅ Copié !";
-            exportBtn.style.background = "#16a34a";
+    // Date du jour pour les exports
+    const date = new Date().toLocaleDateString('fr-FR');
+    const exportText = `Évaluation PMSI - Éligibilité HDJ du ${date}\nDécision : ${node.result}`;
+
+    // Bouton 1 : Copie DPI
+    const copyBtn = createButton("📋 Copier pour le DPI");
+    copyBtn.style.background = "#0284c7";
+    copyBtn.style.color = "white";
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(exportText).then(() => {
+            copyBtn.textContent = "✅ Copié !";
+            copyBtn.style.background = "#16a34a";
             setTimeout(() => {
-                exportBtn.textContent = "📋 Copier la synthèse DPI";
-                exportBtn.style.background = "#0284c7";
+                copyBtn.textContent = "📋 Copier pour le DPI";
+                copyBtn.style.background = "#0284c7";
             }, 3000);
         }).catch(err => console.error('Erreur de copie', err));
     };
 
-    // Bouton Recommencer
+    // Bouton 2 : Export TXT
+    const downloadBtn = createButton("💾 Télécharger (.txt)");
+    downloadBtn.style.background = "#0f172a";
+    downloadBtn.style.color = "white";
+    downloadBtn.onclick = () => {
+        const blob = new Blob([exportText], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Evaluation_HDJ_${date.replace(/\//g, '-')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Bouton 3 : Recommencer
     const restartBtn = createButton("🔄 Nouvelle évaluation");
     restartBtn.style.background = "#475569";
     restartBtn.style.color = "white";
     restartBtn.onclick = initApp;
 
-    answersDiv.appendChild(exportBtn);
+    answersDiv.appendChild(copyBtn);
+    answersDiv.appendChild(downloadBtn);
     answersDiv.appendChild(restartBtn);
     return;
   }
 
-  // 2. GESTION DE LA QUESTION
+  // =======================================
+  // 2. GESTION DES QUESTIONS
+  // =======================================
   questionDiv.style.display = "block";
   examplesBlock.style.display = "block";
   answersDiv.style.display = "flex";
   resultDiv.style.display = "none";
   questionDiv.textContent = node.text || "";
 
-  // Informations réglementaires
   if (node.info) {
     explicationDiv.innerHTML = node.info.explication || "";
     referenceDiv.innerHTML = node.info.reference || "";
@@ -142,7 +159,6 @@ function render(isForward = true) {
     });
   }
 
-  // 3. CONSTRUCTION DES BOUTONS DE RÉPONSE
   if (node.type === "boolean") {
     const yesButton = createButton("✅ Oui");
     yesButton.id = "btn-yes";
@@ -187,15 +203,13 @@ function render(isForward = true) {
     nextButton.style.marginTop = "20px";
     nextButton.style.background = "#0066cc";
     nextButton.style.color = "white";
-    nextButton.onclick = () => {
-      // Évolution possible : valider le nombre de cases cochées ici
-      navigateTo(node.next);
-    };
+    nextButton.onclick = () => navigateTo(node.next);
+    
     wrapper.appendChild(nextButton);
     answersDiv.appendChild(wrapper);
   }
 
-  // Ajout du bouton retour s'il y a un historique
+  // Bouton de retour dans l'historique
   if (historyStack.length > 0) {
       const backBtn = createButton("↩ Retour");
       backBtn.style.background = "#e2e8f0";
