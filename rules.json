@@ -181,40 +181,22 @@
     "no": "Q_PROFESSIONNELS"
   },
 
-  "Q_PROFESSIONNELS": {
-    "type": "multiselect",
-    "text": "Quels professionnels participent effectivement au séjour ?",
+"Q_PROFESSIONNELS": {
+    "type": "choice",
+    "text": "Quel est le niveau d'intervention pluriprofessionnelle tracé au cours du séjour ?",
     "info": {
-      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269 du 2 septembre 2015 relative aux conditions de facturation des soins dispensés en hôpital de jour. Paris: Bulletin Officiel Santé - Protection sociale - Solidarité; 2015.",
+      "reference": "Ministère des Affaires sociales, de la Santé et des Droits des femmes (France). Instruction N° DGOS/R3/2015/269. Paris: 2015.",
       "citation": "« La nécessité de l'intervention de professionnels de spécialités différentes (...) constitue un critère d'éligibilité. »",
       "exemples": [
-        "Binôme systématique Médecin + IDE (Base légale d'un traitement HDJ)",
-        "Action croisée : Diététicien + IDE d'éducation + Médecin spécialiste",
-        "Action d'expertise : Podologue + IDE Plaies et cicatrisation + Diabétologue"
+        "Binôme classique : Médecin + IDE (ex: administration de traitement lourd)",
+        "Parcours élargi : Médecin + IDE + Diététicien/Podologue (ex: pied diabétique complexe)"
       ]
     },
-    "choices": [
-      "Médecin",
-      "Infirmier",
-      "Aide-soignant",
-      "Psychologue",
-      "Neuropsychologue",
-      "Diététicien",
-      "Podologue",
-      "Kinésithérapeute",
-      "Ergothérapeute",
-      "Orthophoniste",
-      "Psychomotricien",
-      "Pharmacien",
-      "Assistant social",
-      "Manipulateur radio",
-      "Technicien laboratoire",
-      "Équipe douleur",
-      "Équipe mobile gériatrique",
-      "Équipe ETP",
-      "Équipe soins palliatifs"
-    ],
-    "next": "Q_SYNTHESE"
+    "choices": {
+      "Intervention médicale exclusive (sans coordination soignante)": "Q_ACTE_ISOLE",
+      "Binôme médico-soignant (Médecin + Infirmier/AS)": "Q_SYNTHESE",
+      "Pluridisciplinarité élargie (Médecin + IDE + autres experts)": "Q_SYNTHESE"
+    }
   },
 
   "Q_SYNTHESE": {
