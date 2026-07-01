@@ -1,67 +1,249 @@
 {
-  "start": "Q1",
-
   "Q1": {
-    "text": "La prise en charge dure-t-elle moins d'une journée (sans nuit passée) ?",
-    "answers": {
-      "oui": "Q2",
-      "non": "R_NO_DAY"
-    }
+    "text": "L'objectif médical du séjour est-il clairement identifié et formalisé ?",
+    "help": "Le séjour doit répondre à un objectif médical précis connu avant l'admission.",
+    "examples_yes": [
+      "Chimiothérapie programmée",
+      "Bilan diagnostique de maladie rare",
+      "Bilan mémoire",
+      "Adaptation d'un traitement immunosuppresseur",
+      "Évaluation pré-greffe",
+      "Bilan gériatrique multidimensionnel",
+      "Programme d'éducation thérapeutique"
+    ],
+    "examples_no": [
+      "Consultation de suivi simple",
+      "Renouvellement d'ordonnance",
+      "Avis spécialisé isolé",
+      "Contrôle annuel sans programme défini"
+    ]
   },
 
   "Q2": {
-    "text": "Le patient est-il accueilli dans une structure d'hospitalisation à temps partiel conforme (HDJ / HTJ) ?",
-    "answers": {
-      "oui": "Q3",
-      "non": "R_STRUCTURE_NON_CONFORME"
-    }
+    "text": "Quel est le motif principal du séjour ?",
+    "help": "Choisir la finalité dominante de la prise en charge.",
+    "options": [
+      "Traitement",
+      "Diagnostic",
+      "Évaluation multidisciplinaire",
+      "Surveillance",
+      "Éducation thérapeutique"
+    ]
   },
 
-  "Q3": {
-    "text": "La prise en charge correspond-elle à des actes ou activités éligibles (séances, explorations, traitements programmés) ?",
-    "answers": {
-      "oui": "Q4",
-      "non": "R_ACTE_NON_ELIGIBLE"
-    }
+  "Q_TRAITEMENT": {
+    "text": "Le traitement nécessite-t-il une préparation, une administration ou une surveillance hospitalière spécifique ?",
+    "help": "Le traitement mobilise des ressources hospitalières qui dépassent une simple consultation.",
+    "examples_yes": [
+      "Chimiothérapie IV",
+      "Immunothérapie",
+      "Biothérapie",
+      "Transfusion",
+      "Perfusion complexe",
+      "Ferrothérapie IV avec surveillance",
+      "Désensibilisation allergologique",
+      "Administration de médicaments nécessitant une surveillance rapprochée"
+    ],
+    "examples_no": [
+      "Injection sous-cutanée simple",
+      "Prescription d'un traitement oral",
+      "Renouvellement de traitement",
+      "Vaccination isolée"
+    ]
   },
 
-  "Q4": {
-    "text": "Un médecin a-t-il formalisé une décision d'admission en hospitalisation de jour ?",
-    "answers": {
-      "oui": "Q5",
-      "non": "R_ADMISSION_NON_FORMALISEE"
-    }
+  "Q_TRAITEMENT2": {
+    "text": "Une surveillance clinique, biologique ou des effets indésirables est-elle prévue pendant ou après le traitement ?",
+    "help": "Évaluer l'existence d'un risque nécessitant un suivi hospitalier.",
+    "examples_yes": [
+      "Surveillance d'une réaction allergique",
+      "Monitorage tensionnel après perfusion",
+      "Contrôle biologique post-thérapeutique",
+      "Surveillance d'une toxicité liée à une chimiothérapie"
+    ],
+    "examples_no": [
+      "Aucune surveillance particulière prévue",
+      "Retour immédiat à domicile après l'acte"
+    ]
   },
 
-  "Q5": {
-    "text": "La prise en charge nécessite-t-elle une présence coordonnée de plusieurs professionnels ou un plateau technique ?",
-    "answers": {
-      "oui": "R_ELIGIBLE",
-      "non": "R_COMPLEXITE_INSUFFISANTE"
-    }
+  "Q_DIAGNOSTIC": {
+    "text": "Le diagnostic repose-t-il sur plusieurs investigations coordonnées au cours de la même journée ?",
+    "help": "Le parcours diagnostique doit dépasser un examen unique.",
+    "examples_yes": [
+      "Consultation + biologie + imagerie + synthèse",
+      "Bilan maladie rare",
+      "Bilan d'extension oncologique",
+      "Explorations neurologiques multiples"
+    ],
+    "examples_no": [
+      "IRM seule",
+      "Scanner seul",
+      "Prise de sang seule",
+      "Endoscopie isolée"
+    ]
   },
 
-  "R_ELIGIBLE": {
-    "result": "Éligible à une facturation en hôpital de jour (sous réserve du codage GHM/GHS conforme)."
+  "Q_DIAGNOSTIC2": {
+    "text": "Les résultats doivent-ils être interprétés de manière globale afin de prendre une décision médicale le jour même ?",
+    "help": "Recherche d'une valeur ajoutée liée à la coordination hospitalière.",
+    "examples_yes": [
+      "Annonce diagnostique",
+      "Décision thérapeutique multidisciplinaire",
+      "Orientation vers une chirurgie",
+      "Validation d'un protocole de traitement"
+    ],
+    "examples_no": [
+      "Examens réalisés sans synthèse prévue",
+      "Résultats transmis ultérieurement"
+    ]
   },
 
-  "R_NO_DAY": {
-    "result": "Séjour avec nuit : ce n'est pas une hospitalisation de jour."
+  "Q_EVALUATION": {
+    "text": "Plusieurs professionnels réalisent-ils des évaluations distinctes au cours du séjour ?",
+    "help": "Les évaluations doivent contribuer à une appréciation globale du patient.",
+    "examples_yes": [
+      "Médecin + IDE",
+      "Médecin + psychologue",
+      "Médecin + diététicien",
+      "Médecin + kinésithérapeute",
+      "Équipe mémoire",
+      "Équipe douleur"
+    ],
+    "examples_no": [
+      "Consultation médicale isolée",
+      "Évaluation par un seul professionnel"
+    ]
   },
 
-  "R_STRUCTURE_NON_CONFORME": {
-    "result": "Structure non conforme aux critères d'hospitalisation à temps partiel."
+  "Q_EVALUATION2": {
+    "text": "Une synthèse intégrant les résultats des différentes évaluations est-elle prévue ?",
+    "help": "La coordination des intervenants doit produire une décision ou un projet de soins.",
+    "examples_yes": [
+      "RCP",
+      "Synthèse gériatrique",
+      "Plan personnalisé de soins",
+      "Projet de réadaptation"
+    ],
+    "examples_no": [
+      "Interventions juxtaposées sans conclusion commune"
+    ]
   },
 
-  "R_ACTE_NON_ELIGIBLE": {
-    "result": "Les actes réalisés ne relèvent pas d'une activité facturable en hôpital de jour."
+  "Q_SURVEILLANCE": {
+    "text": "Le patient présente-t-il un risque qui nécessite une surveillance organisée durant la journée ?",
+    "help": "La surveillance doit être prévue avant l'admission.",
+    "examples_yes": [
+      "Tolérance d'un traitement",
+      "Suivi post-transfusionnel",
+      "Suivi d'une pathologie instable",
+      "Surveillance après geste invasif"
+    ],
+    "examples_no": [
+      "Absence de risque particulier identifié"
+    ]
   },
 
-  "R_ADMISSION_NON_FORMALISEE": {
-    "result": "L'admission en HDJ doit être formalisée par un médecin."
+  "Q_SURVEILLANCE2": {
+    "text": "Cette surveillance peut-elle conduire à une adaptation thérapeutique ou à une décision médicale ?",
+    "help": "La surveillance doit avoir une finalité clinique.",
+    "examples_yes": [
+      "Modification de dose",
+      "Arrêt d'un traitement",
+      "Décision d'examen complémentaire",
+      "Réévaluation médicale"
+    ],
+    "examples_no": [
+      "Observation passive sans impact attendu sur la prise en charge"
+    ]
   },
 
-  "R_COMPLEXITE_INSUFFISANTE": {
-    "result": "La prise en charge ne justifie pas une hospitalisation de jour (complexité insuffisante)."
+  "Q_ETP": {
+    "text": "L'éducation thérapeutique est-elle structurée et intégrée à un programme de soins ?",
+    "help": "Une simple information au patient n'est généralement pas suffisante.",
+    "examples_yes": [
+      "Programme ETP diabète",
+      "Programme insuffisance cardiaque",
+      "Programme BPCO",
+      "Programme stomathérapie"
+    ],
+    "examples_no": [
+      "Remise d'une brochure",
+      "Conseil isolé au cours d'une consultation"
+    ]
+  },
+
+  "Q_ETP2": {
+    "text": "Plusieurs intervenants participent-ils au programme éducatif ?",
+    "help": "L'interdisciplinarité renforce la justification de l'HDJ.",
+    "examples_yes": [
+      "Médecin + IDE",
+      "IDE + diététicien",
+      "Médecin + pharmacien",
+      "Équipe ETP complète"
+    ],
+    "examples_no": [
+      "Intervention unique d'un seul professionnel"
+    ]
+  },
+
+  "Q_COORDINATION": {
+    "text": "Une coordination organisée entre plusieurs séquences de soins est-elle prévue ?",
+    "help": "Rechercher un véritable parcours hospitalier.",
+    "examples_yes": [
+      "Accueil IDE → consultation médicale → traitement → surveillance",
+      "Biologie → imagerie → consultation → synthèse",
+      "Évaluation pluriprofessionnelle → réunion de synthèse"
+    ],
+    "examples_no": [
+      "Acte unique sans autre intervention"
+    ]
+  },
+
+  "Q_COORDINATION2": {
+    "text": "Le séjour comporte-t-il au moins trois temps distincts de prise en charge ?",
+    "help": "L'enchaînement des étapes est un argument fort pour l'HDJ.",
+    "examples_yes": [
+      "Évaluation → traitement → surveillance",
+      "Consultation → examens → synthèse",
+      "Accueil → bilan → adaptation thérapeutique"
+    ],
+    "examples_no": [
+      "Consultation + acte unique"
+    ]
+  },
+
+  "Q_ACTES": {
+    "text": "La prise en charge se limite-t-elle principalement à un acte technique ou à une consultation réalisable isolément ?",
+    "help": "Ces situations sont fréquemment requalifiées en activité externe.",
+    "examples_yes": [
+      "IRM seule",
+      "Scanner seul",
+      "Prise de sang seule",
+      "Consultation spécialisée seule",
+      "ECG seul",
+      "Endoscopie simple"
+    ],
+    "examples_no": [
+      "Parcours coordonné de plusieurs soins",
+      "Bilan complexe",
+      "Traitement avec surveillance"
+    ]
+  },
+
+  "Q_COMPLEXITE": {
+    "text": "Le parcours comporte-t-il au moins deux critères majeurs de complexité ?",
+    "help": "Les critères majeurs incluent coordination, surveillance, risque thérapeutique, multidisciplinarité, synthèse médicale, plateau technique spécialisé.",
+    "examples_yes": [
+      "Chimiothérapie + surveillance",
+      "Bilan mémoire multidisciplinaire",
+      "Bilan pré-greffe",
+      "Traitement biologique avec monitorage",
+      "Évaluation douleur complexe"
+    ],
+    "examples_no": [
+      "Consultation avec prise de sang",
+      "Imagerie avec restitution simple"
+    ]
   }
 }
