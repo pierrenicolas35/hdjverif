@@ -1,47 +1,11 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Éligibilité HDJ</title>
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-
+    <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css)">
     <style>
-.progress-wrapper {
-    margin-bottom: 20px;
-}
-
-.progress-label {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-    color: #475569;
-    font-weight: 600;
-}
-
-.progress-bar {
-    width: 100%;
-    height: 12px;
-    background: #e2e8f0;
-    border-radius: 50px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(
-        90deg,
-        #0066cc,
-        #00b894
-    );
-    transition: width 0.4s ease;
-}
-        
         * {
             box-sizing: border-box;
             margin: 0;
@@ -87,23 +51,32 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.08);
         }
 
-        .progress-container {
+        .progress-wrapper {
             margin-bottom: 20px;
         }
 
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #475569;
+            font-weight: 600;
+        }
+
         .progress-bar {
-            height: 10px;
             width: 100%;
-            background: #e7edf5;
-            border-radius: 20px;
+            height: 12px;
+            background: #e2e8f0;
+            border-radius: 50px;
             overflow: hidden;
         }
 
-        .progress {
-            height: 10px;
+        .progress-fill {
             width: 0%;
-            background: linear-gradient(90deg, #00b894, #00d084);
-            transition: 0.4s;
+            height: 100%;
+            background: linear-gradient(90deg, #0066cc, #00b894);
+            transition: width 0.4s ease;
         }
 
         #question {
@@ -214,113 +187,66 @@
             .header h1 {
                 font-size: 1.4rem;
             }
-
             #question {
                 font-size: 1.1rem;
             }
-
             .buttons {
                 flex-direction: column;
             }
-
             button {
                 width: 100%;
             }
         }
     </style>
 </head>
-
 <body>
 
     <div class="container">
-
         <div class="header">
             <h1>
                 <i class="fas fa-hospital-user"></i>
                 Vérification de l'éligibilité HDJ
             </h1>
-            <p>
-                Outil d'aide à la décision pour les prescripteurs, cadres de santé et TIM.
-            </p>
+            <p>Outil d'aide à la décision pour les prescripteurs, cadres de santé et TIM.</p>
         </div>
 
         <div class="card">
-
-            <div class="progress-container">
+            <div class="progress-wrapper">
+                <div class="progress-label">
+                    <span>Progression</span>
+                    <span id="progress-text">0%</span>
+                </div>
                 <div class="progress-bar">
-                    <div id="progress" class="progress"></div>
+                    <div id="progress-fill" class="progress-fill"></div>
                 </div>
             </div>
-<div class="progress-wrapper">
 
-    <div class="progress-label">
-        <span>Progression</span>
-        <span id="progress-text">0%</span>
-    </div>
-
-    <div class="progress-bar">
-        <div id="progress-fill" class="progress-fill"></div>
-    </div>
-
-</div>
-``
-            <div id="question">
-                Chargement...
-            </div>
-
+            <div id="question">Chargement...</div>
             <div id="help"></div>
 
-       <div id="examples" class="examples">
+            <div id="examples" class="examples">
+                <h4><i class="fas fa-lightbulb"></i> Aide à la décision</h4>
+                <p id="explication"></p>
+                <br>
+                <h4><i class="fas fa-book"></i> Référence réglementaire</h4>
+                <p id="reference"></p>
+                <br>
+                <h4><i class="fas fa-quote-left"></i> Justification réglementaire</h4>
+                <p id="citation"></p>
+                <br>
+                <h4><i class="fas fa-hospital"></i> Exemples pratiques</h4>
+                <ul id="practical-examples"></ul>
+            </div>
 
-    <h4>
-        <i class="fas fa-lightbulb"></i>
-        Aide à la décision
-    </h4>
-
-    <p id="explication"></p>
-
-    <br>
-
-    <h4>
-        <i class="fas fa-book"></i>
-        Référence réglementaire
-    </h4>
-
-    <p id="reference"></p>
-
-    <br>
-
-    <h4>
-        <i class="fas fa-quote-left"></i>
-        Justification réglementaire
-    </h4>
-
-    <p id="citation"></p>
-
-    <br>
-
-    <h4>
-        <i class="fas fa-hospital"></i>
-        Exemples pratiques
-    </h4>
-
-    <ul id="practical-examples"></ul>
-
-</div>
-
-           <div id="answers" class="buttons"></div>
-
+            <div id="answers" class="buttons"></div>
             <div id="result"></div>
-
         </div>
 
         <div class="footer">
             Version HDJ • Aide au raisonnement médico-administratif
         </div>
-
     </div>
 
-<script src="app.js"></script>
-
+    <script src="app.js"></script>
 </body>
 </html>
