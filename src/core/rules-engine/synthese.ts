@@ -49,8 +49,8 @@ function marqueur(statut: StatutPorte): string {
 
 /** Liste à puces, ou mention explicite d'absence. */
 function puces(items: readonly string[], vide = 'Aucun.'): string {
-  if (items.length === 0) return `  ${vide}\n`;
-  return items.map((item) => `  • ${item}\n`).join('');
+  if (items.length === 0) return `  ${vide}`;
+  return items.map((item) => `  • ${item}`).join('\n');
 }
 
 export function construireSynthese(params: ParametresSynthese): string {
@@ -101,11 +101,26 @@ export function construireSynthese(params: ParametresSynthese): string {
   }
 
   lignes.push(SEPARATEUR);
-  lignes.push('  ÉVALUATION DE LA DENSITÉ EN RESSOURCES (PORTE 3)');
-  for (const pilier of piliers) {
-    lignes.push(`  ${pilier.valide ? '[VALIDÉ]' : '[ÉCHEC ]'} ${pilier.libelle}`);
-    for (const justification of pilier.justifications) {
-      lignes.push(`        – ${justification}`);
+  const porte3 = portes.find((p) => p.porte === 'PORTE_3_DENSITE');
+  const densiteAtteinte = porte3?.statut === 'FRANCHIE' || porte3?.statut === 'BLOQUANTE';
+  lignes.push(
+    '  ÉVALUATION DE LA DENSITÉ EN RESSOURCES (PORTE 3)' +
+      (densiteAtteinte ? '' : ' — appréciation indicative'),
+  );
+  if (piliers.length === 0) {
+    lignes.push('  Non évaluée : une porte bloquante en amont interrompt l’analyse.');
+  } else {
+    if (!densiteAtteinte) {
+      lignes.push(
+        '  (Porte 3 non atteinte : les éléments ci-dessous sont fournis pour ' +
+          'l’appréciation des ressources au titre de la porte 1.)',
+      );
+    }
+    for (const pilier of piliers) {
+      lignes.push(`  ${pilier.valide ? '[VALIDÉ]' : '[ÉCHEC ]'} ${pilier.libelle}`);
+      for (const justification of pilier.justifications) {
+        lignes.push(`        – ${justification}`);
+      }
     }
   }
 

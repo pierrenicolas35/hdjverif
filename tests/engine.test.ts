@@ -149,4 +149,13 @@ describe('Déterminisme et traçabilité du moteur', () => {
     expect(resultat.synthese_audit).toContain('MOTIFS DE BLOCAGE');
     expect(resultat.constats.length).toBeGreaterThan(0);
   });
+
+  it('signale que la densité n’est qu’indicative quand la porte 3 n’est pas atteinte', () => {
+    const suspendu = evaluerDossier(CAS_DIABETE_SANS_SYNTHESE);
+    expect(suspendu.synthese_audit).toContain('appréciation indicative');
+    expect(suspendu.synthese_audit).toContain('Porte 3 non atteinte');
+
+    const valide = evaluerDossier(CAS_DIABETE_CONFORME);
+    expect(valide.synthese_audit).not.toContain('appréciation indicative');
+  });
 });
