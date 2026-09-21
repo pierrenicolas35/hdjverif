@@ -3,193 +3,64 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>HDJ Vérif — Moteur décisionnel de cotation GHS vs ACE</title>
+    <title>HDJ Vérif — éligibilité à l'hospitalisation de jour</title>
     <meta
       name="description"
-      content="Moteur d'évaluation opposable en contrôle T2A : hospitalisation de jour (GHS) vs actes et consultations externes (ACE), Instruction DGOS/R1/DSS/1A/2020/52."
+      content="Assistant pas-à-pas d'aide à la décision : facturation en GHS d'hospitalisation de jour ou en actes et consultations externes, selon l'instruction DGOS/R1/DSS/1A/2020/52."
     />
   </head>
   <body>
-    <header class="bandeau">
-      <h1>HDJ Vérif — moteur décisionnel de cotation</h1>
-      <p>
-        Évaluation opposable en contrôle T2A : hospitalisation de jour (GHS) <em>vs</em> actes et
-        consultations externes (ACE) — 5 portes de validation séquentielles.
-      </p>
-      <span class="reference">
-        Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020 — NOR&nbsp;: SSAH2007743J
-      </span>
+    <header class="entete">
+      <div class="entete-ligne">
+        <div class="marque">
+          <span class="pastille" aria-hidden="true">HDJ</span>
+          <div>
+            <h1>HDJ Vérif — éligibilité à l’hospitalisation de jour</h1>
+            <p>
+              Assistant pas-à-pas : GHS d’hospitalisation de jour <em>ou</em> actes et
+              consultations externes.
+            </p>
+          </div>
+        </div>
+        <span class="entete-espace"></span>
+        <div class="voyants">
+          <span class="voyant" id="voyant-referentiel">
+            <span class="point"></span>Référentiel : connexion en cours…
+          </span>
+          <span class="voyant verdict" id="voyant-verdict">Verdict provisoire : —</span>
+          <button type="button" class="btn-entete" data-action="recommencer">
+            ↺ Recommencer
+          </button>
+        </div>
+      </div>
+
+      <div class="progression">
+        <div class="progression-tete">
+          <span id="progression-texte">0 %</span>
+          <span>Instruction DGOS/R1/DSS/1A/2020/52</span>
+        </div>
+        <div
+          class="progression-rail"
+          role="progressbar"
+          aria-label="Progression de l’évaluation"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          id="progression-rail"
+        >
+          <div class="progression-jauge" id="jauge"></div>
+        </div>
+      </div>
     </header>
 
     <main class="ossature">
-      <!-- ================= Colonne saisie ================= -->
-      <section>
-        <form id="formulaire" novalidate>
-          <!-- Bloc 1 — En-tête administratif -->
-          <div class="bloc">
-            <h2><span class="numero">1</span>En-tête administratif &amp; programmation</h2>
-            <p class="aide">
-              Porte 1 : la programmation préalable, la demande médicale et la synthèse signée sont
-              cumulativement requises (annexe 4, points 2.a et 5).
-            </p>
-            <div class="grille">
-              <div>
-                <label for="id_sejour">Identifiant de séjour</label>
-                <input type="text" id="id_sejour" autocomplete="off" />
-              </div>
-              <div>
-                <label for="date_sejour">Date du séjour</label>
-                <input type="date" id="date_sejour" />
-              </div>
-              <div>
-                <label for="regime_champ">Régime de champ d’application</label>
-                <select id="regime_champ"></select>
-              </div>
-            </div>
-            <div class="grille" style="margin-top: 12px">
-              <label class="case" for="est_programme">
-                <input type="checkbox" id="est_programme" />
-                <span>Séjour programmé (convocation et objectif médical formalisés)</span>
-              </label>
-              <label class="case" for="lettre_adressage_presente">
-                <input type="checkbox" id="lettre_adressage_presente" />
-                <span>Demande médicale préalable / lettre d’adressage présente</span>
-              </label>
-              <label class="case" for="synthese_medicale_tracee">
-                <input type="checkbox" id="synthese_medicale_tracee" />
-                <span>Synthèse médicale signée le jour même (CRH / lettre de sortie)</span>
-              </label>
-              <label class="case" for="lettre_liaison_remise">
-                <input type="checkbox" id="lettre_liaison_remise" />
-                <span>Lettre de liaison remise (art. R. 1112-1-2 CSP)</span>
-              </label>
-            </div>
-          </div>
-
-          <!-- Bloc 2 — Intervenants -->
-          <div class="bloc">
-            <h2><span class="numero">2</span>Intervenants</h2>
-            <p class="aide">
-              Porte 3, pilier 3 : seuls les intervenants ayant rédigé une note d’évolution
-              individualisée dans le dossier sont dénombrés (annexe 4, point 2.b.iii).
-            </p>
-            <div id="zone-intervenants"></div>
-            <button type="button" class="bouton ajouter" data-action="ajouter-intervenant">
-              + Ajouter un intervenant
-            </button>
-          </div>
-
-          <!-- Bloc 3 — Actes et produits -->
-          <div class="bloc">
-            <h2><span class="numero">3</span>Actes CCAM &amp; traitements UCD</h2>
-            <p class="aide">
-              Portes 2 et 3 : un acte isolé réalisable en externe renvoie vers l’ACE ; le plateau
-              technique lourd, les actes coordonnés et les produits à réserve hospitalière
-              caractérisent l’intensité (annexe 4, points 2.b.i et 2.b.iii).
-            </p>
-
-            <h3 style="font-size: 0.86rem; margin: 4px 0 10px; color: var(--bleu-700)">
-              Actes CCAM
-            </h3>
-            <div id="zone-actes"></div>
-            <button type="button" class="bouton ajouter" data-action="ajouter-acte">
-              + Ajouter un acte CCAM
-            </button>
-
-            <h3
-              style="font-size: 0.86rem; margin: 20px 0 10px; color: var(--bleu-700)"
-            >
-              Traitements / produits UCD
-            </h3>
-            <div id="zone-medicaments"></div>
-            <button type="button" class="bouton ajouter" data-action="ajouter-medicament">
-              + Ajouter un produit UCD
-            </button>
-          </div>
-
-          <!-- Bloc 4 — Surveillance & paramètres -->
-          <div class="bloc">
-            <h2><span class="numero">4</span>Surveillance &amp; paramètres du séjour</h2>
-            <p class="aide">
-              Porte 3, pilier 1 : la surveillance active documentée constitue à elle seule un
-              motif de densité. Une durée de présence inférieure à 3 h déclenche une alerte
-              qualité non bloquante.
-            </p>
-            <div class="grille">
-              <label class="case" for="surveillance_active_documentee">
-                <input type="checkbox" id="surveillance_active_documentee" />
-                <span>Surveillance clinique rapprochée documentée par l’IDE</span>
-              </label>
-              <div>
-                <label for="duree_presence_minutes">Durée de présence (minutes)</label>
-                <input type="number" id="duree_presence_minutes" min="0" max="1440" step="5" />
-              </div>
-            </div>
-          </div>
-
-          <!-- Cas pré-remplis -->
-          <div class="bloc">
-            <h2><span class="numero">5</span>Cas de démonstration</h2>
-            <p class="aide">
-              Jeux de données alignés sur les tests unitaires obligatoires du moteur.
-            </p>
-            <div class="liste-presets" id="zone-presets"></div>
-          </div>
-        </form>
-      </section>
-
-      <!-- ================= Colonne résultat ================= -->
-      <aside class="panneau">
-        <div class="bloc" id="panneau-resultat">
-          <div class="badge ROUGE" id="badge">
-            <div class="libelle">Décision du moteur</div>
-            <div class="statut" id="badge-statut">—</div>
-            <div class="mention" id="badge-mention"></div>
-          </div>
-
-          <div class="section-resultat">
-            <h3>Pyramide des 5 portes</h3>
-            <ul class="pyramide" id="zone-portes"></ul>
-          </div>
-
-          <div class="section-resultat">
-            <h3>Densité en ressources (porte 3)</h3>
-            <div id="zone-piliers"></div>
-          </div>
-
-          <div class="section-resultat">
-            <h3>Motifs opposables</h3>
-            <ul class="propre" id="zone-motifs"></ul>
-          </div>
-
-          <div class="section-resultat">
-            <h3>Alertes qualité / contrôle T2A</h3>
-            <ul class="propre" id="zone-alertes"></ul>
-          </div>
-
-          <div class="section-resultat">
-            <h3>Constat &amp; références normatives</h3>
-            <div id="zone-constats"></div>
-          </div>
-
-          <div class="actions">
-            <button type="button" class="bouton principal" id="btn-fiche-imprimer">
-              🖨️ Fiche de traçabilité T2A
-            </button>
-            <button type="button" class="bouton secondaire" id="btn-fiche-telecharger">
-              💾 Télécharger (.txt)
-            </button>
-            <button type="button" class="bouton secondaire" id="btn-copier-synthese">
-              📋 Copier la synthèse
-            </button>
-          </div>
-        </div>
-      </aside>
+      <section class="carte" id="carte"></section>
+      <aside class="aide" id="aide"></aside>
     </main>
 
     <footer class="pied">
-      Moteur décisionnel HDJ — Instruction N° DGOS/R1/DSS/1A/2020/52 — outil d’aide à la
-      décision médico-administrative, ne se substituant pas à l’appréciation du DIM.
+      Outil d’aide à la décision médico-administrative fondé sur l’instruction
+      N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020 — il ne se substitue ni à l’appréciation du
+      médecin DIM, ni aux contrôles de l’Assurance Maladie.
     </footer>
 
     <script type="module" src="/src/ui/main.ts"></script>
