@@ -13,10 +13,12 @@ import { PROFESSIONS, evaluerDossier } from '../core/rules-engine/index.js';
 import type { DossierHDJ, Profession, ResultatAudit } from '../core/rules-engine/index.js';
 import { contenuFiche, imprimerFiche, telechargerFiche } from './fiche.js';
 import {
-  ACCROCHES_DISCIPLINE,
   AIDE_ETAPES,
   AIDE_PAR_DEFAUT,
+  DISCIPLINES,
   LIBELLES_DISCIPLINE,
+  LIBELLES_NATURE,
+  casPourEtape,
   type AideEtape,
   type Discipline,
 } from './pedagogie.js';
@@ -53,7 +55,11 @@ interface Etape {
 }
 
 const ETAPES: readonly Etape[] = [
-  { id: 'accueil', domaine: 'Bienvenue', question: 'Quel est votre profil ?' },
+  {
+    id: 'discipline',
+    domaine: 'Bienvenue',
+    question: 'Sur quelle discipline souhaitez-vous des exemples ?',
+  },
   { id: 'identite', domaine: 'Identification', question: 'Quel séjour évaluez-vous ?' },
   {
     id: 'champ_seance',
@@ -192,7 +198,7 @@ function el<T extends HTMLElement>(id: string): T {
 
 class Assistant {
   private etat: EtatAssistant = etatInitial();
-  private etapeId = 'accueil';
+  private etapeId = 'discipline';
   private jetonRequete = 0;
   private minuteurRecherche: number | null = null;
   private termeRecherche = '';
@@ -202,6 +208,8 @@ class Assistant {
   private messageRecherche = '';
   private dernierDossier: DossierHDJ | null = null;
   private dernierResultat: ResultatAudit | null = null;
+  /** Volet d'aide déplié (utile sur smartphone ; toujours ouvert sur PC). */
+  private aideOuverte = false;
 
   private readonly racine = el<HTMLElement>('carte');
   private readonly zoneAide = el<HTMLElement>('aide');
@@ -237,7 +245,7 @@ class Assistant {
   private suivante(): string | null {
     const e = this.etat;
     switch (this.etapeId) {
-      case 'accueil':
+      case 'discipline':
         return 'identite';
       case 'identite':
         return 'champ_seance';
@@ -270,7 +278,7 @@ class Assistant {
 
   private precedente(): string | null {
     const parcours = [
-      'accueil',
+      'discipline',
       'identite',
       'champ_seance',
       'champ_hors_mco',
@@ -299,8 +307,9 @@ class Assistant {
   private saisieComplete(): boolean {
     const e = this.etat;
     switch (this.etapeId) {
-      case 'accueil':
-        return e.discipline !== null;
+      // Le choix de la discipline est facultatif : il n'illustre que les exemples.
+      case 'discipline':
+        return true;
       case 'identite':
         return e.identifiantSejour.trim().length > 0 && e.dateSejour.length > 0;
       case 'champ_seance':
@@ -337,8 +346,10 @@ class Assistant {
   private changerEtape(id: string): void {
     this.etapeId = id;
     this.suggestionsHtml = '';
+    this.refsSuggerees.clear();
     this.messageRecherche = '';
     this.termeRecherche = '';
+    this.aideOuverte = id !== 'discipline';
     this.rendre();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -374,7 +385,8 @@ class Assistant {
 
   private sousQuestion(): string {
     const textes: Record<string, string> = {
-      accueil: 'Vos réponses serviront à adapter les exemples et le vocabulaire de l’assistant.',
+      discipline:
+        'Facultatif. La discipline choisie ne modifie aucune règle : elle sert uniquement à illustrer les étapes par des cas concrets de votre domaine.',
       identite: 'Ces informations figurent en tête de la fiche de traçabilité T2A.',
       champ_seance:
         'Dialyse et chimiothérapie sont financées par un forfait de séance, sans critères de gradation.',
@@ -399,8 +411,8 @@ class Assistant {
 
   private corps(): string {
     switch (this.etapeId) {
-      case 'accueil':
-        return this.corpsAccueil();
+      case 'discipline':
+        return this.corpsDiscipline();
       case 'identite':
         return this.corpsIdentite();
       case 'champ_seance':
@@ -432,32 +444,25 @@ class Assistant {
 
   /* -------------------------------------------------- corps par étape */
 
-  private corpsAccueil(): string {
-    const disciplines: readonly [Discipline, string, string][] = [
-      ['MEDECIN', '🩺', 'Je prescris ou je coordonne la prise en charge.'],
-      ['SOIGNANT', '💉', 'Je réalise et je trace les soins.'],
-      ['DIM_TIM', '🗂️', 'Je code et je contrôle les séjours.'],
-      ['PHARMACIE', '💊', 'Je gère les produits et leur dispensation.'],
-      ['FACTURATION', '🧾', 'Je facture et je sécurise les recettes.'],
-      ['AUTRE', '🏥', 'Autre fonction administrative ou support.'],
-    ];
-
+  private corpsDiscipline(): string {
     return `
       <div class="choix-cartes">
-        ${disciplines
-          .map(
-            ([valeur, icone, description]) => `
+        ${DISCIPLINES.map(
+          (discipline) => `
           <button type="button" class="btn-carte" data-action="discipline"
-                  data-valeur="${valeur}"${presse(this.etat.discipline === valeur)}>
-            <span class="icone" aria-hidden="true">${icone}</span>
+                  data-valeur="${discipline.id}"${presse(this.etat.discipline === discipline.id)}>
+            <span class="icone" aria-hidden="true">${discipline.icone}</span>
             <span>
-              <strong>${esc(LIBELLES_DISCIPLINE[valeur])}</strong>
-              <span>${esc(description)}</span>
+              <strong>${esc(discipline.libelle)}</strong>
+              <span>${esc(discipline.perimetre)}</span>
             </span>
           </button>`,
-          )
-          .join('')}
-      </div>`;
+        ).join('')}
+      </div>
+      <p class="note-saisie">
+        Aucun choix n’est obligatoire : cliquez sur « Suivant » pour continuer sans exemples ciblés
+        (ou re-cliquez sur une discipline pour la désélectionner).
+      </p>`;
   }
 
   private corpsIdentite(): string {
@@ -700,33 +705,51 @@ class Assistant {
   private rendreAide(): void {
     const discipline = this.etat.discipline;
     const aide: AideEtape = AIDE_ETAPES[this.etapeId] ?? AIDE_PAR_DEFAUT;
-    const exemples = discipline ? aide.exemples[discipline] : [];
+    const casTypiques = casPourEtape(discipline, this.etapeId);
+    const libelleDiscipline = discipline
+      ? LIBELLES_DISCIPLINE[discipline]
+      : 'Toutes disciplines (cas généraux)';
 
+    this.zoneAide.className = `aide${this.aideOuverte ? ' ouvert' : ''}`;
     this.zoneAide.innerHTML = `
-      <h2>Aide &amp; exemples</h2>
-      ${
-        discipline
-          ? `<div class="discipline-rappel">Exemples adaptés à : <strong>${esc(
-              LIBELLES_DISCIPLINE[discipline],
-            )}</strong></div>
-             <section><p>${esc(ACCROCHES_DISCIPLINE[discipline])}</p></section>`
-          : '<section><p>Sélectionnez votre profil pour obtenir des exemples ciblés.</p></section>'
-      }
-      <section>
-        <h3>Pourquoi cette question ?</h3>
-        <p>${esc(aide.pourquoi)}</p>
-      </section>
-      <section>
-        <h3>Règle applicable</h3>
-        <p class="regle">${esc(aide.regle)}</p>
-      </section>
-      ${
-        exemples.length
-          ? `<section><h3>Exemples concrets</h3>
-               <ul class="exemples">${exemples.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-             </section>`
-          : ''
-      }`;
+      <button type="button" class="bascule-aide" data-action="basculer-aide"
+              aria-expanded="${this.aideOuverte ? 'true' : 'false'}">
+        <span>Aide &amp; exemples</span>
+        <span aria-hidden="true">${this.aideOuverte ? '▲' : '▼'}</span>
+      </button>
+      <div class="aide-contenu">
+        <h2>Aide &amp; exemples</h2>
+        <div class="discipline-rappel">Cas illustrés : <strong>${esc(libelleDiscipline)}</strong></div>
+
+        <section>
+          <h3>Pourquoi cette question ?</h3>
+          <p>${esc(aide.pourquoi)}</p>
+        </section>
+
+        <section>
+          <h3>Règle applicable</h3>
+          <p class="regle">${esc(aide.regle)}</p>
+        </section>
+
+        <section>
+          <h3>Cas typiques</h3>
+          <ul class="exemples">
+            ${casTypiques
+              .map(
+                (c) => `<li><span class="etiquette-info ${c.nature.toLowerCase()}">${esc(
+                  LIBELLES_NATURE[c.nature],
+                )}</span> ${esc(c.texte)}</li>`,
+              )
+              .join('')}
+          </ul>
+          ${
+            discipline
+              ? ''
+              : `<p class="note-aide">Choisissez une discipline à l’écran d’accueil pour des cas
+                 propres à votre domaine.</p>`
+          }
+        </section>
+      </div>`;
   }
 
   /* -------------------------------------------------- progression */
@@ -801,7 +824,7 @@ class Assistant {
           ${resultat.portes
             .map(
               (porte) =>
-                `<li><span class="marque ${porte.statut}">${porte.statut}</span>` +
+                `<li><span class="marqueur ${porte.statut}">${porte.statut}</span>` +
                 `<span>${esc(porte.libelle)}</span></li>`,
             )
             .join('')}
@@ -886,8 +909,13 @@ class Assistant {
         this.reculer();
         break;
       case 'discipline':
-        this.etat.discipline = valeur as Discipline;
+        // Re-cliquer sur la discipline active la désélectionne.
+        this.etat.discipline = this.etat.discipline === valeur ? null : (valeur as Discipline);
         this.rendre();
+        break;
+      case 'basculer-aide':
+        this.aideOuverte = !this.aideOuverte;
+        this.rendreAide();
         break;
       case 'repondre':
         this.repondre(cible.dataset.cle ?? '', valeur === 'oui');
@@ -977,7 +1005,7 @@ class Assistant {
         break;
       case 'recommencer':
         this.etat = etatInitial();
-        this.changerEtape('accueil');
+        this.changerEtape('discipline');
         break;
       default:
         break;

@@ -1,221 +1,340 @@
 /**
  * Contenu pédagogique de l'assistant.
  *
- * Pour chaque étape : une explication « pourquoi cette question ? », un rappel
- * de la règle applicable, et des exemples concrets adaptés à la discipline de
- * l'utilisateur (les mêmes règles ne se lisent pas de la même façon quand on est
- * médecin, cadre de santé, pharmacien, au DIM ou à la facturation).
+ * Philosophie : l'assistant n'interroge pas l'identité professionnelle de
+ * l'utilisateur. Il propose de choisir une **discipline clinique** dans le seul
+ * but d'illustrer les règles par des cas concrets de cette discipline.
+ *
+ * Pour chaque étape : le « pourquoi » de la question et la règle applicable
+ * (génériques), complétés par des **cas typiques rattachés à la discipline**
+ * choisie et filtrés selon l'étape en cours.
  */
 
-/** Discipline de l'utilisateur, choisie à l'étape d'accueil. */
+/* ================================================================== *
+ * Disciplines cliniques
+ * ================================================================== */
+
 export type Discipline =
-  | 'MEDECIN'
-  | 'SOIGNANT'
-  | 'DIM_TIM'
-  | 'PHARMACIE'
-  | 'FACTURATION'
+  | 'ENDOCRINOLOGIE'
+  | 'CARDIOLOGIE'
+  | 'ONCOLOGIE'
+  | 'NEUROLOGIE'
+  | 'RHUMATOLOGIE'
+  | 'GASTRO'
+  | 'NEPHROLOGIE'
+  | 'PNEUMOLOGIE'
+  | 'PEDIATRIE'
+  | 'GERIATRIE'
+  | 'DOULEUR'
+  | 'PSYCHIATRIE'
+  | 'CHIRURGIE'
   | 'AUTRE';
 
-export const LIBELLES_DISCIPLINE: Readonly<Record<Discipline, string>> = {
-  MEDECIN: 'Médecin (prescripteur / coordonnateur)',
-  SOIGNANT: 'Cadre de santé, IDE, paramédical',
-  DIM_TIM: 'DIM / TIM (codage et contrôle interne)',
-  PHARMACIE: 'Pharmacie à usage intérieur (PUI)',
-  FACTURATION: 'Facturation / finances',
-  AUTRE: 'Autre profil',
+export interface DefinitionDiscipline {
+  readonly id: Discipline;
+  readonly libelle: string;
+  readonly icone: string;
+  /** Intitulé court résumant le périmètre. */
+  readonly perimetre: string;
+}
+
+export const DISCIPLINES: readonly DefinitionDiscipline[] = [
+  {
+    id: 'ENDOCRINOLOGIE',
+    libelle: 'Endocrinologie, diabétologie, nutrition',
+    icone: '🩸',
+    perimetre: 'Diabète, obésité, thyroïde, ETP structurée',
+  },
+  {
+    id: 'CARDIOLOGIE',
+    libelle: 'Cardiologie et maladies vasculaires',
+    icone: '❤️',
+    perimetre: 'Explorations fonctionnelles, insuffisance cardiaque',
+  },
+  {
+    id: 'ONCOLOGIE',
+    libelle: 'Oncologie et hématologie',
+    icone: '🎗️',
+    perimetre: 'Traitements, bilans d’extension, biothérapies',
+  },
+  {
+    id: 'NEUROLOGIE',
+    libelle: 'Neurologie et maladies neuromusculaires',
+    icone: '🧠',
+    perimetre: 'SEP, SLA, bilans neuropsychologiques',
+  },
+  {
+    id: 'RHUMATOLOGIE',
+    libelle: 'Rhumatologie et maladies auto-immunes',
+    icone: '🦴',
+    perimetre: 'Biothérapies, polyarthrite, lupus',
+  },
+  {
+    id: 'GASTRO',
+    libelle: 'Gastro-entérologie et hépatologie',
+    icone: '🫀',
+    perimetre: 'Endoscopies, MICI, bilan hépatique',
+  },
+  {
+    id: 'NEPHROLOGIE',
+    libelle: 'Néphrologie et urologie',
+    icone: '💧',
+    perimetre: 'Dialyse, bilan pré-transplantation',
+  },
+  {
+    id: 'PNEUMOLOGIE',
+    libelle: 'Pneumologie et allergologie',
+    icone: '🫁',
+    perimetre: 'EFR, tests de provocation, asthme sévère',
+  },
+  {
+    id: 'PEDIATRIE',
+    libelle: 'Pédiatrie et neurodéveloppement',
+    icone: '🧒',
+    perimetre: 'Bilans TND, grands prématurés, handicaps',
+  },
+  {
+    id: 'GERIATRIE',
+    libelle: 'Gériatrie et troubles cognitifs',
+    icone: '👵',
+    perimetre: 'Évaluation gériatrique, mémoire, fragilité',
+  },
+  {
+    id: 'DOULEUR',
+    libelle: 'Douleur chronique et soins palliatifs',
+    icone: '🩹',
+    perimetre: 'Bilans douleur, analgésie, soins palliatifs',
+  },
+  {
+    id: 'PSYCHIATRIE',
+    libelle: 'Psychiatrie et addictologie',
+    icone: '🧩',
+    perimetre: 'Hors champ MCO — financements propres',
+  },
+  {
+    id: 'CHIRURGIE',
+    libelle: 'Chirurgie et actes interventionnels',
+    icone: '🔬',
+    perimetre: 'Chirurgie ambulatoire, endoscopie interventionnelle',
+  },
+  {
+    id: 'AUTRE',
+    libelle: 'Autre discipline / cas général',
+    icone: '🏥',
+    perimetre: 'Exemples transversaux, toutes disciplines',
+  },
+];
+
+export const LIBELLES_DISCIPLINE: Readonly<Record<Discipline, string>> = Object.fromEntries(
+  DISCIPLINES.map((d) => [d.id, d.libelle]),
+) as Readonly<Record<Discipline, string>>;
+
+/* ================================================================== *
+ * Cas typiques par discipline
+ * ================================================================== */
+
+/** Nature du cas : conforme GHS, requalification externe, ou piège fréquent. */
+export type NatureCas = 'GHS' | 'ACE' | 'PIEGE' | 'HORS_CHAMP';
+
+export interface CasDiscipline {
+  /** Étape de l'assistant à laquelle le cas se rattache. */
+  readonly etape: string;
+  readonly nature: NatureCas;
+  readonly texte: string;
+}
+
+export const LIBELLES_NATURE: Readonly<Record<NatureCas, string>> = {
+  GHS: 'Relève du GHS',
+  ACE: 'Relève de l’externe',
+  PIEGE: 'Piège fréquent',
+  HORS_CHAMP: 'Hors champ',
 };
 
-/** Accroche affichée après le choix de la discipline. */
-export const ACCROCHES_DISCIPLINE: Readonly<Record<Discipline, string>> = {
-  MEDECIN:
-    'Vous engagez la justification clinique de la prise en charge : l’assistant vous aide à ' +
-    'vérifier que les critères d’un GHS sont réunis avant de valider le séjour.',
-  SOIGNANT:
-    'Votre traçabilité (notes d’évolution, surveillance, éducation thérapeutique) est ce qui ' +
-    'rend la prise en charge opposable : l’assistant vous montre ce qui compte.',
-  DIM_TIM:
-    'L’assistant applique les 5 portes de l’instruction et produit une fiche d’audit ' +
-    'directement opposable en contrôle T2A.',
-  PHARMACIE:
-    'La recherche de spécialités interroge le référentiel des médicaments à réserve ' +
-    'hospitalière (art. R. 5121-82 CSP) : un produit de réserve suffit à caractériser la densité.',
-  FACTURATION:
-    'L’assistant tranche entre facturation en GHS, requalification en ACE et forfait de séance, ' +
-    'et vous donne les motifs de blocage à opposer.',
-  AUTRE:
-    'L’assistant vous guide pas à pas pour déterminer si la prise en charge relève d’un GHS ' +
-    'd’hospitalisation de jour ou d’actes externes.',
+const cas = (etape: string, nature: NatureCas, texte: string): CasDiscipline => ({
+  etape,
+  nature,
+  texte,
+});
+
+export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipline[]>> = {
+  ENDOCRINOLOGIE: [
+    cas('intervenants', 'GHS', 'Bilan de diabète déséquilibré associant endocrinologue, IDE d’éducation et diététicien(ne), chacun ayant tracé sa note d’évolution.'),
+    cas('medicaments', 'GHS', 'Mise en route d’un analogue de la somatostatine (réserve hospitalière) avec surveillance de la tolérance.'),
+    cas('actes', 'ACE', 'ECG de dépistage pratiqué seul au décours d’une consultation : acte isolé, en principe externe.'),
+    cas('duree', 'PIEGE', 'Venue de 45 minutes pour un simple renouvellement d’ordonnance : la durée et l’absence de ressources trahissent une ACE.'),
+  ],
+  CARDIOLOGIE: [
+    cas('actes', 'GHS', 'Exploration fonctionnelle avec cathétérisme et mesure hémodynamique sur plateau technique lourd.'),
+    cas('medicaments', 'GHS', 'Perfusion d’un inotrope (lévosimendan) sous surveillance continue des constantes.'),
+    cas('actes', 'ACE', 'Épreuve d’effort isolée chez un patient stable : réalisable en cabinet.'),
+    cas('programmation', 'PIEGE', 'Patient adressé par les urgences : séjour non programmé, la facturation en GHS est exclue en l’état.'),
+  ],
+  ONCOLOGIE: [
+    cas('champ_seance', 'HORS_CHAMP', 'Cure de chimiothérapie : séance forfaitisée, elle n’a pas à démontrer la densité.'),
+    cas('medicaments', 'GHS', 'Perfusion d’un anticorps monoclonal de réserve hospitalière hors cure, sous surveillance de la tolérance.'),
+    cas('actes', 'GHS', 'Bilan d’extension regroupant plusieurs actes et avis coordonnés sur la journée.'),
+    cas('champ_seance', 'PIEGE', 'Présenter une immunothérapie de séance comme un HDJ de gradation expose à un rejet.'),
+  ],
+  NEUROLOGIE: [
+    cas('actes', 'GHS', 'Bilan de sclérose en plaques coordonné : imagerie, consultation spécialisée et évaluation neuropsychologique.'),
+    cas('intervenants', 'GHS', 'Bilan pluriprofessionnel : neurologue, kinésithérapeute et orthophoniste, notes tracées.'),
+    cas('medicaments', 'GHS', 'Perfusion d’immunoglobulines ou de natalizumab (réserve hospitalière) sous surveillance.'),
+    cas('programmation', 'PIEGE', 'Bilan neuromusculaire programmé mais sans synthèse du jour : suspension pour régularisation, pas rejet.'),
+  ],
+  RHUMATOLOGIE: [
+    cas('medicaments', 'GHS', 'Perfusion d’une biothérapie (infliximab, rituximab) avec surveillance de la tolérance immédiate.'),
+    cas('intervenants', 'GHS', 'Bilan de polyarthrite associant rhumatologue, IDE et assistant(e) social(e).'),
+    cas('actes', 'ACE', 'Infiltration rachidienne simple : geste réalisable en cabinet.'),
+    cas('documents', 'PIEGE', 'Sans compte-rendu signé le jour même, la densité constatée ne suffit pas : le séjour est suspendu.'),
+  ],
+  GASTRO: [
+    cas('actes', 'GHS', 'Endoscopie œso-gastro-duodénale sous anesthésie générale : plateau technique lourd.'),
+    cas('surveillance', 'GHS', 'Surveillance post-ponction biopsie hépatique documentée dans le dossier de soins.'),
+    cas('actes', 'ACE', 'Exploration fonctionnelle isolée sans sédation ni geste associé : à examiner au titre de l’acte isolé.'),
+    cas('actes', 'PIEGE', 'L’ECG DEQP003, souvent associé au bilan, ne peut jamais être dénombré comme intervention.'),
+  ],
+  NEPHROLOGIE: [
+    cas('champ_seance', 'HORS_CHAMP', 'Séance d’hémodialyse : financée par forfait de séance, hors critères de gradation.'),
+    cas('actes', 'GHS', 'Bilan pré-transplantation coordonné : plusieurs avis et examens sur la même journée.'),
+    cas('medicaments', 'GHS', 'Administration d’époétine (réserve hospitalière) avec surveillance tensionnelle.'),
+    cas('champ_seance', 'PIEGE', 'Facturer un GHS de gradation pour une séance de dialyse est un motif classique de rejet.'),
+  ],
+  PNEUMOLOGIE: [
+    cas('surveillance', 'GHS', 'Test de réintroduction médicamenteuse à risque anaphylactique sous surveillance rapprochée.'),
+    cas('medicaments', 'GHS', 'Perfusion d’omalizumab ou d’immunoglobulines (réserve hospitalière) en hôpital de jour.'),
+    cas('actes', 'GHS', 'Explorations fonctionnelles respiratoires complètes avec épreuve de provocation.'),
+    cas('actes', 'ACE', 'Spirométrie isolée : réalisable en cabinet de ville.'),
+  ],
+  PEDIATRIE: [
+    cas('intervenants', 'GHS', 'Bilan de troubles du neurodéveloppement : pédiatre, psychologue et orthophoniste, notes tracées.'),
+    cas('actes', 'GHS', 'Bilan de grand prématuré regroupant plusieurs évaluations coordonnées le même jour.'),
+    cas('surveillance', 'GHS', 'Enfant polyhandicapé : contexte patient et surveillance prolongée à documenter.'),
+    cas('intervenants', 'PIEGE', 'Les interventions réalisées hors la présence de l’enfant ne sont pas dénombrables.'),
+  ],
+  GERIATRIE: [
+    cas('actes', 'GHS', 'Évaluation gériatrique multidimensionnelle : plusieurs évaluations articulées sur la journée.'),
+    cas('intervenants', 'GHS', 'Gériatre, psychologue et assistant(e) social(e) intervenant auprès du patient, notes tracées.'),
+    cas('surveillance', 'GHS', 'Contexte patient : fragilité, troubles de l’équilibre, surveillance des constantes.'),
+    cas('duree', 'PIEGE', 'Une évaluation très courte doit conduire à vérifier la réalité des interventions dénombrées.'),
+  ],
+  DOULEUR: [
+    cas('actes', 'GHS', 'Bilan multidisciplinaire de douleur chronique invalidante : médecin de la douleur, psychiatre, psychologue.'),
+    cas('surveillance', 'GHS', 'Analgésie périmédullaire ou bloc analgésique complet : surveillance particulière documentée.'),
+    cas('medicaments', 'GHS', 'Application de patchs de capsaïcine à haute concentration (réserve hospitalière).'),
+    cas('actes', 'PIEGE', 'Une infiltration simple peut relever du contexte externe selon l’état du patient.'),
+  ],
+  PSYCHIATRIE: [
+    cas('champ_seance', 'HORS_CHAMP', 'Hôpital de jour psychiatrique : financement propre, hors du champ de cette instruction.'),
+    cas('champ_seance', 'PIEGE', 'Ne pas rechercher les critères de densité MCO dans un séjour psychiatrique ou d’addictologie.'),
+    cas('champ_seance', 'HORS_CHAMP', 'Hôpital de jour d’addictologie : activités inscrites dans un programme de soins formalisé.'),
+    cas('champ_seance', 'PIEGE', 'Un séjour SMR ou psychiatrique ne se facture pas en GHS MCO.'),
+  ],
+  CHIRURGIE: [
+    cas('actes', 'GHS', 'Chirurgie ambulatoire : la présence d’un acte classant emporte la facturation d’un GHS plein.'),
+    cas('surveillance', 'GHS', 'Surveillance post-opératoire en salle de réveil puis en unité d’hospitalisation de jour.'),
+    cas('actes', 'ACE', 'Petite intervention réalisable au cabinet sous anesthésie locale : en principe externe.'),
+    cas('actes', 'PIEGE', 'Un acte associé à un forfait « sécurité environnement » ne peut en principe donner lieu à un GHS.'),
+  ],
+  AUTRE: [
+    cas('actes', 'GHS', 'Plusieurs actes de techniques différentes réalisés le même jour sur un plateau technique coordonné.'),
+    cas('intervenants', 'GHS', 'Au moins un médecin et deux professions paramédicales ou sociales distinctes, notes tracées.'),
+    cas('actes', 'ACE', 'Un acte technique isolé, réalisable en cabinet, sans surveillance documentée : requalification externe.'),
+    cas('surveillance', 'PIEGE', 'Une surveillance annoncée mais non tracée au dossier n’est pas opposable en contrôle.'),
+  ],
 };
 
-/** Contenu pédagogique d'une étape. */
+/** Cas à afficher pour une étape donnée : ceux de l'étape, complétés par 2 autres. */
+export function casPourEtape(
+  discipline: Discipline | null,
+  etape: string,
+): readonly CasDiscipline[] {
+  const tous = CAS_PAR_DISCIPLINE[discipline ?? 'AUTRE'];
+  const prioritaires = tous.filter((c) => c.etape === etape);
+  const autres = tous.filter((c) => c.etape !== etape);
+  return [...prioritaires, ...autres].slice(0, 4);
+}
+
+/* ================================================================== *
+ * Aide par étape
+ * ================================================================== */
+
 export interface AideEtape {
   /** Pourquoi cette question est posée. */
   readonly pourquoi: string;
   /** Règle applicable (résumé de la référence normative). */
   readonly regle: string;
-  /** Exemples par discipline ; `AUTRE` sert de repli. */
-  readonly exemples: Readonly<Record<Discipline, readonly string[]>>;
 }
 
-const exemples = (
-  MEDECIN: readonly string[],
-  SOIGNANT: readonly string[],
-  DIM_TIM: readonly string[],
-  PHARMACIE: readonly string[],
-  FACTURATION: readonly string[],
-): Readonly<Record<Discipline, readonly string[]>> => ({
-  MEDECIN,
-  SOIGNANT,
-  DIM_TIM,
-  PHARMACIE,
-  FACTURATION,
-  AUTRE: [...new Set([...MEDECIN, ...DIM_TIM])].slice(0, 4),
-});
+export const AIDE_PAR_DEFAUT: AideEtape = {
+  pourquoi: 'Cette information est utilisée par le moteur décisionnel.',
+  regle: 'Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020.',
+};
 
 export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
+  discipline: {
+    pourquoi:
+      'Le choix de la discipline ne change aucune règle : il sert uniquement à illustrer les ' +
+      'étapes suivantes par des cas concrets de votre domaine d’exercice.',
+    regle:
+      'Les critères de facturation sont identiques quelle que soit la spécialité (instruction ' +
+      'DGOS/R1/DSS/1A/2020/52).',
+  },
+  identite: {
+    pourquoi:
+      'Ces informations identifient le séjour en tête de la fiche de traçabilité. Elles ne ' +
+      'conditionnent pas la décision.',
+    regle: 'Annexe 4, point 5 : traçabilité des éléments permettant de caractériser l’hospitalisation de jour.',
+  },
   champ_seance: {
     pourquoi:
-      'La dialectique de l’instruction ne s’applique pas aux séances : dialyse et chimiothérapie ' +
-      'sont financées par un forfait de séance, sans avoir à démontrer la densité.',
+      'Dialyse et chimiothérapie correspondent à des séances : elles sont financées par un ' +
+      'forfait de séance et n’ont pas à démontrer la densité de la prise en charge.',
     regle:
       'Annexe 4, point 1 : les prises en charge correspondant à des « séances » sont financées à ' +
       'travers un GHS « sans que la prise en charge n’ait à répondre aux critères de la présente ' +
       'instruction ».',
-    exemples: exemples(
-      [
-        'Séance d’hémodialyse en unité d’auto-dialyse ou en centre lourd',
-        'Cure de chimiothérapie anticancéreuse programmée sur protocole',
-        'Séance d’immunothérapie ou de biothérapie en hôpital de jour de cancérologie',
-      ],
-      [
-        'Préparer et administrer une cure de chimiothérapie : codage en séance, pas en GHS de gradation',
-        'Une séance de dialyse se compte par séance, jamais par séjour HDJ',
-        'Vérifier que la convocation porte bien la mention « séance » et non « hôpital de jour »',
-      ],
-      [
-        'Séances = CMD 28 : groupage en séance, hors critères de gradation ambulatoire',
-        'Ne pas rechercher de GHM de médecine pour une séance de dialyse',
-        'Le critère de densité (3 ou 4 interventions) ne s’applique pas aux séances',
-      ],
-      [
-        'Un produit de chimiothérapie en séance reste facturé au forfait de séance',
-        'La réserve hospitalière du produit ne transforme pas une séance en GHS de gradation',
-        'Penser au circuit séparé des préparations cytotoxiques',
-      ],
-      [
-        'Dialyse : forfait D ; chimiothérapie : forfait de séance — pas de GHS de médecine',
-        'Une séance ne consomme pas de numéro de séjour HDJ au sens de la gradation',
-        'Vérifier le mode d’entrée/sortie saisi pour éviter un groupage en erreur',
-      ],
-    ),
   },
-
   champ_hors_mco: {
     pourquoi:
-      'L’instruction ne concerne que les établissements ayant des activités de médecine, ' +
+      'L’instruction ne concerne que les établissements ayant une activité de médecine, ' +
       'chirurgie, obstétrique et odontologie (MCO). Le SMR et la psychiatrie relèvent d’autres ' +
       'modalités de financement.',
     regle:
-      'L’instruction est relative aux prises en charge réalisées « au sein des établissements de ' +
-      'santé ayant des activités de médecine, chirurgie, obstétrique et odontologie ou ayant une ' +
+      'Instruction relative aux prises en charge réalisées « au sein des établissements de santé ' +
+      'ayant des activités de médecine, chirurgie, obstétrique et odontologie ou ayant une ' +
       'activité d’hospitalisation à domicile ».',
-    exemples: exemples(
-      [
-        'Hôpital de jour de rééducation neurologique : champ SMR, pas MCO',
-        'Hôpital de jour psychiatrique : financement propre à la psychiatrie',
-        'Une activité de dialyse en établissement MCO reste une séance, pas un séjour de gradation',
-      ],
-      [
-        'HDJ de soins de suite : la dotation SMR s’applique, pas la règle des 3 interventions',
-        'HDJ psychiatrique : ne pas rechercher de critères de densité MCO',
-      ],
-      [
-        'Vérifier l’autorisation de l’entité juridique avant d’appliquer les portes 1 à 4',
-        'Un séjour SMR/DPSY groupé dans son champ propre n’entre pas dans cet audit',
-        'Contrôler la table de correspondance des unités fonctionnelles',
-      ],
-      [
-        'Un traitement de fond en HDJ psychiatrique suit le financement psychiatrique',
-        'Pas de recherche de réserve hospitalière au titre de la gradation MCO',
-      ],
-      [
-        'Segments tarifaires distincts : un séjour SMR/psy ne se facture pas en GHS MCO',
-        'Vérifier le régime saisi en amont pour éviter un rejet',
-      ],
-    ),
   },
-
   programmation: {
     pourquoi:
-      'Un GHS de jour suppose une organisation anticipée : convocation, objectif médical formalisé ' +
-      'et utilisation des moyens de la structure d’hospitalisation de jour.',
+      'Une hospitalisation de jour suppose une organisation anticipée : convocation, objectif ' +
+      'médical formalisé et utilisation des moyens d’une structure dédiée.',
     regle:
       'Annexe 4, point 2.a : « Une prise en charge programmée sans nuitée requiert une ' +
       'organisation spécifique réalisée sur un plateau adapté. »',
-    exemples: exemples(
-      [
-        'Convoquer un patient pour un bilan de diabète déséquilibré avec synthèse en fin de journée',
-        'Regrouper sur une même venue les avis dont le patient a besoin (endocrino, diététique, IDE)',
-        'Un passage direct par les urgences ne permet pas de reconstituer une programmation',
-      ],
-      [
-        'Vérifier que la convocation mentionne un objectif (bilan, traitement, éducation)',
-        'Le cahier de rendez-vous de l’HDJ fait foi en cas de contrôle',
-        'Un patient « ajouté » le matin sans convocation affaiblit sérieusement le dossier',
-      ],
-      [
-        'Rechercher la trace de convocation dans le DPI, pas seulement la date d’entrée',
-        'Un séjour non programmé se code en GHS mais doit être requalifié',
-        'Tracer la programmation dans le dossier des séjours pour l’opposabilité',
-      ],
-      [
-        'Une chimiothérapie programmée relève de la séance : la question ne se pose qu’en MCO',
-        'Vérifier que la préparation pharmaceutique est bien datée du jour de la venue',
-      ],
-      [
-        'Contrôler le mode d’entrée : un mode « urgence » avec objectif HDJ est un signal d’alerte',
-        'La programmation conditionne la facturabilité, pas seulement la qualité',
-      ],
-    ),
   },
-
-  documents: {
+  doc_adressage: {
     pourquoi:
-      'Ce sont les pièces qui rendent la prise en charge opposable. Sans elles, l’assurance ' +
-      'maladie ne peut pas vérifier la réalité de la prise en charge coordonnée.',
+      'La demande médicale préalable justifie la pertinence du recours à l’hospitalisation de jour.',
     regle:
-      'Annexe 4, points 2.b.iii et 5 : compte-rendu d’hospitalisation ou lettre de liaison ' +
-      '(art. R. 1112-1-2 CSP) ; les interventions doivent « donner lieu à une mention dans le ' +
-      'dossier du patient ».',
-    exemples: exemples(
-      [
-        'Signer le compte-rendu le jour même : c’est le document central du contrôle',
-        'La lettre d’adressage du médecin traitant justifie la pertinence du recours à l’HDJ',
-        'Ne pas « reconstituer » a posteriori un compte-rendu : c’est le risque majeur en contrôle',
-      ],
-      [
-        'Chaque intervenant écrit sa note d’évolution le jour de la venue',
-        'La surveillance des constantes se trace dans le dossier de soins, pas sur un post-it',
-        'Une lettre de liaison remise au patient est également une exigence de qualité',
-      ],
-      [
-        'Absence de synthèse signée = suspension pour régularisation, pas rejet : laissez la ' +
-          'chance au service de produire la pièce avant validation DIM',
-        'Vérifier que la synthèse est signée, pas seulement saisie dans le DPI',
-        'Contrôler la remise de la lettre de liaison au médecin traitant',
-      ],
-      [
-        'Un compte-rendu mentionnant explicitement le produit administré et sa surveillance ' +
-          'conforte le pilier « soins »',
-        'La mention de la réserve hospitalière dans le dossier est un élément de preuve',
-      ],
-      [
-        'Ces pièces ne sont pas facturables mais conditionnent le paiement : les exiger en amont',
-        'La lettre de liaison est un indicateur qualité souvent regardé en contrôle',
-      ],
-    ),
+      'Annexe 4, point 5 : le dossier doit permettre d’apprécier les éléments ayant conduit à la ' +
+      'prise en charge en hospitalisation de jour.',
   },
-
+  doc_synthese: {
+    pourquoi:
+      'La coordination par un professionnel médical se matérialise par un compte-rendu ' +
+      'd’hospitalisation ou une lettre de liaison. Sans cette pièce, la prise en charge n’est pas ' +
+      'opposable — mais elle reste régularisable.',
+    regle:
+      'Annexe 4, point 2.b.iii : « La coordination de la prise en charge, assurée par un ' +
+      'professionnel médical, donne lieu […] à la rédaction d’un compte-rendu d’hospitalisation ' +
+      'ou de la lettre de liaison mentionnée à l’article R. 1112-1-2 du code de la santé publique. »',
+  },
+  doc_liaison: {
+    pourquoi:
+      'La lettre de liaison est une exigence de la circulaire et un indicateur qualité suivi en ' +
+      'contrôle. Son absence ne bloque pas la décision : elle déclenche une alerte.',
+    regle: 'Code de la santé publique, article R. 1112-1-2.',
+  },
   actes: {
     pourquoi:
       'Un acte technique isolé, réalisable en cabinet, ne justifie pas une hospitalisation. ' +
@@ -223,144 +342,39 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
     regle:
       'Annexe 4, points 2.b.i et 2.b.iii : acte classant → GHS plein ; deux actes CCAM de ' +
       'techniques différentes sont dénombrables ; l’ECG DEQP003 ne peut être dénombré.',
-    exemples: exemples(
-      [
-        'Une endoscopie digestive sous anesthésie générale relève d’un plateau technique',
-        'Un ECG seul ne justifie jamais un GHS : il n’est même pas dénombrable',
-        'Regrouper deux gestes de techniques différentes sur la même venue renforce le dossier',
-      ],
-      [
-        'Un acte réalisé en salle interventionnelle est un marqueur fort de densité',
-        'Ne comptez pas un ECG dans vos interventions : le texte l’exclut explicitement',
-        'Vérifiez que l’acte est bien codé le jour de la venue (pas la veille)',
-      ],
-      [
-        'La recherche interroge directement la nomenclature : le code et le libellé sont fiables',
-        'Acte classant (annexe 8 du manuel des GHM) → GHS plein sans autre condition',
-        'ECG DEQP003 : non dénombrable au titre d’une intervention',
-      ],
-      [
-        'Un acte de perfusion isolé est en principe externe : vérifiez le besoin de surveillance',
-        'La réserve hospitalière du produit administré peut suffire à caractériser la densité',
-      ],
-      [
-        'Un acte isolé réalisable en externe se requalifie en ACE (consultation ou acte)',
-        'Deux actes de techniques distinctes valorisent un GHS : ne pas les fusionner',
-      ],
-    ),
   },
-
   medicaments: {
     pourquoi:
-      'Certains produits ne peuvent être administrés qu’à l’hôpital. Leur administration est alors ' +
-      'un motif suffisant de prise en charge en hôpital de jour, quel que soit le nombre ' +
+      'Certains produits ne peuvent être administrés qu’à l’hôpital. Leur administration est un ' +
+      'motif suffisant de prise en charge en hôpital de jour, quel que soit le nombre ' +
       'd’interventions.',
     regle:
       'Annexe 4, point 2.b.iii : la prise en charge justifie un GHS plein « soit parce que la ' +
       'prise en charge comporte l’administration de produits de la réserve hospitalière telle que ' +
       'définie à l’article R. 5121-82 du code de la santé publique ».',
-    exemples: exemples(
-      [
-        'Perfusion d’immunoglobulines polyvalentes (réserve hospitalière)',
-        'Administration d’une biothérapie nécessitant une surveillance de la tolérance',
-        'Un antalgique de ville administré pendant la venue ne caractérise pas la densité',
-      ],
-      [
-        'Surveillez et tracez la tolérance : c’est cette trace qui rend la surveillance opposable',
-        'Un produit à réserve hospitalière impose une surveillance, donc une trace',
-        'Distinguez « produit de réserve » et « produit courant » dans la feuille de surveillance',
-      ],
-      [
-        'Le référentiel indique si le produit est en réserve hospitalière ; NULL = à trancher',
-        'La mention du lot et de l’heure d’administration conforte le dossier',
-        'Un produit hors AMM fait l’objet d’un moratoire sur le contrôle de la facturation',
-      ],
-      [
-        'Recherchez la spécialité dans l’assistant : la réserve hospitalière vient du référentiel',
-        'Produit non retrouvé ? Le référentiel renvoie « non déterminé » : tranchez avec le DIM',
-        'La liste en sus est un champ distinct, utile au contrôle du remboursement',
-      ],
-      [
-        'Un produit de réserve hospitalière suffit à facturer un GHS plein : c’est un point de contrôle clé',
-        'Vérifiez la concordance entre la pharmacie, le dossier et la facturation',
-      ],
-    ),
   },
-
   intervenants: {
     pourquoi:
-      'La pluriprofessionnalité ne compte que si elle est écrite. Un intervenant qui n’a pas ' +
+      'La pluriprofessionnalité ne compte que si elle est écrite : un intervenant qui n’a pas ' +
       'rédigé de note d’évolution n’est pas dénombrable en contrôle.',
     regle:
-      'Annexe 4, point 2.b.iii : les interventions doivent être « réalisées directement auprès du ' +
-      'patient » ; plusieurs médecins ne sont dénombrés que s’ils relèvent de deux spécialités ou ' +
-      'surspécialités distinctes. Point 5 : mention obligatoire dans le dossier.',
-    exemples: exemples(
-      [
-        'Un bilan d’éducation thérapeutique associe médecin, IDE et diététicien(ne)',
-        'Deux médecins de la même spécialité ne comptent que pour un',
-        'Chaque intervenant signe sa propre note dans le dossier',
-      ],
-      [
-        'L’entretien diététique et l’entretien éducatif IDE sont deux interventions distinctes',
-        'Une intervention collective peut être dénombrée pour chacun des patients',
-        'N’oubliez pas de tracer les entretiens d’éducation thérapeutique',
-      ],
-      [
-        'Comptez les professions distinctes, pas le nombre de personnes',
-        'Médecins : exiger la spécialité (qualification ordinale ou surspécialité)',
-        'Un intervenant sans note d’évolution est exclu du décompte',
-      ],
-      [
-        'Le pharmacien clinicien réalisant un entretien pharmaceutique peut être dénombré',
-        'Le biologiste qui traite un prélèvement au laboratoire n’est pas dénombrable',
-      ],
-      [
-        '3 interventions = GHS intermédiaire ; 4 interventions = GHS plein',
-        'Sans trace écrite, l’intervention n’existe pas au plan tarifaire',
-      ],
-    ),
+      'Annexe 4, point 2.b.iii : interventions « réalisées directement auprès du patient » ; ' +
+      'plusieurs médecins ne sont dénombrés que s’ils relèvent de deux spécialités distinctes.',
   },
-
   surveillance: {
     pourquoi:
       'La surveillance particulière et le contexte patient justifient un GHS plein quel que soit ' +
-      'le nombre d’interventions — mais uniquement si elle est documentée.',
+      'le nombre d’interventions — à condition d’être documentés.',
     regle:
-      'Annexe 4, point 2.b.iii : « la prise en charge peut justifier une hospitalisation de jour ' +
-      'et la facturation d’un GHS dit « plein » […] dans la mesure où […] la surveillance ' +
-      'particulière sont bien retracées dans le dossier du patient ».',
-    exemples: exemples(
-      [
-        'Surveillance de la tolérance d’une première perfusion de biothérapie',
-        'Patient très dépendant nécessitant des précautions particulières pendant l’acte',
-        'Un acte rapide chez un patient autonome ne mobilise pas de surveillance particulière',
-      ],
-      [
-        'Tracez les constantes avant, pendant et après : c’est votre preuve',
-        'Durée de présence courte + acte simple = signal d’alerte en contrôle',
-        'La surveillance prolongée après le geste est un critère à documenter',
-      ],
-      [
-        'Une durée de présence inférieure à 3 heures déclenche une alerte qualité (non bloquante)',
-        'La surveillance particulière doit être retrouvée dans le dossier de soins',
-        'Contexte patient : à motiver explicitement, sinon fragile en contrôle',
-      ],
-      [
-        'Surveillance continue requise par le produit → pilier « soins » validé',
-        'Pensez à la surveillance post-administration, pas seulement pendant la perfusion',
-      ],
-      [
-        'Alerte durée < 3 h : renforcer le dossier plutôt que de renoncer à facturer',
-        'La surveillance documentée peut suffire à elle seule à justifier le GHS',
-      ],
-    ),
+      'Annexe 4, point 2.b.iii : la facturation d’un GHS plein est admise « dans la mesure où ' +
+      '[…] la surveillance particulière sont bien retracées dans le dossier du patient ».',
   },
-};
-
-/** Repli générique si une étape n'a pas de contenu dédié. */
-export const AIDE_PAR_DEFAUT: AideEtape = {
-  pourquoi: 'Cette information est utilisée par le moteur décisionnel.',
-  regle: 'Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020.',
-  exemples: exemples([], [], [], [], []),
+  duree: {
+    pourquoi:
+      'La durée de présence éclaire la densité réelle de la prise en charge. Une venue très ' +
+      'courte constitue un point d’attention en contrôle.',
+    regle:
+      'Annexe 4, point 2.a : la prise en charge « donne lieu à l’utilisation des moyens en locaux, ' +
+      'en matériel et en personnel dont dispose la structure d’hospitalisation de jour ».',
+  },
 };

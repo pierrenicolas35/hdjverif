@@ -11,7 +11,12 @@ Site : <https://pierrenicolas35.github.io/hdjverif/>
 
 ---
 
-## 1. Interface : un assistant, pas un formulaire
+## 1. Interface : un assistant pédagogique, pas un formulaire
+
+**Philosophie** : l’outil n’interroge pas l’identité professionnelle de l’utilisateur
+(pas de « profil par métier »). Il propose de choisir une **discipline clinique**, dans le seul
+but d’illustrer les règles par des cas concrets de cette discipline. Ce choix est **facultatif**
+et ne modifie **aucun** critère de décision.
 
 - **Une question par écran**, avec **barre de progression** et compteur (`Question n sur 13`).
 - **Gros boutons Oui / Non** pour toutes les questions fermées ; pas de liste déroulante pour
@@ -19,14 +24,27 @@ Site : <https://pierrenicolas35.github.io/hdjverif/>
 - **Boutons à bascule** (maintenus enfoncés) pour les choix multiples : profession des
   intervenants, durée de présence, caractéristiques d’un acte, statut d’un produit.
 - **Verdict provisoire en direct** dans l’en-tête, dès la première réponse.
-- **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable
-  citée, et **exemples concrets adaptés à la discipline** déclarée à l’accueil (médecin,
-  cadre de santé/IDE, DIM/TIM, pharmacie, facturation, autre).
+- **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable citée,
+  et **cas typiques de la discipline choisie**, étiquetés *Relève du GHS* / *Relève de l’externe* /
+  *Piège fréquent* / *Hors champ*. 14 disciplines sont proposées (endocrinologie, cardiologie,
+  oncologie, neurologie, rhumatologie, gastro-entérologie, néphrologie, pneumologie, pédiatrie,
+  gériatrie, douleur, psychiatrie, chirurgie, cas général).
 - **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou un champ SMR/psychiatrie
   conduit directement au résultat, sans dérouler inutilement l’assistant.
 - **Fiche de traçabilité T2A** imprimable (PDF) ou exportable en `.txt`, avec zones de visa et
   rappel du dispositif de rescrit tarifaire.
-- Charte graphique : bleu institutionnel du logo du **CHU Grenoble Alpes** (`#008FDB`).
+
+### Charte et ergonomie
+
+- **Blanc sur fond bleu** : le bleu du logo du CHU Grenoble Alpes (`#008FDB`) structure le fond et
+  les surfaces ; textes, boutons et pastilles sont blancs. Les états « sélectionné » s’inversent
+  en blanc sur texte bleu, ce qui matérialise clairement les bascules enfoncées.
+- **Optimisé smartphone et poste de travail** :
+  - une colonne et **barre d’action fixée en bas** (espace réservé, rien n’est recouvert) sur
+    téléphone et tablette ;
+  - **volet d’aide repliable** sur petit écran, toujours déplié et collant sur grand écran ;
+  - cibles tactiles ≥ 44 px, `color-scheme: dark` (sélecteurs natifs de date lisibles),
+    prise en charge de `prefers-reduced-motion` et des `safe-area-inset` (encoches).
 
 ## 2. Architecture
 
@@ -47,7 +65,7 @@ src/
     wizard.ts                     Assistant pas-à-pas (état, navigation, rendu, recherche)
     store.ts                      État de l’assistant → DossierHDJ
     referentiels.ts               Client Supabase (médicaments, CCAM) + repli local
-    pedagogie.ts                  Contenus pédagogiques par discipline
+    pedagogie.ts                  Disciplines cliniques, cas typiques, aide par étape
     fiche.ts                      Fiche de traçabilité T2A
     styles.css                    Charte CHU Grenoble Alpes
 supabase/                         SQL du projet Supabase (durcissement, RPC de recherche)
@@ -132,7 +150,7 @@ node scripts/import-referentiels.mjs
 
 ```bash
 npm install
-npm test              # 55 tests : moteur, portes, assistant (référentiel simulé)
+npm test              # 60 tests : moteur, portes, assistant (référentiel simulé)
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement
