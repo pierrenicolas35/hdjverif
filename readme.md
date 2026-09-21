@@ -1,129 +1,145 @@
-# HDJ Vérif — moteur décisionnel de cotation HDJ (GHS) vs ACE
+# HDJ Vérif — assistant d’éligibilité à l’hospitalisation de jour
 
-Moteur d'évaluation **opposable en contrôle T2A** des séjours d'hospitalisation de jour
-(HDJ / GHS) au regard des actes et consultations externes (ACE), conformément à
-l'**Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020**
-(NOR : SSAH2007743J — BO Santé n° 2020/9 du 15 octobre 2020).
+Assistant pas-à-pas d’aide à la décision : une prise en charge ambulatoire doit-elle être
+facturée en **GHS d’hospitalisation de jour** ou requalifiée en **actes et consultations
+externes (ACE)** ?
 
-> Précédente version : questionnaire « Akinator » (`app.js` + `rules.json`), fondé sur un
-> entonnoir de questions. Il est **remplacé** par une architecture modulaire : un moteur
-> typé, pur et testé, plus une interface de saisie structurée.
+Fondement : **Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020** (NOR : SSAH2007743J,
+BO Santé n° 2020/9 du 15 octobre 2020) relative à la gradation des prises en charge ambulatoires.
+
+Site : <https://pierrenicolas35.github.io/hdjverif/>
 
 ---
 
-## 1. Architecture
+## 1. Interface : un assistant, pas un formulaire
+
+- **Une question par écran**, avec **barre de progression** et compteur (`Question n sur 13`).
+- **Gros boutons Oui / Non** pour toutes les questions fermées ; pas de liste déroulante pour
+  les décisions.
+- **Boutons à bascule** (maintenus enfoncés) pour les choix multiples : profession des
+  intervenants, durée de présence, caractéristiques d’un acte, statut d’un produit.
+- **Verdict provisoire en direct** dans l’en-tête, dès la première réponse.
+- **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable
+  citée, et **exemples concrets adaptés à la discipline** déclarée à l’accueil (médecin,
+  cadre de santé/IDE, DIM/TIM, pharmacie, facturation, autre).
+- **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou un champ SMR/psychiatrie
+  conduit directement au résultat, sans dérouler inutilement l’assistant.
+- **Fiche de traçabilité T2A** imprimable (PDF) ou exportable en `.txt`, avec zones de visa et
+  rappel du dispositif de rescrit tarifaire.
+- Charte graphique : bleu institutionnel du logo du **CHU Grenoble Alpes** (`#008FDB`).
+
+## 2. Architecture
 
 ```
-index.html                      Interface (formulaire dynamique + panneau temps réel)
+index.html                        Structure de l’assistant (en-tête, progression, carte, aide)
 src/
-  core/rules-engine/            MOTEUR — pur, typé, découplé de l'UI
-    types.ts                    Schéma métier + ResultatAudit
-    references.ts               Citations littérales de l'instruction (opposabilité)
-    helpers.ts                  Primitives (intervenants actifs, dénombrement…)
-    validation.ts               Garde-fous d'entrée
-    engine.ts                   Orchestration séquentielle des 5 portes
-    synthese.ts                 Génération de la synthèse d'audit
-    index.ts                    API publique
-    ports/
-      porte0-champ.ts           Filtre de champ d'application
-      porte1-prerequis.ts       Prérequis médico-administratifs et traçabilité
-      porte2-acte-isole.ts      Exclusion des actes isolés réalisables en externe
-      porte3-densite.ts         Piliers de densité en ressources
-      porte4-decision.ts        Décision finale + alertes qualité
-  ui/                           INTERFACE — aucune règle métier
-    main.ts                     Formulaire dynamique, rendu temps réel
-    store.ts                    État de l'écran → DossierHDJ
-    presets.ts                  Cas de démonstration (= cas de test)
-    fiche.ts                    Fiche de traçabilité T2A (impression / export)
-tests/
-  engine.test.ts                Les 5 cas obligatoires
-  portes.test.ts                Couverture porte par porte
-  ui.test.ts                    Intégration UI ↔ moteur
+  config.ts                       Accès au référentiel Supabase (clé publique anon)
+  core/rules-engine/              MOTEUR — pur, typé strict, découplé de l’UI
+    types.ts                      Schéma métier + ResultatAudit
+    references.ts                 Citations littérales de l’instruction
+    helpers.ts                    Primitives (intervenants actifs, dénombrement des interventions)
+    validation.ts                 Garde-fous d’entrée
+    engine.ts                     Orchestration séquentielle des 5 portes
+    synthese.ts                   Synthèse d’audit opposable
+    ports/                        porte0-champ · porte1-prerequis · porte2-acte-isole
+                                  porte3-densite · porte4-decision
+  ui/
+    wizard.ts                     Assistant pas-à-pas (état, navigation, rendu, recherche)
+    store.ts                      État de l’assistant → DossierHDJ
+    referentiels.ts               Client Supabase (médicaments, CCAM) + repli local
+    pedagogie.ts                  Contenus pédagogiques par discipline
+    fiche.ts                      Fiche de traçabilité T2A
+    styles.css                    Charte CHU Grenoble Alpes
+supabase/                         SQL du projet Supabase (durcissement, RPC de recherche)
+scripts/import-referentiels.mjs   Import des référentiels officiels
+data/                             Listes de travail (réserve hospitalière, surcharges CCAM)
+tests/                            Moteur (5 cas obligatoires), portes, assistant
 ```
 
-**Principe de conception** : l'UI ne décide rien. Elle collecte la saisie, la convertit en
+**Principe** : l’interface ne décide rien. Elle collecte les réponses, les convertit en
 `DossierHDJ`, appelle `evaluerDossier()` et affiche le `ResultatAudit`. Le moteur est une
-fonction pure : aucune dépendance au DOM, au réseau ou à l'horloge système (la date
-d'évaluation est injectable), ce qui garantit sa testabilité et son déterminisme.
+fonction pure (pas de DOM, pas de réseau, pas d’horloge : la date d’évaluation est injectable).
 
----
-
-## 2. Algorithme : 5 portes séquentielles
+## 3. Algorithme : 5 portes séquentielles
 
 | Porte | Objet | Issue bloquante |
 |---|---|---|
-| **0** | Filtre de champ d'application | `REJET_VERS_FORFAIT_SEANCE` (dialyse, chimiothérapie)<br>`REJET_HORS_MCO` (SMR, psychiatrie) |
-| **1** | Prérequis médico-administratifs et traçabilité | `REJET_NON_PROGRAMME` (séjour non programmé)<br>`SUSPENDU_POUR_REGULARISATION` (pièce manquante, ressources présentes)<br>`REJET_VERS_ACE` (pièce manquante et aucune ressource) |
+| **0** | Filtre de champ d’application | `REJET_VERS_FORFAIT_SEANCE` (dialyse, chimiothérapie)<br>`REJET_HORS_MCO` (SMR, psychiatrie) |
+| **1** | Prérequis médico-administratifs et traçabilité | `REJET_NON_PROGRAMME` · `SUSPENDU_POUR_REGULARISATION` · `REJET_VERS_ACE` |
 | **2** | Exclusion des actes isolés réalisables en externe | `REJET_VERS_ACE` |
 | **3** | Densité en ressources mobilisées (≥ 1 pilier) | — (alimente la porte 4) |
 | **4** | Décision finale et alertes qualité | `REJET_VERS_ACE` si aucun pilier validé |
 
-### Piliers de densité (porte 3)
+**Piliers de densité (porte 3)**
 
-1. **Soins / surveillance active** — surveillance active documentée, **ou** administration
-   d'un produit de la réserve hospitalière (art. R. 5121-82 CSP) / à surveillance continue.
-2. **Plateau technique lourd / actes coordonnés** — au moins un acte `est_plateau_lourd`,
-   **ou** au moins deux actes CCAM dénombrables distincts.
-   L'ECG `DEQP003` est exclu du décompte (annexe 4, point 2.b.iii).
+1. **Soins / surveillance active** — surveillance documentée, ou administration d’un produit de
+   la réserve hospitalière (art. R. 5121-82 CSP) ou à surveillance continue.
+2. **Plateau technique lourd / actes coordonnés** — au moins un acte sur plateau lourd, ou au
+   moins deux actes CCAM dénombrables distincts. L’ECG `DEQP003` est exclu du décompte
+   (annexe 4, point 2.b.iii).
 3. **Pluriprofessionnalité concertée** — seuls les intervenants ayant
-   `note_evolution_tracee === true` sont dénombrés :
-   - **3A** : ≥ 2 médecins de spécialités médicales distinctes ;
-   - **3B** : ≥ 1 médecin + ≥ 2 professions paramédicales/sociales distinctes.
+   `note_evolution_tracee === true` comptent : **3A** ≥ 2 médecins de spécialités distinctes,
+   **3B** ≥ 1 médecin + ≥ 2 professions paramédicales/sociales distinctes.
 
-### Alertes qualité (non bloquantes)
-- durée de présence < 180 min → « Durée < 3h : vigilance accrue en contrôle T2A sur la
-  densité des soins » ;
-- lettre de liaison non remise → traçabilité incomplète (art. R. 1112-1-2 CSP).
+**Alertes qualité** (non bloquantes) : durée de présence < 180 min ; lettre de liaison non remise.
 
----
+## 4. Référentiels Supabase
 
-## 3. Sortie : `ResultatAudit`
+Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 
-```ts
-interface ResultatAudit {
-  id_sejour: string;
-  date_evaluation: string;
-  statut: StatutAudit;              // VALIDE_GHS | REJET_VERS_ACE | …
-  severite: 'VERT' | 'ORANGE' | 'ROUGE';
-  ghs_autorise: boolean;
-  piliers_valides: PilierId[];
-  motifs_blocage: string[];
-  alertes_controle: string[];
-  piliers: PilierEvaluation[];      // détail et justifications par pilier
-  constats: Constat[];              // constats élémentaires + référence normative
-  porte_blocage: PorteId | null;
-  portes: EtapePorte[];             // pyramide : franchies / bloquante / non évaluées
-  synthese_audit: string;           // synthèse textuelle opposable
-}
+| Table | Contenu | Source |
+|---|---|---|
+| `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, DCI, réserve hospitalière, liste en sus, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie), fichier `CIS_bdpm.txt` |
+| `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
+
+Dans l’assistant :
+
+- l’utilisateur **recherche un acte** (par code ou par mots-clés) : le code, le libellé et les
+  trois indicateurs sont repris du référentiel, et restent **corrigeables** par des bascules ;
+- l’utilisateur **recherche un médicament** (nom ou DCI) : l’assistant affiche s’il s’agit d’un
+  **produit de la réserve hospitalière** — ce qui suffit à valider le pilier « soins » ;
+- la recherche est **insensible à la casse et aux accents** (fonctions RPC `unaccent`) ;
+- si le référentiel est **injoignable**, un repli local embarqué prend le relais et l’état est
+  signalé dans l’en-tête.
+
+### Points de vigilance sur les données
+
+- `est_reserve_hospitaliere` et `est_liste_en_sus` : `TRUE` pour les listes de travail
+  (`data/reserve-hospitaliere.dci.txt`), **`NULL` = non déterminé** (et non « hors réserve »).
+  L’assistant invite alors l’utilisateur à trancher. Une **validation par la pharmacie à usage
+  intérieur** reste nécessaire.
+- `acte_marqueur_hdj` / `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode
+  d’accès** de la nomenclature CCAM (un acte en « abord ouvert » ou « accès transpariétal »
+  nécessite un plateau lourd ; une imagerie « sans accès » est réalisable en externe), corrigés
+  par `data/ccam-overlay.csv` pour les cas connus (ECG `DEQP003`, etc.).
+
+### Sécurité
+
+`supabase/hardening.sql` active **Row Level Security** et réduit les privilèges de `anon` et
+`authenticated` à `SELECT`. La clé `anon` est publique par conception ; **aucune écriture n’est
+possible depuis le navigateur**.
+
+### Mise à jour des référentiels
+
+```bash
+export SUPABASE_URL=https://<ref>.supabase.co
+export SUPABASE_SERVICE_ROLE_KEY=<clé service_role>   # ne jamais publier
+node scripts/import-referentiels.mjs
+# puis appliquer supabase/hardening.sql et supabase/rpc-recherche.sql
 ```
 
-Utilisation :
-
-```ts
-import { evaluerDossier } from './src/core/rules-engine/index.js';
-
-const audit = evaluerDossier(dossier);
-if (audit.ghs_autorise) {
-  // facturation GHS
-} else {
-  console.warn(audit.motifs_blocage.join('\n'));
-}
-```
-
----
-
-## 4. Tests
+## 5. Tests
 
 ```bash
 npm install
-npm test              # 50 tests (moteur, portes, UI)
+npm test              # 55 tests : moteur, portes, assistant (référentiel simulé)
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement
 npm run build         # build de production dans dist/
 ```
 
-Les **5 cas obligatoires** du cahier des charges :
+Les **5 cas obligatoires** :
 
 | # | Cas | Statut attendu |
 |---|---|---|
@@ -133,27 +149,12 @@ Les **5 cas obligatoires** du cahier des charges :
 | 4 | Perfusion isolée de fer, sans surveillance continue | `REJET_VERS_ACE` |
 | 5 | Séance de chimiothérapie | `REJET_VERS_FORFAIT_SEANCE` |
 
----
-
-## 5. Interface
-
-- Formulaire en 4 blocs : en-tête administratif & programmation, intervenants (avec case
-  **impérative** « note d'évolution rédigée dans le dossier »), actes CCAM & traitements UCD,
-  surveillance & paramètres.
-- Panneau de résultat **temps réel** : badge de statut (vert / orange / rouge), pyramide des
-  5 portes, détail des piliers, motifs opposables, alertes qualité, constats et références.
-- **Fiche de traçabilité T2A** : impression / PDF ou export `.txt`, avec zones de visa
-  (rédacteur, DIM, médecin coordonnateur) et rappel du dispositif de rescrit tarifaire.
-- 5 cas de démonstration pré-remplis, alignés sur les tests unitaires.
-
----
-
 ## 6. Références
 
 - Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020 — NOR : SSAH2007743J.
-- Code de la sécurité sociale, art. L. 162-22-6, L. 162-26, L. 162-26-1, R. 162-33-1.
-- Code de la santé publique, art. D. 6124-301-1 et s., R. 1112-1-2, R. 5121-82, L. 4111-1.
+- Code de la sécurité sociale : art. L. 162-22-6, L. 162-26, L. 162-26-1, R. 162-33-1.
+- Code de la santé publique : art. D. 6124-301-1 et s., R. 1112-1-2, R. 5121-82, L. 4111-1.
 - Arrêté du 19 février 2015 modifié (art. 11 et 11 bis) ; arrêté du 23 décembre 2016.
 
-Outil d'aide à la décision médico-administrative : il ne se substitue ni à l'appréciation du
-médecin DIM ni aux contrôles de l'Assurance Maladie.
+Outil d’aide à la décision médico-administrative : il ne se substitue ni à l’appréciation du
+médecin DIM, ni aux contrôles de l’Assurance Maladie.
