@@ -62,7 +62,12 @@ beforeAll(async () => {
 
     if (url.includes('rechercher_ccam')) return reponseJson([ACTES['ZZQL002']]);
     if (url.includes('acte_ccam')) return reponseJson([ACTES[String(corps['p_code'])]]);
-    if (url.includes('rechercher_medicaments')) return reponseJson(MEDICAMENTS);
+    if (url.includes('rechercher_medicaments')) {
+      // Le référentiel ne sait pas chercher par CIS : une sélection doit
+      // s'appuyer sur l'objet déjà renvoyé par la recherche textuelle.
+      const terme = String(corps['p_terme'] ?? '');
+      return reponseJson(/^\d+$/.test(terme) ? [] : MEDICAMENTS);
+    }
     return reponseJson([]);
   });
   vi.stubGlobal('fetch', fetchSimule);
@@ -200,8 +205,10 @@ describe('Assistant pas-à-pas — parcours complet', () => {
     }
     await attendre(450);
     await choisirPremiereSuggestion('suggestion-medicament');
+    // Régression : la sélection ne doit pas dépendre d'une recherche par CIS.
     expect(document.querySelectorAll('[data-action="retirer-medicament"]')).toHaveLength(1);
     expect(texte('.selection')).toContain('IMMUNOGLOBULINE');
+    expect(texte('.element-meta')).toContain('CIS 68201234');
 
     // La réserve hospitalière est reprise du référentiel et le bouton reste enfoncé.
     const boutonReserve = document.querySelector<HTMLElement>(

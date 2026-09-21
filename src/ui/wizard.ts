@@ -38,6 +38,7 @@ import {
   rechercherActesCcam,
   rechercherMedicaments,
   verifierReferentiel,
+  type ActeRef,
   type MedicamentRef,
 } from './referentiels.js';
 
@@ -196,6 +197,8 @@ class Assistant {
   private minuteurRecherche: number | null = null;
   private termeRecherche = '';
   private suggestionsHtml = '';
+  /** Objets complets du référentiel indexés par identifiant de suggestion. */
+  private refsSuggerees = new Map<string, MedicamentRef | ActeRef>();
   private messageRecherche = '';
   private dernierDossier: DossierHDJ | null = null;
   private dernierResultat: ResultatAudit | null = null;
@@ -1065,6 +1068,8 @@ class Assistant {
       if (type === 'actes') {
         const resultats = await rechercherActesCcam(terme);
         if (jeton !== this.jetonRequete) return;
+        this.refsSuggerees.clear();
+        for (const acte of resultats) this.refsSuggerees.set(acte.code, acte);
         this.suggestionsHtml = resultats
           .map(
             (a) => `<li><button type="button" data-action="suggestion-acte"
@@ -1081,6 +1086,8 @@ class Assistant {
       } else {
         const resultats = await rechercherMedicaments(terme);
         if (jeton !== this.jetonRequete) return;
+        this.refsSuggerees.clear();
+        for (const medicament of resultats) this.refsSuggerees.set(medicament.cis, medicament);
         this.suggestionsHtml = resultats
           .map(
             (m) => `<li><button type="button" data-action="suggestion-medicament"
@@ -1117,7 +1124,8 @@ class Assistant {
       this.signaler(`L’acte ${code} est déjà sélectionné.`);
       return;
     }
-    const reference = await acteParCode(code);
+    const connue = this.refsSuggerees.get(code);
+    const reference = connue && 'libelle' in connue ? connue : await acteParCode(code);
     this.etat.actes.push(
       reference ? acteChoisiDepuisReferentiel(reference) : acteChoisiManuel(code, ''),
     );
@@ -1129,10 +1137,11 @@ class Assistant {
       this.signaler('Ce médicament est déjà sélectionné.');
       return;
     }
-    const trouves = await rechercherMedicaments(cis, 1).catch(
-      () => [] as readonly MedicamentRef[],
-    );
-    const reference = trouves[0];
+    const connue = this.refsSuggerees.get(cis);
+    const reference =
+      connue && 'denomination' in connue
+        ? connue
+        : (await rechercherMedicaments(cis, 1).catch(() => [] as readonly MedicamentRef[]))[0];
     if (!reference) {
       this.signaler('Médicament introuvable dans le référentiel.');
       return;
