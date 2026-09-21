@@ -1,261 +1,197 @@
 <!DOCTYPE html>
 <html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Éligibilité HDJ</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: "Segoe UI", sans-serif;
-        }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HDJ Vérif — Moteur décisionnel de cotation GHS vs ACE</title>
+    <meta
+      name="description"
+      content="Moteur d'évaluation opposable en contrôle T2A : hospitalisation de jour (GHS) vs actes et consultations externes (ACE), Instruction DGOS/R1/DSS/1A/2020/52."
+    />
+  </head>
+  <body>
+    <header class="bandeau">
+      <h1>HDJ Vérif — moteur décisionnel de cotation</h1>
+      <p>
+        Évaluation opposable en contrôle T2A : hospitalisation de jour (GHS) <em>vs</em> actes et
+        consultations externes (ACE) — 5 portes de validation séquentielles.
+      </p>
+      <span class="reference">
+        Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020 — NOR&nbsp;: SSAH2007743J
+      </span>
+    </header>
 
-        body {
-            background: #f4f7fb;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #0066cc, #0099ff);
-            color: white;
-            padding: 25px;
-            border-radius: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-
-        .header h1 {
-            font-size: 1.8rem;
-        }
-
-        .header p {
-            opacity: 0.95;
-            margin-top: 8px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        }
-
-        .progress-wrapper {
-            margin-bottom: 20px;
-        }
-
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: #475569;
-            font-weight: 600;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 12px;
-            background: #e2e8f0;
-            border-radius: 50px;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #0066cc, #00b894);
-            transition: width 0.4s ease;
-        }
-
-        #question {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 15px;
-        }
-
-        #help {
-            color: #64748b;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-
-      .examples {
-            background: #f8fafc;
-            border-left: 5px solid #0099ff;
-            padding: 12px; /* Padding réduit pour compacter le bloc */
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 9pt; /* Application de la taille 9 globale au bloc */
-        }
-
-        .examples h4 {
-            margin-bottom: 5px; /* Marges réduites */
-            color: #0f172a;
-            font-size: 10pt; /* Maintien d'une hiérarchie visuelle pour les titres */
-        }
-
-        .examples p {
-            font-size: 9pt;
-            color: #475569;
-        }
-
-        .examples ul {
-            padding-left: 20px;
-        }
-
-        .examples li {
-            margin-bottom: 4px;
-            color: #475569;
-            font-size: 9pt;
-        }
-
-        .buttons {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
- button {
-    flex: 1;
-    min-width: 120px;
-    padding: 15px;
-    border: none;
-    border-radius: 12px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: 600;
-    transition: 0.3s;
-    /* AJOUTS POUR CORRIGER LE DÉBORDEMENT */
-    white-space: normal; 
-    word-wrap: break-word;
-    height: auto;
-    line-height: 1.3;
-}
-
-        #btn-yes {
-            background: #16a34a;
-            color: white;
-        }
-
-        #btn-yes:hover {
-            background: #15803d;
-        }
-
-        #btn-no {
-            background: #dc2626;
-            color: white;
-        }
-
-        #btn-no:hover {
-            background: #b91c1c;
-        }
-
-        #result {
-            margin-top: 25px;
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 1.1rem;
-            display: none;
-        }
-
-        .success {
-            background: #dcfce7;
-            color: #166534;
-            border-left: 6px solid #16a34a;
-        }
-
-        .warning {
-            background: #fff7ed;
-            color: #9a3412;
-            border-left: 6px solid #f97316;
-        }
-
-        .danger {
-            background: #fee2e2;
-            color: #991b1b;
-            border-left: 6px solid #dc2626;
-        }
-
-        .footer {
-            text-align: center;
-            margin-top: 20px;
-            color: #64748b;
-            font-size: 0.9rem;
-        }
-
-        @media (max-width: 768px) {
-            .header h1 {
-                font-size: 1.4rem;
-            }
-            #question {
-                font-size: 1.1rem;
-            }
-            .buttons {
-                flex-direction: column;
-            }
-            button {
-                width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <div class="header">
-            <h1>
-                <i class="fas fa-hospital-user"></i>
-                Vérification de l'éligibilité HDJ
-            </h1>
-            <p>Outil d'aide à la décision pour les prescripteurs, cadres de santé et TIM.</p>
-        </div>
-
-        <div class="card">
-            <div class="progress-wrapper">
-                <div class="progress-label">
-                    <span>Progression</span>
-                    <span id="progress-text">0%</span>
-                </div>
-                <div class="progress-bar">
-                    <div id="progress-fill" class="progress-fill"></div>
-                </div>
+    <main class="ossature">
+      <!-- ================= Colonne saisie ================= -->
+      <section>
+        <form id="formulaire" novalidate>
+          <!-- Bloc 1 — En-tête administratif -->
+          <div class="bloc">
+            <h2><span class="numero">1</span>En-tête administratif &amp; programmation</h2>
+            <p class="aide">
+              Porte 1 : la programmation préalable, la demande médicale et la synthèse signée sont
+              cumulativement requises (annexe 4, points 2.a et 5).
+            </p>
+            <div class="grille">
+              <div>
+                <label for="id_sejour">Identifiant de séjour</label>
+                <input type="text" id="id_sejour" autocomplete="off" />
+              </div>
+              <div>
+                <label for="date_sejour">Date du séjour</label>
+                <input type="date" id="date_sejour" />
+              </div>
+              <div>
+                <label for="regime_champ">Régime de champ d’application</label>
+                <select id="regime_champ"></select>
+              </div>
             </div>
-
-            <div id="question">Chargement...</div>
-            <div id="help"></div>
-
-            <div id="examples" class="examples">
-                <h4><i class="fas fa-book"></i> Référence réglementaire</h4>
-                <p id="reference"></p>
-                <br>
-                <h4><i class="fas fa-quote-left"></i> Justification réglementaire</h4>
-                <p id="citation"></p>
-                <br>
-                <h4><i class="fas fa-hospital"></i> Exemples pratiques</h4>
-                <ul id="practical-examples"></ul>
+            <div class="grille" style="margin-top: 12px">
+              <label class="case" for="est_programme">
+                <input type="checkbox" id="est_programme" />
+                <span>Séjour programmé (convocation et objectif médical formalisés)</span>
+              </label>
+              <label class="case" for="lettre_adressage_presente">
+                <input type="checkbox" id="lettre_adressage_presente" />
+                <span>Demande médicale préalable / lettre d’adressage présente</span>
+              </label>
+              <label class="case" for="synthese_medicale_tracee">
+                <input type="checkbox" id="synthese_medicale_tracee" />
+                <span>Synthèse médicale signée le jour même (CRH / lettre de sortie)</span>
+              </label>
+              <label class="case" for="lettre_liaison_remise">
+                <input type="checkbox" id="lettre_liaison_remise" />
+                <span>Lettre de liaison remise (art. R. 1112-1-2 CSP)</span>
+              </label>
             </div>
+          </div>
 
-            <div id="answers" class="buttons"></div>
-            <div id="result"></div>
+          <!-- Bloc 2 — Intervenants -->
+          <div class="bloc">
+            <h2><span class="numero">2</span>Intervenants</h2>
+            <p class="aide">
+              Porte 3, pilier 3 : seuls les intervenants ayant rédigé une note d’évolution
+              individualisée dans le dossier sont dénombrés (annexe 4, point 2.b.iii).
+            </p>
+            <div id="zone-intervenants"></div>
+            <button type="button" class="bouton ajouter" data-action="ajouter-intervenant">
+              + Ajouter un intervenant
+            </button>
+          </div>
+
+          <!-- Bloc 3 — Actes et produits -->
+          <div class="bloc">
+            <h2><span class="numero">3</span>Actes CCAM &amp; traitements UCD</h2>
+            <p class="aide">
+              Portes 2 et 3 : un acte isolé réalisable en externe renvoie vers l’ACE ; le plateau
+              technique lourd, les actes coordonnés et les produits à réserve hospitalière
+              caractérisent l’intensité (annexe 4, points 2.b.i et 2.b.iii).
+            </p>
+
+            <h3 style="font-size: 0.86rem; margin: 4px 0 10px; color: var(--bleu-700)">
+              Actes CCAM
+            </h3>
+            <div id="zone-actes"></div>
+            <button type="button" class="bouton ajouter" data-action="ajouter-acte">
+              + Ajouter un acte CCAM
+            </button>
+
+            <h3
+              style="font-size: 0.86rem; margin: 20px 0 10px; color: var(--bleu-700)"
+            >
+              Traitements / produits UCD
+            </h3>
+            <div id="zone-medicaments"></div>
+            <button type="button" class="bouton ajouter" data-action="ajouter-medicament">
+              + Ajouter un produit UCD
+            </button>
+          </div>
+
+          <!-- Bloc 4 — Surveillance & paramètres -->
+          <div class="bloc">
+            <h2><span class="numero">4</span>Surveillance &amp; paramètres du séjour</h2>
+            <p class="aide">
+              Porte 3, pilier 1 : la surveillance active documentée constitue à elle seule un
+              motif de densité. Une durée de présence inférieure à 3 h déclenche une alerte
+              qualité non bloquante.
+            </p>
+            <div class="grille">
+              <label class="case" for="surveillance_active_documentee">
+                <input type="checkbox" id="surveillance_active_documentee" />
+                <span>Surveillance clinique rapprochée documentée par l’IDE</span>
+              </label>
+              <div>
+                <label for="duree_presence_minutes">Durée de présence (minutes)</label>
+                <input type="number" id="duree_presence_minutes" min="0" max="1440" step="5" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Cas pré-remplis -->
+          <div class="bloc">
+            <h2><span class="numero">5</span>Cas de démonstration</h2>
+            <p class="aide">
+              Jeux de données alignés sur les tests unitaires obligatoires du moteur.
+            </p>
+            <div class="liste-presets" id="zone-presets"></div>
+          </div>
+        </form>
+      </section>
+
+      <!-- ================= Colonne résultat ================= -->
+      <aside class="panneau">
+        <div class="bloc" id="panneau-resultat">
+          <div class="badge ROUGE" id="badge">
+            <div class="libelle">Décision du moteur</div>
+            <div class="statut" id="badge-statut">—</div>
+            <div class="mention" id="badge-mention"></div>
+          </div>
+
+          <div class="section-resultat">
+            <h3>Pyramide des 5 portes</h3>
+            <ul class="pyramide" id="zone-portes"></ul>
+          </div>
+
+          <div class="section-resultat">
+            <h3>Densité en ressources (porte 3)</h3>
+            <div id="zone-piliers"></div>
+          </div>
+
+          <div class="section-resultat">
+            <h3>Motifs opposables</h3>
+            <ul class="propre" id="zone-motifs"></ul>
+          </div>
+
+          <div class="section-resultat">
+            <h3>Alertes qualité / contrôle T2A</h3>
+            <ul class="propre" id="zone-alertes"></ul>
+          </div>
+
+          <div class="section-resultat">
+            <h3>Constat &amp; références normatives</h3>
+            <div id="zone-constats"></div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="bouton principal" id="btn-fiche-imprimer">
+              🖨️ Fiche de traçabilité T2A
+            </button>
+            <button type="button" class="bouton secondaire" id="btn-fiche-telecharger">
+              💾 Télécharger (.txt)
+            </button>
+            <button type="button" class="bouton secondaire" id="btn-copier-synthese">
+              📋 Copier la synthèse
+            </button>
+          </div>
         </div>
+      </aside>
+    </main>
 
-        <div class="footer">
-            Version 1 • Aide au raisonnement médico-administratif • P.NICOLAS
-        </div>
-    </div>
+    <footer class="pied">
+      Moteur décisionnel HDJ — Instruction N° DGOS/R1/DSS/1A/2020/52 — outil d’aide à la
+      décision médico-administrative, ne se substituant pas à l’appréciation du DIM.
+    </footer>
 
-    <script src="app.js"></script>
-</body>
+    <script type="module" src="/src/ui/main.ts"></script>
+  </body>
 </html>
