@@ -12,3 +12,6 @@ coverage/
 .DS_Store
 *.log
 .vite/
+
+# Cache des sources de référentiel (téléchargées par scripts/import-referentiels.mjs)
+.cache/

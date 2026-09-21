@@ -1,0 +1,359 @@
+# Liste de travail « réserve hospitalière » (médicaments réservés à l'usage hospitalier)
+#
+# OBJET      : alimenter referentiel_medicaments.est_reserve_hospitaliere dans Supabase.
+# FORMAT     : un motif par ligne, recherché en sous-chaîne, insensible à la casse et
+#              aux accents, sur la dénomination BDPM et/ou la DCI.
+#              Les lignes vides et les commentaires (#) sont ignorés.
+#
+# PROVENANCE : liste de travail constituée à partir des classes thérapeutiques
+#              relevant de la réserve hospitalière au sens de l'article R. 5121-82
+#              du code de la santé publique (médicaments réservés à l'usage
+#              hospitalier) et, pour la plupart d'entre elles, inscrites sur la liste
+#              en sus des GHS.
+#
+# AVERTISSEMENT : cette liste est un PROPOSITION DE TRAVAIL destinée à pré-remplir le
+#              référentiel. Elle ne se substitue pas à la liste officielle : elle doit
+#              être revue et validée par la pharmacie à usage intérieur (PUI) de
+#              l'établissement. Les médicaments non reconnus restent à NULL dans la
+#              base, ce qui signifie « non déterminé » (et non « hors réserve ») :
+#              l'application invite alors l'utilisateur à trancher.
+#
+# MAINTENANCE : mettre à jour ce fichier puis rejouer
+#              `node scripts/import-referentiels.mjs`.
+
+# --- Immunoglobulines et dérivés sanguins ---------------------------------
+immunoglobuline
+immunoglobine
+antithrombine
+alpha-1-antitrypsine
+facteur viii
+facteur ix
+facteur vii
+facteur xiii
+facteur von willebrand
+octocog
+moroctocog
+eftrenonacog
+albutrepenonacog
+susoctocog
+eptacog
+nonacog
+simoctocog
+turoctocog
+damosoctocog
+rhuman coagul
+c1-inhibiteur
+protéine c humaine
+albumine humaine
+# --- Produits de thérapie cellulaire / génique ----------------------------
+tisagenlecleucel
+axicabtagene
+brexucabtagene
+lisocabtagene
+onasemnogene
+betibeglogene
+libmeldy
+atidarsagene
+strimvelis
+zynteglo
+skysona
+hemgenix
+roctavian
+# --- Facteurs de croissance hématopoïétiques ------------------------------
+époétine
+epoetine
+darbépoétine
+darbe poetine
+methoxypolyethylene
+mircera
+filgrastim
+pegfilgrastim
+lenograstim
+lipegfilgrastim
+eltrombopag
+romiplostim
+avatrombopag
+luspatercept
+# --- Anticorps monoclonaux et protéines de fusion -------------------------
+abciximab
+adalimumab
+alemtuzumab
+atezolizumab
+avelumab
+basiliximab
+belimumab
+benralizumab
+bevacizumab
+bimekizumab
+blinatumomab
+brentuximab
+brolucizumab
+burosumab
+canakinumab
+cemiplimab
+certolizumab
+cetuximab
+crovalimab
+daratumumab
+denosumab
+dinutuximab
+dupilumab
+durvalumab
+eculizumab
+elotuzumab
+emicizumab
+erenumab
+evolocumab
+fremanezumab
+galcanezumab
+golimumab
+guselkumab
+ibritumomab
+idarucizumab
+infliximab
+ipilimumab
+isatuximab
+ixekizumab
+lanadelumab
+mepolizumab
+mogamulizumab
+motavizumab
+natalizumab
+necitumumab
+nivolumab
+obiltoxaximab
+obinutuzumab
+ocrelizumab
+ofatumumab
+omalizumab
+panitumumab
+pembrolizumab
+pertuzumab
+ramucirumab
+ranibizumab
+ravulizumab
+risankizumab
+rituximab
+sarilumab
+secukinumab
+siltuximab
+sotrovimab
+tildrakizumab
+tocilizumab
+trastuzumab
+tremelimumab
+ublituximab
+ustekinumab
+vedolizumab
+# --- Cytotoxiques et apparentés (chimiothérapie) --------------------------
+asparaginase
+pegaspargase
+bendamustine
+bléomycine
+bleomycine
+busulfan
+carboplatine
+carmustine
+cisplatine
+cladribine
+clofarabine
+cyclophosphamide
+cytarabine
+dacarbazine
+dactinomycine
+daunorubicine
+decitabine
+docétaxel
+doxorubicine
+épirubicine
+estramustine
+étoposide
+fludarabine
+fluorouracile
+fotémustine
+gemcitabine
+idarubicine
+ifosfamide
+irinotécan
+lomustine
+melphalan
+mercaptopurine
+méthotrexate
+mitomycine
+mitoxantrone
+nelarabine
+oxaliplatine
+paclitaxel
+pemetrexed
+pentostatine
+pipobroman
+procarbazine
+raltitrexed
+streptozocine
+témozolomide
+téniposide
+thiotépa
+tioguanine
+topotécan
+trabectédine
+vinblastine
+vincristine
+vindésine
+vinflunine
+vinorelbine
+# --- Biothérapies et facteurs de croissance osseuse -----------------------
+somatropine
+somatrogon
+mecasermin
+teriparatide
+abaloparatide
+asfotase alfa
+burosumab
+vosoritide
+# --- Enzymes de substitution ---------------------------------------------
+agalsidase
+alglucosidase
+avelaglucosidase
+pegunigalsidase
+imiglucérase
+velaglucerase
+taliglucerase
+laronidase
+idursulfase
+elosulfase
+vestronidase
+galsulfase
+asfotase
+sebelipase
+olipudase
+# --- Anti-infectieux d'usage hospitalier ----------------------------------
+amphotéricine b
+caspofungine
+micafungine
+anidulafungine
+voriconazole
+posaconazole
+isavuconazole
+foscarnet
+cidofovir
+ganciclovir
+valganciclovir
+aciclovir 250 mg
+vancomycine
+teicoplanine
+daptomycine
+colistine
+colistimethate
+ceftazidime-avibactam
+ceftolozane-tazobactam
+ceftobiprole
+imipénème
+méropénème
+ertapénème
+doripénème
+tigécycline
+linezolide 2 mg
+amikacine
+tobramycine 300
+cefiderocol
+ceftaroline
+dalbavancine
+oritavancine
+plazomicine
+aztréonam
+polymyxine
+rifampicine 600 mg
+# --- Antirétroviraux, hépatites, autres antiviraux ------------------------
+enfuvirtide
+bictegravir
+dolutegravir
+raltegravir 400
+# --- Produits de contraste, dialyse, nutrition, gaz -----------------------
+gadobutrol 1 mmol
+gadoteridol 0,5 mmol
+gadotérique
+ioversol 350
+iodixanol 320
+iohexol 350
+ioxaglate
+solutions pour hémodialyse
+solution pour dialyse péritonéale
+solution de dialyse
+acide zoledronique 5 mg
+aliments diététiques destinés à des fins médicales spéciales
+aliment diététique destiné à des fins médicales spéciales
+oxygène médicinal
+protoxyde d'azote médicinal
+# --- Divers hospitaliers --------------------------------------------------
+iloprost
+époprosténol
+epoprostenol
+bosentan
+riociguat
+sildénafil 10 mg
+tadalafil 20 mg
+ambrisentan
+macitentan
+sélévipag
+selexipag
+surdénil
+ivabradine 5 mg
+lévosimendan
+milrinone
+noradrénaline
+adrénaline 1 mg
+dopamine
+dobutamine
+midazolam 5 mg
+propofol
+kétamine
+sufentanil
+rémifentanil
+morphine 10 mg
+oxycodone 10 mg
+sugammadex
+rocuronium
+cisatracurium
+atracurium
+vécuronium
+pancuronium
+néostigmine
+suxaméthonium
+somatostatine
+octréotide
+lanréotide
+pasiréotide
+tériparatide
+diazoxide
+tolvaptan 15 mg
+conivaptan
+carglumique
+carglumic
+bétanine
+betaine
+nitisinone
+sapropterine
+tétrabénazine
+triheptanoine
+miglustat
+eliglustat
+cysteamine
+sodium phénylbutyrate
+glycéril triheptanoate
+levocarnitine
+carglumic acid
+
+# --- Produits non réservés (exclusions explicites, priorité haute) --------
+# Toute correspondance ci-dessous force est_reserve_hospitaliere = false.
+!paracétamol
+!ibuprofène
+!amoxicilline
+!doliprane
+!efferalgan
+!spasfon
+!gaviscon
+!smecta
+!metformine
+!kardégic
+!ventoline
+!levothyrox

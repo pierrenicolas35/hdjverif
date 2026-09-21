@@ -1,0 +1,28 @@
+# Surcharges éditoriales du référentiel CCAM.
+#
+# OBJET : corriger, pour des actes identifiés, les trois indicateurs dérivés du
+#         référentiel CCAM (acte_marqueur_hdj, exclusif_externe,
+#         necessite_plateau_lourd) lorsque l'heuristique automatique se trompe.
+#
+# Les colonnes de valeurs acceptent : true / false / (vide = ne pas surcharger).
+#
+# PROVENANCE : instruction N° DGOS/R1/DSS/1A/2020/52 et pratique de codage PMSI
+#             (actes d'exploration fonctionnelle non dénombrables, actes
+#             réalisables en cabinet, actes nécessitant une salle interventionnelle).
+#
+# FORMAT : code;acte_marqueur_hdj;exclusif_externe;necessite_plateau_lourd;commentaire
+code;acte_marqueur_hdj;exclusif_externe;necessite_plateau_lourd;commentaire
+# --- Electrocardiographie : non dénombrable (annexe 4, point 2.b.iii) -----
+DEQP003;false;true;false;ECG >= 12 derivations : ne peut etre denombre au titre d'une intervention
+DEQP001;false;true;false;ECG avec enregistrement evenementiel
+DEQP002;false;true;false;ECG a haute amplification
+DEQP005;false;true;false;ECG >= 2 derivations avec enregistrement continu
+# --- Explorations fonctionnelles realisees en externe --------------------
+DKRP004;false;true;false;epreuve d'effort sur tapis roulant ou bicyclette ergometrique
+EQRP002;false;true;false;epreuve d'effort sur tapis roulant ou bicyclette ergometrique
+# --- Imagerie en coupe : realisable en externe ---------------------------
+AAQM002;false;true;false;echographie transfontanellaire
+ACQK001;false;true;false;scanographie du crane sans injection
+ACQN001;false;true;false;IRM du crane sans injection
+# --- Perfusions et injections simples : realisables en externe ------------
+ZZQK001;false;true;false;perfusion intraveineuse lente (acte generique)
