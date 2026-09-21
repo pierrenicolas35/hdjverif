@@ -1,0 +1,14 @@
+# Dépendances
+node_modules/
+
+# Build
+dist/
+*.tsbuildinfo
+
+# Couverture de tests
+coverage/
+
+# Divers
+.DS_Store
+*.log
+.vite/

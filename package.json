@@ -1,0 +1,24 @@
+{
+  "name": "hdjverif",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Moteur décisionnel de cotation HDJ (GHS) vs ACE — Instruction DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "@vitest/coverage-v8": "^2.1.4",
+    "happy-dom": "^15.11.7",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}
