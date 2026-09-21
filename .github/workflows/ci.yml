@@ -1,0 +1,67 @@
+name: Qualité & déploiement
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ------------------------------------------------------------------
+  # Vérification : typage strict, tests unitaires, build de production.
+  # Aucun commit ne doit passer sans que les 5 cas obligatoires soient verts.
+  # ------------------------------------------------------------------
+  qualite:
+    name: Typage, tests et build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Installation des dépendances
+        run: npm ci
+
+      - name: Vérification du typage (TypeScript strict)
+        run: npm run typecheck
+
+      - name: Tests unitaires et d'intégration
+        run: npm run test
+
+      - name: Build de production
+        run: npm run build
+
+      - name: Publication de l'artefact statique
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  # ------------------------------------------------------------------
+  # Déploiement GitHub Pages (branche principale uniquement).
+  # ------------------------------------------------------------------
+  deploiement:
+    name: Déploiement GitHub Pages
+    needs: qualite
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - name: Déploiement
+        id: deploiement
+        uses: actions/deploy-pages@v4
