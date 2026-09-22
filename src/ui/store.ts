@@ -21,9 +21,11 @@ import type { Discipline } from './pedagogie.js';
  * ------------------------------------------------------------------ */
 
 /**
- * Acte retenu par l'utilisateur, éventuellement issu du référentiel CCAM.
- * Volontairement mutable : l'assistant laisse l'utilisateur corriger les
- * caractéristiques proposées par le référentiel.
+ * Acte retenu par l'utilisateur, issu du référentiel CCAM.
+ *
+ * Les caractéristiques de l'acte (plateau technique lourd, réalisation en
+ * externe) sont reprises telles quelles de la nomenclature : elles ne sont
+ * jamais redemandées à l'utilisateur.
  */
 export interface ActeChoisi {
   acte: ActeCCAM;
@@ -33,13 +35,16 @@ export interface ActeChoisi {
   reference: ActeRef | null;
 }
 
-/** Médicament retenu par l'utilisateur, éventuellement issu du référentiel. */
+/**
+ * Médicament retenu par l'utilisateur, issu du référentiel.
+ *
+ * Le classement « réserve hospitalière » et la surveillance renforcée sont
+ * repris du référentiel : ils ne sont jamais redemandés à l'utilisateur.
+ */
 export interface MedicamentChoisi {
   medicament: MedicamentUCD;
   issuReferentiel: boolean;
   reference: MedicamentRef | null;
-  /** Traçabilité de la décision « réserve hospitalière » (référentiel ou arbitrage). */
-  reserveSource: 'referentiel' | 'arbitrage';
 }
 
 /**
@@ -62,11 +67,7 @@ export interface EtatAssistant {
   /** Discipline déclarée à l'accueil (adapte les exemples pédagogiques). */
   discipline: Discipline | null;
 
-  /** Identité du séjour. */
-  identifiantSejour: string;
-  dateSejour: string;
-
-  /** Régime déterminé par les portes 0 (réponses aux deux questions de champ). */
+  /** Régime déterminé par les portes 0 (réponses aux questions de champ). */
   estSeance: boolean | null;
   estHorsMco: boolean | null;
 
@@ -86,13 +87,9 @@ export interface EtatAssistant {
   dureePresenceMinutes: number;
 }
 
-const dateDuJour = (): string => new Date().toISOString().slice(0, 10);
-
 export function etatInitial(): EtatAssistant {
   return {
     discipline: null,
-    identifiantSejour: 'SEJ-2026-0001',
-    dateSejour: dateDuJour(),
     estSeance: null,
     estHorsMco: null,
     estProgramme: null,
@@ -144,28 +141,34 @@ export function acteChoisiManuel(code: string, libelle: string): ActeChoisi {
 }
 
 export function medicamentChoisiDepuisReferentiel(ref: MedicamentRef): MedicamentChoisi {
-  const reserveConnue = ref.est_reserve_hospitaliere !== null;
   return {
     issuReferentiel: true,
     reference: ref,
-    reserveSource: reserveConnue ? 'referentiel' : 'arbitrage',
     medicament: {
       code_ucd: ref.cis,
       libelle: ref.denomination,
-      // `null` = non déterminé dans le référentiel : l'utilisateur tranche, et
-      // l'assistant l'y invite explicitement.
-      reserve_hospitaliere: ref.est_reserve_hospitaliere ?? false,
+      // Le référentiel fait foi. Une valeur absente n'est pas interprétée comme
+      // une exclusion : elle est traitée comme « hors réserve hospitalière »,
+      // sans interroger à nouveau l'utilisateur.
+      reserve_hospitaliere: ref.est_reserve_hospitaliere === true,
       necessite_surveillance_continue: ref.surveillance_renforcee === true,
     },
   };
 }
 
-export function intervenantVide(): IntervenantSaisi {
+/**
+ * Crée un intervenant pour la profession choisie.
+ *
+ * La note d'évolution est considérée tracée par défaut : l'utilisateur la
+ * décoche explicitement (bouton « Non ») lorsqu'aucune note n'a été rédigée.
+ */
+export function intervenantPourProfession(profession: Profession): IntervenantSaisi {
   return {
     id: nouvelId('int'),
-    profession: 'MEDECIN',
-    note_evolution_tracee: false,
+    profession,
+    note_evolution_tracee: true,
     acte_ou_atelier: '',
+    ...(profession === 'MEDECIN' ? { specialite_medicale: '' } : {}),
   };
 }
 
@@ -187,22 +190,18 @@ export function regimeDe(etat: EtatAssistant): RegimeChamp {
  * peut ainsi afficher un verdict provisoire à chaque étape.
  */
 export function versDossier(etat: EtatAssistant): DossierHDJ {
-  const intervenants: Intervenant[] = etat.intervenants
-    .filter((i) => i.acte_ou_atelier.trim() !== '' || i.specialite_medicale?.trim())
-    .map((i) => ({
-      id: i.id,
-      profession: i.profession,
-      ...(i.specialite_medicale?.trim()
-        ? { specialite_medicale: i.specialite_medicale.trim() }
-        : {}),
-      note_evolution_tracee: i.note_evolution_tracee,
-      acte_ou_atelier: i.acte_ou_atelier.trim(),
-    }));
+  const intervenants: Intervenant[] = etat.intervenants.map((i) => ({
+    id: i.id,
+    profession: i.profession,
+    ...(i.specialite_medicale?.trim()
+      ? { specialite_medicale: i.specialite_medicale.trim() }
+      : {}),
+    note_evolution_tracee: i.note_evolution_tracee,
+    acte_ou_atelier: i.acte_ou_atelier.trim() || LIBELLES_PROFESSION[i.profession],
+  }));
 
   return {
-    id_sejour: etat.identifiantSejour.trim() || 'SEJ-SANS-ID',
     regime_champ: regimeDe(etat),
-    date_sejour: etat.dateSejour,
     duree_presence_minutes: etat.dureePresenceMinutes,
     est_programme: etat.estProgramme ?? false,
     lettre_adressage_presente: etat.lettreAdressage ?? false,
@@ -221,10 +220,10 @@ export function versDossier(etat: EtatAssistant): DossierHDJ {
 
 export const LIBELLES_PROFESSION: Readonly<Record<Profession, string>> = {
   MEDECIN: 'Médecin',
-  IDE: 'IDE',
+  IDE: 'Infirmier(ère)',
+  KINESITHERAPEUTE: 'Kinésithérapeute',
   DIETETICIEN: 'Diététicien(ne)',
   PSYCHOLOGUE: 'Psychologue',
-  KINESITHERAPEUTE: 'Kinésithérapeute',
   ASSISTANT_SOCIAL: 'Assistant(e) social(e)',
   AUTRE_PARAMEDICAL: 'Autre paramédical',
 };

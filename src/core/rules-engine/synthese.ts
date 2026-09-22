@@ -7,6 +7,7 @@ import type {
   Constat,
   DossierHDJ,
   EtapePorte,
+  NiveauGHS,
   PilierEvaluation,
   ResultatAudit,
   StatutAudit,
@@ -20,8 +21,9 @@ const SEPARATEUR = '-'.repeat(LARGEUR);
 export interface ParametresSynthese {
   readonly dossier: DossierHDJ;
   readonly statut: StatutAudit;
+  readonly libelle_decision: string;
+  readonly niveau_ghs: NiveauGHS | null;
   readonly ghs_autorise: boolean;
-  readonly date_evaluation: string;
   readonly piliers: readonly PilierEvaluation[];
   readonly motifs_blocage: readonly string[];
   readonly alertes_controle: readonly string[];
@@ -57,8 +59,9 @@ export function construireSynthese(params: ParametresSynthese): string {
   const {
     dossier,
     statut,
+    libelle_decision,
+    niveau_ghs,
     ghs_autorise,
-    date_evaluation,
     piliers,
     motifs_blocage,
     alertes_controle,
@@ -73,9 +76,6 @@ export function construireSynthese(params: ParametresSynthese): string {
   lignes.push('  FICHE D’AUDIT DÉCISIONNEL — COTATION HDJ (GHS) vs ACTES EXTERNES (ACE)');
   lignes.push(`  Instruction N° ${INSTRUCTION_DGOS_2020_52.id} du ${INSTRUCTION_DGOS_2020_52.date}`);
   lignes.push(REGLE);
-  lignes.push(ligne('Séjour', dossier.id_sejour));
-  lignes.push(ligne('Date du séjour', dossier.date_sejour));
-  lignes.push(ligne('Date d’évaluation', date_evaluation));
   lignes.push(ligne('Régime de champ', dossier.regime_champ));
   lignes.push(ligne('Durée de présence', `${dossier.duree_presence_minutes} min`));
   lignes.push(ligne('Séjour programmé', dossier.est_programme ? 'OUI' : 'NON'));
@@ -87,8 +87,11 @@ export function construireSynthese(params: ParametresSynthese): string {
   );
 
   lignes.push(SEPARATEUR);
-  lignes.push(`  DÉCISION : ${statut}`);
-  lignes.push(`  GHS facturable : ${ghs_autorise ? 'OUI' : 'NON'}`);
+  lignes.push(`  DÉCISION : ${libelle_decision}`);
+  lignes.push(`  Statut technique : ${statut}`);
+  lignes.push(
+    `  GHS facturable : ${ghs_autorise ? `OUI (GHS ${niveau_ghs === 'PLEIN' ? 'plein' : 'intermédiaire'})` : 'NON'}`,
+  );
   lignes.push(
     `  Piliers validés : ${piliersValides.length}/${piliers.length} ` +
       `(${piliersValides.map((p) => p.id).join(', ') || 'aucun'})`,
@@ -161,7 +164,7 @@ export function construireSynthese(params: ParametresSynthese): string {
 /** Vérifie l'invariant d'opposabilité du résultat produit. */
 export function resultatCoherent(resultat: ResultatAudit): boolean {
   if (resultat.statut === 'VALIDE_GHS') {
-    return resultat.ghs_autorise && resultat.piliers_valides.length > 0;
+    return resultat.ghs_autorise && resultat.niveau_ghs !== null && resultat.piliers_valides.length > 0;
   }
-  return !resultat.ghs_autorise;
+  return !resultat.ghs_autorise && resultat.niveau_ghs === null;
 }

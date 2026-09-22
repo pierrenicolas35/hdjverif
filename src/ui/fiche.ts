@@ -8,11 +8,10 @@
 import { INSTRUCTION_DGOS_2020_52 } from '../core/rules-engine/index.js';
 import type { DossierHDJ, ResultatAudit } from '../core/rules-engine/index.js';
 
-/** Nom de fichier normalisé, horodaté par la date d'évaluation. */
-export function nomFichier(dossier: DossierHDJ, resultat: ResultatAudit): string {
-  const sejour = dossier.id_sejour.replace(/[^A-Za-z0-9_-]+/g, '_');
-  const date = resultat.date_evaluation.replace(/[^0-9-]+/g, '-');
-  return `Fiche_T2A_${sejour}_${date}_${resultat.statut}.txt`;
+/** Nom de fichier normalisé, dérivé de la décision rendue. */
+export function nomFichier(resultat: ResultatAudit): string {
+  const niveau = resultat.niveau_ghs ? `_${resultat.niveau_ghs}` : '';
+  return `Fiche_T2A_HDJ_${resultat.statut}${niveau}.txt`;
 }
 
 /** Contenu texte complet de la fiche de traçabilité. */
@@ -73,7 +72,7 @@ export function telechargerFiche(dossier: DossierHDJ, resultat: ResultatAudit): 
   const url = URL.createObjectURL(blob);
   const lien = document.createElement('a');
   lien.href = url;
-  lien.download = nomFichier(dossier, resultat);
+  lien.download = nomFichier(resultat);
   document.body.appendChild(lien);
   lien.click();
   lien.remove();
@@ -103,7 +102,7 @@ export function imprimerFiche(dossier: DossierHDJ, resultat: ResultatAudit): voi
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <title>Fiche de traçabilité T2A — ${echapper(dossier.id_sejour)}</title>
+  <title>Fiche de traçabilité T2A — évaluation HDJ</title>
   <style>
     @page { size: A4; margin: 14mm; }
     body { font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; }
@@ -122,7 +121,7 @@ export function imprimerFiche(dossier: DossierHDJ, resultat: ResultatAudit): voi
   <button onclick="window.print()">Imprimer / Enregistrer en PDF</button>
   <h1>Fiche de traçabilité T2A — Évaluation HDJ</h1>
   <div class="meta">
-    Séjour ${echapper(dossier.id_sejour)} — décision : <strong>${echapper(resultat.statut)}</strong>
+    Décision : <strong>${echapper(resultat.libelle_decision)}</strong>
   </div>
   <pre>${echapper(contenuFiche(dossier, resultat))}</pre>
 </body>

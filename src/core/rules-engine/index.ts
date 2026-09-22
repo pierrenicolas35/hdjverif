@@ -14,8 +14,7 @@
  * ```
  */
 
-export { evaluerDossier, severiteDe, PORTES } from './engine.js';
-export type { OptionsEvaluation } from './engine.js';
+export { evaluerDossier, severiteDe, PORTES, libelleDecision } from './engine.js';
 
 export { evaluerPorte0 } from './ports/porte0-champ.js';
 export { evaluerPorte1 } from './ports/porte1-prerequis.js';
@@ -46,6 +45,7 @@ export type {
   EtapePorte,
   Intervenant,
   MedicamentUCD,
+  NiveauGHS,
   PilierEvaluation,
   PilierId,
   PorteId,
@@ -57,6 +57,6 @@ export type {
   StatutPorte,
 } from './types.js';
 
-export { denombrerInterventions, intervenantsActifs } from './helpers.js';
+export { denombrerInterventions, intervenantsActifs, niveauGhs } from './helpers.js';
 export { validerDossier, dossierValide } from './validation.js';
 export type { ErreurValidation } from './validation.js';

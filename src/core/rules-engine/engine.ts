@@ -6,10 +6,11 @@
  * opposable en contrôle T2A.
  *
  * Le moteur est PUREMENT FONCTIONNEL : pas de dépendance UI, DOM, réseau ou
- * horloge système (la date d'évaluation est injectable pour garantir le
- * déterminisme des tests).
+ * horloge système. Deux dossiers identiques produisent toujours le même
+ * résultat.
  */
 
+import { niveauGhs } from './helpers.js';
 import { evaluerPiliers } from './ports/porte3-densite.js';
 import { evaluerPorte0 } from './ports/porte0-champ.js';
 import { evaluerPorte1 } from './ports/porte1-prerequis.js';
@@ -20,6 +21,7 @@ import { construireSynthese } from './synthese.js';
 import type {
   DossierHDJ,
   EtapePorte,
+  NiveauGHS,
   PilierEvaluation,
   PorteId,
   ResultatAudit,
@@ -27,15 +29,6 @@ import type {
   StatutAudit,
   StatutPorte,
 } from './types.js';
-
-/** Options d'évaluation. */
-export interface OptionsEvaluation {
-  /**
-   * Date d'évaluation (ISO 8601). Par défaut : la date du séjour, afin de
-   * préserver la pureté et le déterminisme du moteur.
-   */
-  readonly date_evaluation?: string;
-}
 
 /** Définition ordonnée des portes (pour la pyramide décisionnelle). */
 export const PORTES: readonly { readonly id: PorteId; readonly libelle: string }[] = [
@@ -67,6 +60,32 @@ export function severiteDe(statut: StatutAudit): Severite {
   }
 }
 
+/**
+ * Décision formulée en langage courant : c'est le libellé affiché au praticien,
+ * en lieu et place des codes techniques du moteur.
+ */
+export function libelleDecision(
+  statut: StatutAudit,
+  niveau: NiveauGHS | null,
+): string {
+  switch (statut) {
+    case 'VALIDE_GHS':
+      return niveau === 'PLEIN'
+        ? 'HDJ validée — facturation en GHS plein'
+        : 'HDJ validée — facturation en GHS intermédiaire';
+    case 'SUSPENDU_POUR_REGULARISATION':
+      return 'HDJ à régulariser — pièce(s) manquante(s) au dossier';
+    case 'REJET_VERS_ACE':
+      return 'Facturation en HDJ non validée — actes et consultations externes';
+    case 'REJET_VERS_FORFAIT_SEANCE':
+      return 'Facturation en HDJ non validée — forfait de séance';
+    case 'REJET_HORS_MCO':
+      return 'Facturation en HDJ non validée — hors champ MCO';
+    case 'REJET_NON_PROGRAMME':
+      return 'Facturation en HDJ non validée — prise en charge non programmée';
+  }
+}
+
 /** Construit la pyramide des portes jusqu'à l'indice `derniereEvaluee` inclus. */
 function construirePortes(
   statuts: ReadonlyMap<PorteId, StatutPorte>,
@@ -80,35 +99,37 @@ function construirePortes(
 
 interface ParametresFinalisation {
   readonly dossier: DossierHDJ;
-  readonly dateEvaluation: string;
   readonly issue: IssuePorte;
   readonly piliers: readonly PilierEvaluation[];
   readonly portes: readonly EtapePorte[];
 }
 
 function finaliser(params: ParametresFinalisation): ResultatAudit {
-  const { dossier, dateEvaluation, issue, piliers, portes } = params;
+  const { dossier, issue, piliers, portes } = params;
   const piliersValides = piliers.filter((p) => p.valide).map((p) => p.id);
   const alertes = alertesQualite(dossier);
+  const ghsAutorise = issue.statut === 'VALIDE_GHS';
+  const niveau = ghsAutorise ? niveauGhs(dossier) : null;
 
   return {
-    id_sejour: dossier.id_sejour,
-    date_evaluation: dateEvaluation,
     statut: issue.statut,
+    libelle_decision: libelleDecision(issue.statut, niveau),
+    niveau_ghs: niveau,
     severite: severiteDe(issue.statut),
-    ghs_autorise: issue.statut === 'VALIDE_GHS',
+    ghs_autorise: ghsAutorise,
     piliers_valides: piliersValides,
     motifs_blocage: issue.motifs_blocage,
     alertes_controle: alertes,
     piliers,
     constats: issue.constats,
-    porte_blocage: issue.statut === 'VALIDE_GHS' ? null : issue.porte,
+    porte_blocage: ghsAutorise ? null : issue.porte,
     portes,
     synthese_audit: construireSynthese({
       dossier,
       statut: issue.statut,
-      ghs_autorise: issue.statut === 'VALIDE_GHS',
-      date_evaluation: dateEvaluation,
+      libelle_decision: libelleDecision(issue.statut, niveau),
+      niveau_ghs: niveau,
+      ghs_autorise: ghsAutorise,
       piliers,
       motifs_blocage: issue.motifs_blocage,
       alertes_controle: alertes,
@@ -124,24 +145,14 @@ function finaliser(params: ParametresFinalisation): ResultatAudit {
  * Les portes sont évaluées séquentiellement : la première porte bloquante
  * interrompt le processus et les portes suivantes sont marquées NON_EVALUEE.
  */
-export function evaluerDossier(
-  dossier: DossierHDJ,
-  options: OptionsEvaluation = {},
-): ResultatAudit {
-  const dateEvaluation = options.date_evaluation ?? dossier.date_sejour;
+export function evaluerDossier(dossier: DossierHDJ): ResultatAudit {
   const statuts = new Map<PorteId, StatutPorte>();
 
   // ---------------------------------------------------------------- Porte 0
   const issue0 = evaluerPorte0(dossier);
   if (issue0) {
     statuts.set('PORTE_0_CHAMP', 'BLOQUANTE');
-    return finaliser({
-      dossier,
-      dateEvaluation,
-      issue: issue0,
-      piliers: [],
-      portes: construirePortes(statuts),
-    });
+    return finaliser({ dossier, issue: issue0, piliers: [], portes: construirePortes(statuts) });
   }
   statuts.set('PORTE_0_CHAMP', 'FRANCHIE');
 
@@ -152,13 +163,7 @@ export function evaluerDossier(
   const issue1 = evaluerPorte1(dossier, piliers);
   if (issue1) {
     statuts.set('PORTE_1_PREREQUIS', 'BLOQUANTE');
-    return finaliser({
-      dossier,
-      dateEvaluation,
-      issue: issue1,
-      piliers,
-      portes: construirePortes(statuts),
-    });
+    return finaliser({ dossier, issue: issue1, piliers, portes: construirePortes(statuts) });
   }
   statuts.set('PORTE_1_PREREQUIS', 'FRANCHIE');
 
@@ -166,21 +171,12 @@ export function evaluerDossier(
   const issue2 = evaluerPorte2(dossier);
   if (issue2) {
     statuts.set('PORTE_2_ACTE_ISOLE', 'BLOQUANTE');
-    return finaliser({
-      dossier,
-      dateEvaluation,
-      issue: issue2,
-      piliers,
-      portes: construirePortes(statuts),
-    });
+    return finaliser({ dossier, issue: issue2, piliers, portes: construirePortes(statuts) });
   }
   statuts.set('PORTE_2_ACTE_ISOLE', 'FRANCHIE');
 
   // ---------------------------------------------------------------- Porte 3
-  statuts.set(
-    'PORTE_3_DENSITE',
-    piliers.some((p) => p.valide) ? 'FRANCHIE' : 'BLOQUANTE',
-  );
+  statuts.set('PORTE_3_DENSITE', piliers.some((p) => p.valide) ? 'FRANCHIE' : 'BLOQUANTE');
 
   // ---------------------------------------------------------------- Porte 4
   const issue4 = evaluerPorte4(dossier, piliers);
@@ -189,11 +185,5 @@ export function evaluerDossier(
     issue4.statut === 'VALIDE_GHS' ? 'FRANCHIE' : 'BLOQUANTE',
   );
 
-  return finaliser({
-    dossier,
-    dateEvaluation,
-    issue: issue4,
-    piliers,
-    portes: construirePortes(statuts),
-  });
+  return finaliser({ dossier, issue: issue4, piliers, portes: construirePortes(statuts) });
 }

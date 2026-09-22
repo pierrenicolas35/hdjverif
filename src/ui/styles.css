@@ -1,45 +1,50 @@
 /* =====================================================================
    HDJ Vérif — charte graphique
-   Bleu du logo du CHU Grenoble Alpes : #008FDB
-   Principe de couleur : texte et éléments BLANCS sur fond BLEU.
+   En-tête bleu du CHU Grenoble Alpes (#008FDB), écriture blanche.
+   Fond du site blanc et fixe (aucune adaptation à l'heure ou au thème).
+   Boutons d'inspiration Material Design.
    Approche « mobile first » : téléphone, tablette, puis poste de travail.
    ===================================================================== */
 
 :root {
-  color-scheme: dark;
+  /* Le site ne comporte qu'un seul thème : clair, fond blanc. */
+  color-scheme: light;
 
-  /* Bleus institutionnels */
+  /* Bleu institutionnel du logo du CHU Grenoble Alpes */
   --chu-bleu: #008fdb;
-  --chu-bleu-clair: #4fb3e8;
-  --chu-bleu-fonce: #0072af;
-  --chu-bleu-profonde: #01486e;
-  --chu-nuit: #012f4a;
+  --chu-bleu-fonce: #0071ad;
+  --chu-bleu-clair: #e4f3fc;
+  --chu-bleu-tres-clair: #f2f9fe;
 
   /* Surfaces */
-  --surface: rgba(0, 45, 74, 0.62);
-  --surface-haute: rgba(0, 45, 74, 0.42);
-  --surface-survol: rgba(255, 255, 255, 0.14);
-  --surface-champ: rgba(255, 255, 255, 0.1);
-  --bordure: rgba(255, 255, 255, 0.2);
-  --bordure-forte: rgba(255, 255, 255, 0.42);
+  --fond: #ffffff;
+  --surface: #ffffff;
+  --surface-douce: #f5f7fa;
+  --surface-survol: #eef3f8;
+  --bordure: #dfe5ec;
+  --bordure-forte: #c4ced9;
 
   /* Textes */
-  --texte: #ffffff;
-  --texte-doux: #cfe8f8;
-  --texte-faible: rgba(255, 255, 255, 0.62);
+  --texte: #1f2933;
+  --texte-doux: #52606d;
+  --texte-faible: #7b8794;
 
-  /* Sémantique */
-  --vert: #12855a;
-  --vert-clair: #1aa06d;
-  --orange: #b25f0d;
-  --orange-clair: #d4841c;
-  --rouge: #a92c2c;
-  --rouge-clair: #c94040;
-  --violet: #64499b;
+  /* Sémantique Material */
+  --vert: #2e7d32;
+  --vert-fonce: #1b5e20;
+  --vert-clair: #e8f5e9;
+  --orange: #ef6c00;
+  --orange-clair: #fff3e0;
+  --rouge: #c62828;
+  --rouge-fonce: #8e1b1b;
+  --rouge-clair: #fdecea;
+  --violet: #6a3fa0;
 
-  --rayon: 16px;
-  --rayon-petit: 10px;
-  --ombre: 0 4px 18px rgba(0, 20, 35, 0.28);
+  --rayon: 12px;
+  --rayon-petit: 8px;
+  --ombre-1: 0 1px 3px rgba(16, 24, 40, 0.12), 0 1px 2px rgba(16, 24, 40, 0.08);
+  --ombre-2: 0 3px 6px rgba(16, 24, 40, 0.16), 0 1px 3px rgba(16, 24, 40, 0.1);
+  --ombre-3: 0 8px 18px rgba(16, 24, 40, 0.18);
 }
 
 * {
@@ -52,18 +57,11 @@ html {
 
 body {
   margin: 0;
-  font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: "Roboto", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   color: var(--texte);
-  background-color: var(--chu-bleu-fonce);
-  background-image: linear-gradient(
-    165deg,
-    #0180c7 0%,
-    #00699d 42%,
-    #01486e 100%
-  );
-  background-attachment: fixed;
+  background-color: var(--fond);
   min-height: 100vh;
 }
 
@@ -72,15 +70,16 @@ button {
 }
 
 /* =====================================================================
-   En-tête
+   En-tête — bleu CHU, écriture blanche
    ===================================================================== */
 
 .entete {
-  background: linear-gradient(120deg, var(--chu-nuit), var(--chu-bleu-fonce));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--chu-bleu);
+  color: #fff;
   padding: 14px 16px 0;
   position: relative;
   z-index: 3;
+  box-shadow: var(--ombre-2);
 }
 
 .entete-ligne {
@@ -107,17 +106,21 @@ button {
   overflow-wrap: anywhere;
 }
 
-.marque > div {
-  min-width: 0;
+.marque h1 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
 }
 
 .marque .pastille {
   flex: 0 0 auto;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #fff;
-  color: var(--chu-bleu-fonce);
+  color: var(--chu-bleu);
   display: grid;
   place-items: center;
   font-weight: 800;
@@ -125,17 +128,10 @@ button {
   letter-spacing: -0.5px;
 }
 
-.marque h1 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.25;
-}
-
 .marque p {
   margin: 2px 0 0;
   font-size: 0.75rem;
-  color: var(--texte-doux);
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .entete-espace {
@@ -160,9 +156,9 @@ button {
   padding: 6px 12px;
   font-size: 0.72rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid var(--bordure);
-  color: var(--texte);
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: #fff;
 }
 
 .voyant .point {
@@ -170,18 +166,16 @@ button {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--chu-bleu-clair);
-  box-shadow: 0 0 0 3px rgba(79, 179, 232, 0.25);
+  background: #fff;
 }
 
 .voyant.degrade .point {
   background: #ffb020;
-  box-shadow: 0 0 0 3px rgba(255, 176, 32, 0.25);
 }
 
 .voyant.verdict {
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--chu-bleu-profonde);
+  background: #fff;
+  color: var(--chu-bleu-fonce);
   border-color: transparent;
   font-weight: 700;
 }
@@ -202,7 +196,7 @@ button {
 }
 
 .btn-entete {
-  border: 1px solid var(--bordure-forte);
+  border: 1px solid rgba(255, 255, 255, 0.6);
   background: transparent;
   color: #fff;
   border-radius: 999px;
@@ -215,7 +209,7 @@ button {
 }
 
 .btn-entete:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Barre de progression */
@@ -233,7 +227,7 @@ button {
   font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  color: var(--texte-doux);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 6px;
 }
 
@@ -244,13 +238,13 @@ button {
 
 .progression-tete span:last-child {
   text-align: right;
-  opacity: 0.8;
+  opacity: 0.86;
 }
 
 .progression-rail {
-  height: 8px;
+  height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.34);
   overflow: hidden;
 }
 
@@ -258,7 +252,7 @@ button {
   height: 100%;
   width: 0;
   border-radius: 999px;
-  background: linear-gradient(90deg, #fff, var(--chu-bleu-clair));
+  background: #fff;
   transition: width 0.35s ease;
 }
 
@@ -280,12 +274,16 @@ button {
    Carte question
    ===================================================================== */
 
-.carte {
+.carte,
+.aide {
   background: var(--surface);
   border: 1px solid var(--bordure);
-  border-top: 4px solid var(--chu-bleu-clair);
   border-radius: var(--rayon);
-  box-shadow: var(--ombre);
+  box-shadow: var(--ombre-1);
+}
+
+.carte {
+  border-top: 4px solid var(--chu-bleu);
   padding: 18px 16px 16px;
 }
 
@@ -295,7 +293,7 @@ button {
   font-weight: 700;
   letter-spacing: 0.09em;
   text-transform: uppercase;
-  color: var(--chu-bleu-clair);
+  color: var(--chu-bleu);
   margin-bottom: 6px;
 }
 
@@ -313,8 +311,17 @@ button {
   font-size: 0.86rem;
 }
 
+.consigne {
+  margin: 18px 0 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--texte-doux);
+}
+
 /* =====================================================================
-   Gros boutons Oui / Non
+   Boutons Oui / Non — Material : Oui vert, Non rouge
    ===================================================================== */
 
 .choix-binaire {
@@ -325,46 +332,122 @@ button {
 }
 
 .btn-oui-non {
-  border: 2px solid var(--bordure-forte);
-  background: transparent;
-  border-radius: var(--rayon);
-  padding: 18px 10px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--rayon-petit);
+  padding: 14px 10px;
   font-size: 1rem;
-  font-weight: 700;
-  color: var(--texte);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 68px;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  min-height: 52px;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
 }
 
 .btn-oui-non .glyphe {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   line-height: 1;
 }
 
-.btn-oui-non:hover {
-  background: var(--surface-survol);
+/* Oui — vert */
+.btn-oui-non[data-valeur="oui"] {
+  color: var(--vert-fonce);
+  background: var(--vert-clair);
+  border-color: #a5d6a7;
 }
 
-/* État « enfoncé » : bouton blanc, texte bleu */
-.btn-oui-non[aria-pressed="true"] {
-  background: #fff;
-  border-color: #fff;
-  color: var(--chu-bleu-profonde);
-  box-shadow: 0 4px 14px rgba(0, 20, 35, 0.3);
+.btn-oui-non[data-valeur="oui"]:hover {
+  background: #dcefdd;
+}
+
+.btn-oui-non[data-valeur="oui"][aria-pressed="true"] {
+  background: var(--vert);
+  border-color: var(--vert);
+  color: #fff;
+  box-shadow: var(--ombre-2);
+}
+
+/* Non — rouge */
+.btn-oui-non[data-valeur="non"] {
+  color: var(--rouge-fonce);
+  background: var(--rouge-clair);
+  border-color: #ef9a9a;
+}
+
+.btn-oui-non[data-valeur="non"]:hover {
+  background: #fbdedb;
+}
+
+.btn-oui-non[data-valeur="non"][aria-pressed="true"] {
+  background: var(--rouge);
+  border-color: var(--rouge);
+  color: #fff;
+  box-shadow: var(--ombre-2);
 }
 
 .btn-oui-non[aria-pressed="true"]::after {
   content: "✓";
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  margin-left: 2px;
+}
+
+.btn-oui-non:active {
+  transform: translateY(1px);
 }
 
 /* =====================================================================
-   Boutons à bascule
+   Lignes de questions binaires (champ, prérequis, surveillance)
+   ===================================================================== */
+
+.lignes-questions {
+  display: grid;
+  gap: 10px;
+}
+
+.ligne-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  background: var(--surface-douce);
+  padding: 12px 14px;
+}
+
+.ligne-libelle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 240px;
+}
+
+.ligne-titre {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.ligne-precision {
+  font-size: 0.76rem;
+  color: var(--texte-doux);
+  margin-top: 3px;
+}
+
+.ligne-question .choix-binaire {
+  flex: 0 0 auto;
+  min-width: 210px;
+  margin: 0;
+}
+
+/* =====================================================================
+   Boutons à bascule (chips Material)
    ===================================================================== */
 
 .bascule-grille {
@@ -374,16 +457,16 @@ button {
 }
 
 .btn-bascule {
-  border: 2px solid var(--bordure-forte);
-  background: transparent;
+  border: 1px solid var(--bordure-forte);
+  background: #fff;
   border-radius: 999px;
-  padding: 9px 15px;
-  font-size: 0.83rem;
+  padding: 9px 16px;
+  font-size: 0.84rem;
   font-weight: 600;
-  color: var(--texte);
+  color: var(--texte-doux);
   cursor: pointer;
   min-height: 40px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-bascule:hover {
@@ -391,10 +474,16 @@ button {
 }
 
 .btn-bascule[aria-pressed="true"] {
-  background: #fff;
-  border-color: #fff;
-  color: var(--chu-bleu-profonde);
-  box-shadow: 0 3px 10px rgba(0, 20, 35, 0.28);
+  background: var(--chu-bleu);
+  border-color: var(--chu-bleu);
+  color: #fff;
+  box-shadow: var(--ombre-1);
+}
+
+.btn-bascule.ajout-second {
+  margin-top: 10px;
+  border-style: dashed;
+  color: var(--chu-bleu-fonce);
 }
 
 /* Cartes de choix (disciplines) */
@@ -406,8 +495,8 @@ button {
 }
 
 .btn-carte {
-  border: 2px solid var(--bordure);
-  background: var(--surface-haute);
+  border: 1px solid var(--bordure);
+  background: #fff;
   border-radius: var(--rayon);
   padding: 14px 15px;
   text-align: left;
@@ -416,18 +505,18 @@ button {
   gap: 12px;
   align-items: flex-start;
   color: var(--texte);
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-carte:hover {
-  background: var(--surface-survol);
+  background: var(--surface-douce);
   border-color: var(--bordure-forte);
 }
 
 .btn-carte[aria-pressed="true"] {
-  background: #fff;
-  border-color: #fff;
-  color: var(--chu-bleu-profonde);
+  background: var(--chu-bleu-clair);
+  border-color: var(--chu-bleu);
+  box-shadow: var(--ombre-1);
 }
 
 .btn-carte .icone {
@@ -445,23 +534,19 @@ button {
 .btn-carte span span {
   display: block;
   font-size: 0.76rem;
-  opacity: 0.78;
+  color: var(--texte-doux);
   margin-top: 2px;
 }
 
-.btn-carte[aria-pressed="true"] span span {
-  opacity: 0.72;
-}
-
 /* =====================================================================
-   Champs
+   Champs (text fields Material)
    ===================================================================== */
 
 .grille-champs {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
-  margin-bottom: 6px;
+  margin: 12px 0 6px;
 }
 
 label.etiquette {
@@ -481,7 +566,7 @@ input[type="number"] {
   border-radius: var(--rayon-petit);
   font-size: 0.95rem;
   color: var(--texte);
-  background: var(--surface-champ);
+  background: #fff;
   min-height: 46px;
 }
 
@@ -491,8 +576,8 @@ input::placeholder {
 
 input:focus {
   outline: none;
-  border-color: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.22);
+  border-color: var(--chu-bleu);
+  box-shadow: 0 0 0 3px rgba(0, 143, 219, 0.18);
 }
 
 /* =====================================================================
@@ -513,7 +598,7 @@ input:focus {
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--texte-doux);
+  color: var(--texte-faible);
   pointer-events: none;
 }
 
@@ -530,14 +615,14 @@ input:focus {
 }
 
 .suggestions li + li {
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid var(--bordure);
 }
 
 .suggestions button {
   width: 100%;
   text-align: left;
   border: 0;
-  background: var(--surface-haute);
+  background: #fff;
   color: var(--texte);
   padding: 11px 13px;
   cursor: pointer;
@@ -589,8 +674,8 @@ input:focus {
 }
 
 .etiquette-info.non {
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--texte);
+  background: #e3e8ee;
+  color: var(--texte-doux);
 }
 
 .etiquette-info.inconnu,
@@ -602,7 +687,6 @@ input:focus {
 .etiquette-info.ace {
   background: var(--chu-bleu-fonce);
   color: #fff;
-  border: 1px solid var(--bordure-forte);
 }
 
 .etiquette-info.hors_champ {
@@ -617,11 +701,12 @@ input:focus {
 .selection {
   display: grid;
   gap: 11px;
+  margin-top: 12px;
 }
 
 .element {
   border: 1px solid var(--bordure);
-  background: var(--surface-haute);
+  background: var(--surface-douce);
   border-radius: var(--rayon);
   padding: 13px 14px;
 }
@@ -656,9 +741,10 @@ input:focus {
   justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
-  font-size: 0.81rem;
+  font-size: 0.84rem;
   color: var(--texte);
-  background: rgba(255, 255, 255, 0.07);
+  background: #fff;
+  border: 1px solid var(--bordure);
   border-radius: var(--rayon-petit);
   padding: 10px 11px;
 }
@@ -673,10 +759,20 @@ input:focus {
   min-height: 36px;
 }
 
+.mini-question .choix-binaire {
+  min-width: 200px;
+  margin: 0;
+}
+
+.mini-question .btn-oui-non {
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
 .btn-retirer {
   border: 1px solid var(--bordure-forte);
-  background: transparent;
-  color: #fff;
+  background: #fff;
+  color: var(--rouge);
   border-radius: 999px;
   padding: 7px 13px;
   font-size: 0.74rem;
@@ -687,8 +783,9 @@ input:focus {
 }
 
 .btn-retirer:hover {
-  background: rgba(201, 64, 64, 0.85);
-  border-color: transparent;
+  background: var(--rouge);
+  border-color: var(--rouge);
+  color: #fff;
 }
 
 .vide {
@@ -705,10 +802,6 @@ input:focus {
    ===================================================================== */
 
 .aide {
-  background: var(--surface);
-  border: 1px solid var(--bordure);
-  border-radius: var(--rayon);
-  box-shadow: var(--ombre);
   padding: 0;
   overflow: hidden;
 }
@@ -721,7 +814,7 @@ input:focus {
   gap: 10px;
   border: 0;
   background: transparent;
-  color: #fff;
+  color: var(--texte);
   font-size: 0.84rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -750,7 +843,7 @@ input:focus {
 .aide h3 {
   margin: 0 0 6px;
   font-size: 0.84rem;
-  color: var(--chu-bleu-clair);
+  color: var(--chu-bleu-fonce);
 }
 
 .aide p {
@@ -773,8 +866,8 @@ input:focus {
 }
 
 .aide .regle {
-  background: rgba(255, 255, 255, 0.08);
-  border-left: 4px solid var(--chu-bleu-clair);
+  background: var(--chu-bleu-tres-clair);
+  border-left: 4px solid var(--chu-bleu);
   border-radius: 0 var(--rayon-petit) var(--rayon-petit) 0;
   padding: 11px 12px;
   font-size: 0.79rem;
@@ -795,7 +888,7 @@ input:focus {
 }
 
 /* =====================================================================
-   Navigation — dans le flux de la carte ; barre fixe réservée sur mobile
+   Navigation
    ===================================================================== */
 
 .navigation {
@@ -805,40 +898,43 @@ input:focus {
   gap: 10px;
   margin: 18px -16px -16px;
   padding: 12px 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(1, 47, 74, 0.94);
-  border-radius: 0 0 calc(var(--rayon) - 4px) calc(var(--rayon) - 4px);
+  border-top: 1px solid var(--bordure);
+  background: var(--surface-douce);
+  border-radius: 0 0 calc(var(--rayon) - 2px) calc(var(--rayon) - 2px);
 }
 
 .btn-nav {
   border: 0;
   border-radius: var(--rayon-petit);
   padding: 12px 18px;
-  font-size: 0.88rem;
-  font-weight: 700;
+  font-size: 0.86rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
   min-height: 48px;
-  transition: filter 0.15s ease, background 0.15s ease;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-nav.retour {
   background: transparent;
   border: 1px solid var(--bordure-forte);
-  color: #fff;
+  color: var(--texte-doux);
 }
 
 .btn-nav.retour:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--surface-survol);
 }
 
 .btn-nav.suivant {
-  background: #fff;
-  color: var(--chu-bleu-profonde);
-  box-shadow: 0 4px 14px rgba(0, 20, 35, 0.32);
+  background: var(--chu-bleu);
+  color: #fff;
+  box-shadow: var(--ombre-1);
 }
 
 .btn-nav.suivant:hover:not(:disabled) {
-  background: #e8f5fd;
+  background: var(--chu-bleu-fonce);
+  box-shadow: var(--ombre-2);
 }
 
 .btn-nav:disabled {
@@ -860,21 +956,22 @@ input:focus {
 
 .badge {
   border-radius: var(--rayon);
-  padding: 18px 18px;
+  padding: 18px;
   color: #fff;
   margin-bottom: 16px;
+  box-shadow: var(--ombre-1);
 }
 
 .badge.VERT {
-  background: linear-gradient(120deg, #0d6b45, var(--vert-clair));
+  background: var(--vert);
 }
 
 .badge.ORANGE {
-  background: linear-gradient(120deg, #9a5109, var(--orange-clair));
+  background: var(--orange);
 }
 
 .badge.ROUGE {
-  background: linear-gradient(120deg, #8e2424, var(--rouge-clair));
+  background: var(--rouge);
 }
 
 .badge .intitule {
@@ -888,7 +985,7 @@ input:focus {
   font-size: 1.22rem;
   font-weight: 800;
   margin: 5px 0 7px;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .badge .mention {
@@ -897,7 +994,7 @@ input:focus {
 }
 
 .bloc-resultat {
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-top: 1px solid var(--bordure);
   padding-top: 14px;
   margin-top: 14px;
 }
@@ -913,7 +1010,7 @@ input:focus {
   font-size: 0.72rem;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--chu-bleu-clair);
+  color: var(--chu-bleu-fonce);
 }
 
 ul.liste {
@@ -931,17 +1028,17 @@ ul.liste li {
   padding: 11px 12px;
   margin-bottom: 8px;
   font-size: 0.82rem;
-  border-left: 5px solid;
-  background: rgba(255, 255, 255, 0.07);
+  border-left: 5px solid var(--bordure-forte);
+  background: var(--surface-douce);
 }
 
 .pilier.valide {
-  border-color: var(--vert-clair);
-  background: rgba(18, 133, 90, 0.28);
+  border-color: var(--vert);
+  background: var(--vert-clair);
 }
 
 .pilier.echec {
-  border-color: rgba(255, 255, 255, 0.32);
+  border-color: var(--bordure-forte);
   color: var(--texte-doux);
 }
 
@@ -962,7 +1059,7 @@ ul.liste li {
   gap: 9px;
   align-items: center;
   padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--bordure);
 }
 
 .pyramide li:last-child {
@@ -989,7 +1086,7 @@ ul.liste li {
 }
 
 .marqueur.NON_EVALUEE {
-  background: rgba(255, 255, 255, 0.16);
+  background: #e3e8ee;
   color: var(--texte-faible);
 }
 
@@ -1000,7 +1097,7 @@ ul.liste li {
 }
 
 .constat code {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--surface-survol);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 0.71rem;
@@ -1008,7 +1105,7 @@ ul.liste li {
 
 .constat .source {
   display: block;
-  color: var(--chu-bleu-clair);
+  color: var(--chu-bleu-fonce);
   font-size: 0.72rem;
   margin-top: 4px;
 }
@@ -1025,24 +1122,31 @@ ul.liste li {
   border-radius: var(--rayon-petit);
   padding: 13px 16px;
   font-size: 0.86rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.03em;
   cursor: pointer;
   min-height: 48px;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .btn-action.principal {
-  background: #fff;
-  color: var(--chu-bleu-profonde);
+  background: var(--chu-bleu);
+  color: #fff;
+  box-shadow: var(--ombre-1);
+}
+
+.btn-action.principal:hover {
+  background: var(--chu-bleu-fonce);
 }
 
 .btn-action.secondaire {
-  background: transparent;
+  background: #fff;
   border: 1px solid var(--bordure-forte);
-  color: #fff;
+  color: var(--texte-doux);
 }
 
-.btn-action:hover {
-  filter: brightness(1.06);
+.btn-action.secondaire:hover {
+  background: var(--surface-survol);
 }
 
 .alerte-vide {
@@ -1063,8 +1167,12 @@ ul.liste li {
 /* Accessibilité */
 
 :focus-visible {
-  outline: 3px solid #fff;
+  outline: 3px solid var(--chu-bleu-fonce);
   outline-offset: 2px;
+}
+
+.entete :focus-visible {
+  outline-color: #fff;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1118,7 +1226,7 @@ ul.liste li {
   .navigation {
     margin: 22px -26px -22px;
     padding: 14px 26px;
-    border-radius: 0 0 calc(var(--rayon) - 4px) calc(var(--rayon) - 4px);
+    border-radius: 0 0 calc(var(--rayon) - 2px) calc(var(--rayon) - 2px);
   }
 }
 
@@ -1150,10 +1258,9 @@ ul.liste li {
     font-size: 0.78rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--chu-bleu-clair);
+    color: var(--chu-bleu-fonce);
   }
 
-  /* La navigation ne colle plus en bas : la carte n'est plus un écran */
   .navigation {
     position: static;
     background: transparent;
@@ -1168,17 +1275,14 @@ ul.liste li {
 }
 
 /* =====================================================================
-   Repli du volet d'aide sur petit écran
+   Repli du volet d'aide et barre d'action fixée sur petit écran
    ===================================================================== */
 
 @media (max-width: 999px) {
-  /* Le volet d'aide se replie pour laisser la place à la question. */
   .aide:not(.ouvert) .aide-contenu {
     display: none;
   }
 
-  /* Barre de navigation fixée en bas : toujours accessible au pouce, et
-     l'espace qu'elle occupe est réservé pour ne rien recouvrir. */
   body {
     padding-bottom: calc(84px + env(safe-area-inset-bottom));
   }
@@ -1191,17 +1295,21 @@ ul.liste li {
     margin: 0;
     padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
     border-radius: 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    background: #012844;
-    box-shadow: 0 -8px 24px rgba(0, 20, 35, 0.4);
+    border-top: 1px solid var(--bordure);
+    background: #fff;
+    box-shadow: 0 -8px 24px rgba(16, 24, 40, 0.14);
     z-index: 6;
   }
 }
 
-@media (max-width: 380px) {
-  .btn-oui-non {
-    font-size: 0.92rem;
-    padding: 14px 8px;
+@media (max-width: 420px) {
+  .ligne-question {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ligne-question .choix-binaire {
+    min-width: 0;
   }
 
   .mini-question {
@@ -1209,8 +1317,8 @@ ul.liste li {
     align-items: stretch;
   }
 
-  .note-saisie {
-    display: none;
+  .mini-question .choix-binaire {
+    min-width: 0;
   }
 }
 

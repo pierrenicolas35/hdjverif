@@ -125,9 +125,7 @@ export const PSYCHOLOGUE = intervenant('PSYCHOLOGUE', {
 
 export function dossier(partial: Partial<DossierHDJ> = {}): DossierHDJ {
   const base: DossierHDJ = {
-    id_sejour: 'SEJ-2026-0001',
     regime_champ: 'MCO_GENERAL',
-    date_sejour: '2026-04-15',
     duree_presence_minutes: 240,
     est_programme: true,
     lettre_adressage_presente: true,
@@ -151,7 +149,6 @@ export function dossier(partial: Partial<DossierHDJ> = {}): DossierHDJ {
  * Densité assurée par le seul pilier de pluriprofessionnalité concertée.
  */
 export const CAS_DIABETE_CONFORME: DossierHDJ = dossier({
-  id_sejour: 'SEJ-DIAB-001',
   duree_presence_minutes: 300,
   actes_ccam: [ACTE_ECG],
   medicaments: [UCD_METFORMINE],
@@ -160,7 +157,6 @@ export const CAS_DIABETE_CONFORME: DossierHDJ = dossier({
 
 /** Idem, mais la diététicienne n'a pas tracé sa note d'évolution. */
 export const CAS_DIABETE_DIET_NON_TRACEE: DossierHDJ = dossier({
-  id_sejour: 'SEJ-DIAB-002',
   duree_presence_minutes: 300,
   actes_ccam: [ACTE_ECG],
   medicaments: [UCD_METFORMINE],
@@ -173,7 +169,6 @@ export const CAS_DIABETE_DIET_NON_TRACEE: DossierHDJ = dossier({
 
 /** Idem cas conforme, mais aucune synthèse médicale signée le jour même. */
 export const CAS_DIABETE_SANS_SYNTHESE: DossierHDJ = dossier({
-  id_sejour: 'SEJ-DIAB-003',
   duree_presence_minutes: 300,
   synthese_medicale_tracee: false,
   actes_ccam: [ACTE_ECG],
@@ -183,7 +178,6 @@ export const CAS_DIABETE_SANS_SYNTHESE: DossierHDJ = dossier({
 
 /** Perfusion simple de fer, sans surveillance continue ni coordination. */
 export const CAS_PERFUSION_FER: DossierHDJ = dossier({
-  id_sejour: 'SEJ-FER-001',
   duree_presence_minutes: 90,
   actes_ccam: [ACTE_PERFUSION_FER],
   medicaments: [UCD_FER_INJECTABLE],
@@ -192,7 +186,6 @@ export const CAS_PERFUSION_FER: DossierHDJ = dossier({
 
 /** Séance de chimiothérapie injectée dans l'outil. */
 export const CAS_CHIMIOTHERAPIE: DossierHDJ = dossier({
-  id_sejour: 'SEJ-CHIMIO-001',
   regime_champ: 'CHIMIOTHERAPIE',
   duree_presence_minutes: 180,
   actes_ccam: [ACTE_PERFUSION_FER],

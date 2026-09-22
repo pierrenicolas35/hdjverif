@@ -9,6 +9,7 @@ import type {
   DossierHDJ,
   Intervenant,
   MedicamentUCD,
+  NiveauGHS,
 } from './types.js';
 
 /**
@@ -131,4 +132,31 @@ export function denombrerInterventions(dossier: DossierHDJ): number {
   ).length;
 
   return nbActes + nbMedecins + nbParamedicaux;
+}
+
+/**
+ * Niveau de GHS à retenir pour une prise en charge dont la densité est établie.
+ *
+ * Le GHS « plein » est retenu dès lors que la prise en charge comporte :
+ *  - une surveillance particulière (surveillance active documentée, produit de
+ *    la réserve hospitalière ou à surveillance continue), ou
+ *  - un acte classant / une prise en charge sur plateau technique (acte lourd ou
+ *    au moins deux actes CCAM dénombrables distincts), ou
+ *  - au moins quatre interventions dénombrées.
+ *
+ * À défaut — typiquement une prise en charge de médecine pluriprofessionnelle
+ * reposant sur exactement trois interventions — le GHS « intermédiaire »
+ * s'applique (annexe 4, point 2.b.iii).
+ */
+export function niveauGhs(dossier: DossierHDJ): NiveauGHS {
+  const surveillanceParticuliere =
+    dossier.surveillance_active_documentee ||
+    medicamentsSurveillanceParticuliere(dossier).length > 0;
+
+  const plateauTechnique =
+    actesDenombrables(dossier).some((acte) => acte.est_plateau_lourd) ||
+    codesCcamDistincts(dossier).length >= 2;
+
+  if (surveillanceParticuliere || plateauTechnique) return 'PLEIN';
+  return denombrerInterventions(dossier) >= 4 ? 'PLEIN' : 'INTERMEDIAIRE';
 }

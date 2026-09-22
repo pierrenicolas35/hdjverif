@@ -112,10 +112,7 @@ export const REGIMES_CHAMP: readonly RegimeChamp[] = [
 
 /** Dossier soumis à l'évaluation du moteur. */
 export interface DossierHDJ {
-  readonly id_sejour: string;
   readonly regime_champ: RegimeChamp;
-  /** Date ISO 8601 (YYYY-MM-DD) du séjour. */
-  readonly date_sejour: string;
   /** Durée de présence effective du patient, en minutes. */
   readonly duree_presence_minutes: number;
   /** Convocation programmée avec objectif médical formalisé. */
@@ -200,11 +197,23 @@ export interface PilierEvaluation {
   readonly justifications: readonly string[];
 }
 
+/**
+ * Niveau de facturation d'un GHS validé.
+ *
+ * L'instruction distingue le GHS dit « intermédiaire » (prises en charge
+ * justifiant trois interventions coordonnées) du GHS dit « plein » (à compter
+ * de quatre interventions, ou en présence d'une surveillance particulière,
+ * d'un contexte patient particulier ou d'un acte classant).
+ */
+export type NiveauGHS = 'PLEIN' | 'INTERMEDIAIRE';
+
 /** Sortie du moteur : audit décisionnel complet et opposable. */
 export interface ResultatAudit {
-  readonly id_sejour: string;
-  readonly date_evaluation: string;
   readonly statut: StatutAudit;
+  /** Décision formulée en langage courant, directement lisible par le praticien. */
+  readonly libelle_decision: string;
+  /** Niveau de GHS retenu (`null` lorsque le GHS n'est pas facturable). */
+  readonly niveau_ghs: NiveauGHS | null;
   readonly severite: Severite;
   /** Le GHS est-il facturable ? */
   readonly ghs_autorise: boolean;

@@ -16,6 +16,9 @@ import {
   CAS_DIABETE_DIET_NON_TRACEE,
   CAS_DIABETE_SANS_SYNTHESE,
   CAS_PERFUSION_FER,
+  ACTE_BIO_COMPLEXE,
+  IDE,
+  dossier,
 } from './fixtures.js';
 
 /** Invariants applicables à tout résultat d'audit. */
@@ -133,12 +136,31 @@ describe('Déterminisme et traçabilité du moteur', () => {
     expect(a).toEqual(b);
   });
 
-  it('accepte une date d’évaluation injectée sans accéder à l’horloge système', () => {
-    const resultat = evaluerDossier(CAS_DIABETE_CONFORME, {
-      date_evaluation: '2026-05-01',
-    });
-    expect(resultat.date_evaluation).toBe('2026-05-01');
-    expect(resultat.synthese_audit).toContain('2026-05-01');
+  it('formule la décision en langage courant (GHS plein / intermédiaire)', () => {
+    const resultat = evaluerDossier(CAS_DIABETE_CONFORME);
+    expect(resultat.niveau_ghs).toBe('INTERMEDIAIRE');
+    expect(resultat.libelle_decision).toBe('HDJ validée — facturation en GHS intermédiaire');
+  });
+
+  it('retient un GHS plein dès qu’une surveillance particulière est documentée', () => {
+    const resultat = evaluerDossier(
+      dossier({
+        surveillance_active_documentee: true,
+        actes_ccam: [ACTE_BIO_COMPLEXE],
+        intervenants: [IDE],
+      }),
+    );
+    expect(resultat.statut).toBe('VALIDE_GHS');
+    expect(resultat.niveau_ghs).toBe('PLEIN');
+    expect(resultat.libelle_decision).toBe('HDJ validée — facturation en GHS plein');
+  });
+
+  it('n’expose aucun niveau de GHS lorsque la facturation est écartée', () => {
+    const resultat = evaluerDossier(CAS_PERFUSION_FER);
+    expect(resultat.niveau_ghs).toBeNull();
+    expect(resultat.libelle_decision).toBe(
+      'Facturation en HDJ non validée — actes et consultations externes',
+    );
   });
 
   it('génère une synthèse opposable citant l’instruction DGOS 2020/52', () => {

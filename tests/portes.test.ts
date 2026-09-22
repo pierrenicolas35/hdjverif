@@ -367,14 +367,12 @@ describe('Validation du dossier', () => {
     expect(dossierValide(dossier({ intervenants: [MEDECIN_ENDOCRINO] }))).toBe(true);
   });
 
-  it('rejette une date non ISO et une profession inconnue', () => {
+  it('rejette une profession inconnue', () => {
     const invalide = {
       ...dossier(),
-      date_sejour: '15/04/2026',
       intervenants: [{ ...IDE, profession: 'INCONNUE' }],
     } as unknown as DossierHDJ;
     const erreurs = validerDossier(invalide);
-    expect(erreurs.map((e) => e.champ)).toContain('date_sejour');
     expect(erreurs.map((e) => e.champ)).toContain('intervenants[0].profession');
   });
 

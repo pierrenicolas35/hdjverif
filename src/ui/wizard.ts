@@ -1,9 +1,10 @@
 /**
  * Assistant pas-à-pas (wizard) du moteur décisionnel HDJ.
  *
- * Une question par écran, gros boutons Oui/Non, choix multiples par boutons à
- * bascule (maintenus enfoncés), barre de progression, et volet pédagogique
- * adapté à la discipline déclarée par l'utilisateur.
+ * Principe : une saisie réduite au strict nécessaire au calcul de la
+ * facturation. Aucune donnée administrative (ni numéro de séjour, ni date)
+ * n'est demandée. Les caractéristiques des actes et des médicaments sont
+ * reprises du référentiel : elles ne sont jamais redemandées à l'utilisateur.
  *
  * L'UI ne décide rien : chaque réponse alimente `EtatAssistant`, converti en
  * `DossierHDJ` puis soumis à `evaluerDossier`.
@@ -26,7 +27,7 @@ import {
   acteChoisiDepuisReferentiel,
   acteChoisiManuel,
   etatInitial,
-  intervenantVide,
+  intervenantPourProfession,
   libelleBooleen,
   medicamentChoisiDepuisReferentiel,
   versDossier,
@@ -60,63 +61,37 @@ const ETAPES: readonly Etape[] = [
     domaine: 'Bienvenue',
     question: 'Sur quelle discipline souhaitez-vous des exemples ?',
   },
-  { id: 'identite', domaine: 'Identification', question: 'Quel séjour évaluez-vous ?' },
   {
-    id: 'champ_seance',
-    domaine: 'Porte 0 — Champ d’application',
-    question: 'S’agit-il d’une séance de dialyse ou de chimiothérapie ?',
+    id: 'champ',
+    domaine: 'Champ d’application',
+    question: 'La prise en charge relève-t-elle du champ de l’instruction ?',
   },
   {
-    id: 'champ_hors_mco',
-    domaine: 'Porte 0 — Champ d’application',
-    question: 'La prise en charge relève-t-elle du SMR/SSR ou de la psychiatrie ?',
-  },
-  {
-    id: 'programmation',
-    domaine: 'Porte 1 — Prérequis',
-    question: 'La venue du patient était-elle programmée ?',
-  },
-  {
-    id: 'doc_adressage',
-    domaine: 'Porte 1 — Prérequis',
-    question: 'La demande médicale préalable est-elle au dossier ?',
-  },
-  {
-    id: 'doc_synthese',
-    domaine: 'Porte 1 — Prérequis',
-    question: 'La synthèse médicale a-t-elle été signée le jour même ?',
-  },
-  {
-    id: 'doc_liaison',
-    domaine: 'Porte 1 — Prérequis',
-    question: 'La lettre de liaison a-t-elle été remise ?',
+    id: 'prerequis',
+    domaine: 'Prérequis du dossier',
+    question: 'Quelles pièces figurent au dossier du patient ?',
   },
   {
     id: 'actes',
-    domaine: 'Portes 2 & 3 — Densité',
-    question: 'Quel(s) acte(s) technique(s) ont été réalisés ?',
+    domaine: 'Densité — actes',
+    question: 'Quels actes techniques ont été réalisés ?',
   },
   {
     id: 'medicaments',
-    domaine: 'Porte 3 — Densité',
-    question: 'Quel(s) médicament(s) ont été administrés ?',
+    domaine: 'Densité — médicaments',
+    question: 'Quels médicaments ont été administrés ?',
   },
   {
     id: 'intervenants',
-    domaine: 'Porte 3 — Densité',
+    domaine: 'Densité — intervenants',
     question: 'Qui est intervenu directement auprès du patient ?',
   },
   {
-    id: 'surveillance',
-    domaine: 'Porte 3 — Densité',
-    question: 'Une surveillance clinique rapprochée a-t-elle été documentée ?',
+    id: 'densite',
+    domaine: 'Densité — surveillance et durée',
+    question: 'Surveillance et durée de présence',
   },
-  {
-    id: 'duree',
-    domaine: 'Porte 4 — Alertes qualité',
-    question: 'Quelle a été la durée de présence du patient ?',
-  },
-  { id: 'resultat', domaine: 'Décision', question: 'Décision du moteur décisionnel' },
+  { id: 'resultat', domaine: 'Décision', question: 'Décision' },
 ];
 
 const INDEX = new Map(ETAPES.map((etape, i) => [etape.id, i]));
@@ -135,33 +110,54 @@ const esc = (valeur: string): string =>
 const presse = (actif: boolean): string =>
   actif ? ' aria-pressed="true"' : ' aria-pressed="false"';
 
-/** Paire de gros boutons Oui / Non (choix exclusif). */
-function boutonsOuiNon(cle: string, valeur: boolean | null): string {
+/**
+ * Paire de boutons Oui (vert) / Non (rouge).
+ * `cible` porte l'action et l'index éventuel ; `cle` la question concernée.
+ */
+function boutonsOuiNon(
+  cle: string,
+  valeur: boolean | null,
+  action = 'repondre',
+  index = -1,
+): string {
+  const attributIndex = index >= 0 ? ` data-index="${index}"` : '';
+  const commun = `type="button" class="btn-oui-non" data-action="${action}"${attributIndex} data-cle="${cle}"`;
   return `
     <div class="choix-binaire">
-      <button type="button" class="btn-oui-non" data-action="repondre" data-cle="${cle}"
-              data-valeur="oui"${presse(valeur === true)}>
+      <button ${commun} data-valeur="oui"${presse(valeur === true)}>
         <span class="glyphe" aria-hidden="true">✔</span>Oui
       </button>
-      <button type="button" class="btn-oui-non" data-action="repondre" data-cle="${cle}"
-              data-valeur="non"${presse(valeur === false)}>
+      <button ${commun} data-valeur="non"${presse(valeur === false)}>
         <span class="glyphe" aria-hidden="true">✘</span>Non
       </button>
     </div>`;
 }
 
-/**
- * Boutons à bascule Oui / Non pour un élément d'une liste.
- * Le bouton correspondant à la valeur courante reste « enfoncé ».
- */
-function boutonsValeur(action: string, index: number, valeur: boolean): string {
-  return `
-    <div class="bascule-grille">
-      <button type="button" class="btn-bascule" data-action="${action}" data-index="${index}"
-              data-valeur="true"${presse(valeur)}>Oui</button>
-      <button type="button" class="btn-bascule" data-action="${action}" data-index="${index}"
-              data-valeur="false"${presse(!valeur)}>Non</button>
-    </div>`;
+/** Une ligne de question binaire : intitulé à gauche, boutons Oui/Non à droite. */
+interface LigneBinaire {
+  readonly cle: string;
+  readonly titre: string;
+  readonly precision?: string;
+  readonly valeur: boolean | null;
+}
+
+function lignesBinaires(lignes: readonly LigneBinaire[]): string {
+  return `<div class="lignes-questions">${lignes
+    .map(
+      (ligne) => `
+      <div class="ligne-question">
+        <div class="ligne-libelle">
+          <span class="ligne-titre">${esc(ligne.titre)}</span>
+          ${
+            ligne.precision
+              ? `<span class="ligne-precision">${esc(ligne.precision)}</span>`
+              : ''
+          }
+        </div>
+        ${boutonsOuiNon(ligne.cle, ligne.valeur)}
+      </div>`,
+    )
+    .join('')}</div>`;
 }
 
 /** Boutons à bascule d'un choix exclusif parmi une liste. */
@@ -242,66 +238,35 @@ class Assistant {
     return ETAPES[INDEX.get(this.etapeId) ?? 0] ?? ETAPES[0]!;
   }
 
-  private suivante(): string | null {
+  /**
+   * Parcours effectivement applicable compte tenu des raccourcis des portes 0
+   * et 1 (un séjour non programmé ou hors champ ne déroule pas la densité).
+   */
+  private parcours(): readonly string[] {
     const e = this.etat;
-    switch (this.etapeId) {
-      case 'discipline':
-        return 'identite';
-      case 'identite':
-        return 'champ_seance';
-      case 'champ_seance':
-        return e.estSeance === true ? 'resultat' : 'champ_hors_mco';
-      case 'champ_hors_mco':
-        return e.estHorsMco === true ? 'resultat' : 'programmation';
-      case 'programmation':
-        return e.estProgramme === false ? 'resultat' : 'doc_adressage';
-      case 'doc_adressage':
-        return 'doc_synthese';
-      case 'doc_synthese':
-        return 'doc_liaison';
-      case 'doc_liaison':
-        return 'actes';
-      case 'actes':
-        return 'medicaments';
-      case 'medicaments':
-        return 'intervenants';
-      case 'intervenants':
-        return 'surveillance';
-      case 'surveillance':
-        return 'duree';
-      case 'duree':
-        return 'resultat';
-      default:
-        return null;
+    const etapes: string[] = ['discipline', 'champ'];
+    const horsChamp = e.estSeance === true || e.estHorsMco === true;
+    if (!horsChamp) {
+      etapes.push('prerequis');
+      if (e.estProgramme !== false) {
+        etapes.push('actes', 'medicaments', 'intervenants', 'densite');
+      }
     }
+    return etapes;
+  }
+
+  private suivante(): string | null {
+    const parcours = this.parcours();
+    if (this.etapeId === 'resultat') return null;
+    const rang = parcours.indexOf(this.etapeId);
+    if (rang === -1) return parcours[0] ?? null;
+    return parcours[rang + 1] ?? 'resultat';
   }
 
   private precedente(): string | null {
-    const parcours = [
-      'discipline',
-      'identite',
-      'champ_seance',
-      'champ_hors_mco',
-      'programmation',
-      'doc_adressage',
-      'doc_synthese',
-      'doc_liaison',
-      'actes',
-      'medicaments',
-      'intervenants',
-      'surveillance',
-      'duree',
-    ];
-    const rang = INDEX.get(this.etapeId) ?? 0;
-    for (let i = Math.min(rang - 1, parcours.length - 1); i >= 0; i -= 1) {
-      const candidat = parcours[i];
-      if (!candidat) continue;
-      if (candidat === 'champ_hors_mco' && this.etat.estSeance === true) continue;
-      if (candidat === 'programmation' && this.etat.estHorsMco === true) continue;
-      if (candidat.startsWith('doc_') && this.etat.estProgramme === false) continue;
-      return candidat;
-    }
-    return null;
+    const parcours = this.parcours();
+    const cible = this.etapeId === 'resultat' ? parcours.length - 1 : parcours.indexOf(this.etapeId) - 1;
+    return parcours[cible] ?? null;
   }
 
   private saisieComplete(): boolean {
@@ -310,21 +275,16 @@ class Assistant {
       // Le choix de la discipline est facultatif : il n'illustre que les exemples.
       case 'discipline':
         return true;
-      case 'identite':
-        return e.identifiantSejour.trim().length > 0 && e.dateSejour.length > 0;
-      case 'champ_seance':
-        return e.estSeance !== null;
-      case 'champ_hors_mco':
-        return e.estHorsMco !== null;
-      case 'programmation':
-        return e.estProgramme !== null;
-      case 'doc_adressage':
-        return e.lettreAdressage !== null;
-      case 'doc_synthese':
-        return e.syntheseMedicale !== null;
-      case 'doc_liaison':
-        return e.lettreLiaison !== null;
-      case 'surveillance':
+      case 'champ':
+        return e.estSeance !== null && e.estHorsMco !== null;
+      case 'prerequis':
+        return (
+          e.estProgramme !== null &&
+          e.lettreAdressage !== null &&
+          e.syntheseMedicale !== null &&
+          e.lettreLiaison !== null
+        );
+      case 'densite':
         return e.surveillanceActive !== null;
       default:
         return true;
@@ -365,7 +325,8 @@ class Assistant {
   }
 
   private rendreQuestion(): void {
-    const rang = (INDEX.get(this.etapeId) ?? 0) + 1;
+    const parcours = this.parcours();
+    const rang = parcours.indexOf(this.etapeId) + 1;
     const precedent = this.precedente();
     this.racine.innerHTML = `
       <span class="etape-numero">${esc(this.etape.domaine)}</span>
@@ -376,7 +337,7 @@ class Assistant {
         <button type="button" class="btn-nav retour" data-action="reculer"${
           precedent ? '' : ' disabled'
         }>← Précédent</button>
-        <span class="note-saisie">Question ${rang} sur ${ETAPES.length - 1}</span>
+        <span class="note-saisie">Étape ${rang} sur ${parcours.length}</span>
         <button type="button" class="btn-nav suivant" data-action="avancer"${
           this.saisieComplete() ? '' : ' disabled'
         }>Suivant →</button>
@@ -387,24 +348,18 @@ class Assistant {
     const textes: Record<string, string> = {
       discipline:
         'Facultatif. La discipline choisie ne modifie aucune règle : elle sert uniquement à illustrer les étapes par des cas concrets de votre domaine.',
-      identite: 'Ces informations figurent en tête de la fiche de traçabilité T2A.',
-      champ_seance:
-        'Dialyse et chimiothérapie sont financées par un forfait de séance, sans critères de gradation.',
-      champ_hors_mco: 'L’instruction ne s’applique qu’au champ médecine-chirurgie-obstétrique.',
-      programmation:
-        'Une hospitalisation de jour suppose une organisation anticipée sur un plateau dédié.',
-      doc_adressage: 'Pièce justifiant la pertinence du recours à l’hospitalisation de jour.',
-      doc_synthese: 'Compte-rendu d’hospitalisation ou lettre de sortie signé.',
-      doc_liaison: 'Courrier remis au patient et transmis au médecin traitant (art. R. 1112-1-2 CSP).',
+      champ:
+        'Deux filtres rapides : une séance (dialyse, chimiothérapie) ou une prise en charge hors MCO n’appelle pas la gradation ambulatoire.',
+      prerequis:
+        'Il suffit d’indiquer si chaque pièce est au dossier. Une pièce manquante peut se régulariser ; un séjour non programmé, non.',
       actes:
-        'Recherchez dans la nomenclature CCAM : les caractéristiques de l’acte sont reprises du référentiel.',
+        'Recherchez dans la nomenclature CCAM : le code, le libellé et les caractéristiques de l’acte sont repris du référentiel.',
       medicaments:
-        'La recherche interroge le référentiel et indique s’il s’agit d’un produit à réserve hospitalière.',
+        'Recherchez le produit par son nom ou sa DCI : le référentiel indique lui-même s’il relève de la réserve hospitalière.',
       intervenants:
-        'Seuls les intervenants ayant rédigé une note d’évolution individualisée sont dénombrés.',
-      surveillance:
-        'La surveillance particulière justifie un GHS plein, à condition d’être retracée au dossier.',
-      duree: 'Une durée inférieure à 3 heures déclenche une alerte qualité, sans bloquer la décision.',
+        'Cliquez sur les professionnels intervenus : le bouton reste enfoncé. Précisez seulement si une note d’évolution a été rédigée.',
+      densite:
+        'La surveillance active justifie à elle seule un GHS plein ; la durée de présence, elle, n’est qu’un point d’attention.',
     };
     return textes[this.etapeId] ?? '';
   }
@@ -413,30 +368,18 @@ class Assistant {
     switch (this.etapeId) {
       case 'discipline':
         return this.corpsDiscipline();
-      case 'identite':
-        return this.corpsIdentite();
-      case 'champ_seance':
-        return boutonsOuiNon('estSeance', this.etat.estSeance);
-      case 'champ_hors_mco':
-        return boutonsOuiNon('estHorsMco', this.etat.estHorsMco);
-      case 'programmation':
-        return boutonsOuiNon('estProgramme', this.etat.estProgramme);
-      case 'doc_adressage':
-        return boutonsOuiNon('lettreAdressage', this.etat.lettreAdressage);
-      case 'doc_synthese':
-        return boutonsOuiNon('syntheseMedicale', this.etat.syntheseMedicale);
-      case 'doc_liaison':
-        return boutonsOuiNon('lettreLiaison', this.etat.lettreLiaison);
-      case 'surveillance':
-        return boutonsOuiNon('surveillanceActive', this.etat.surveillanceActive);
+      case 'champ':
+        return this.corpsChamp();
+      case 'prerequis':
+        return this.corpsPrerequis();
       case 'actes':
         return this.corpsActes();
       case 'medicaments':
         return this.corpsMedicaments();
       case 'intervenants':
         return this.corpsIntervenants();
-      case 'duree':
-        return this.corpsDuree();
+      case 'densite':
+        return this.corpsDensite();
       default:
         return '';
     }
@@ -465,48 +408,46 @@ class Assistant {
       </p>`;
   }
 
-  private corpsIdentite(): string {
-    return `
-      <div class="grille-champs">
-        <div>
-          <label class="etiquette" for="champ-sejour">Identifiant de séjour</label>
-          <input type="text" id="champ-sejour" data-champ="identifiantSejour"
-                 value="${esc(this.etat.identifiantSejour)}" autocomplete="off" />
-        </div>
-        <div>
-          <label class="etiquette" for="champ-date">Date du séjour</label>
-          <input type="date" id="champ-date" data-champ="dateSejour"
-                 value="${esc(this.etat.dateSejour)}" />
-        </div>
-      </div>`;
+  private corpsChamp(): string {
+    return lignesBinaires([
+      {
+        cle: 'estSeance',
+        titre: 'S’agit-il d’une séance de dialyse ou de chimiothérapie ?',
+        precision: 'Séance forfaitisée, sans critères de gradation.',
+        valeur: this.etat.estSeance,
+      },
+      {
+        cle: 'estHorsMco',
+        titre: 'La prise en charge relève-t-elle du SMR/SSR ou de la psychiatrie ?',
+        precision: 'Hors champ MCO : financements propres.',
+        valeur: this.etat.estHorsMco,
+      },
+    ]);
   }
 
-  private corpsDuree(): string {
-    const raccourcis = [60, 90, 120, 180, 240, 300, 360];
-    const sousSeuil = this.etat.dureePresenceMinutes < 180;
-    return `
-      ${basculesExclusives(
-        'duree',
-        raccourcis.map((minutes) => ({
-          valeur: String(minutes),
-          libelle: minutes >= 120 ? `${minutes / 60} h` : `${minutes} min`,
-          actif: this.etat.dureePresenceMinutes === minutes,
-        })),
-      )}
-      <div class="grille-champs">
-        <div>
-          <label class="etiquette" for="champ-duree">Durée exacte de présence (minutes)</label>
-          <input type="number" id="champ-duree" data-champ="dureePresenceMinutes" min="0"
-                 max="1440" step="5" value="${this.etat.dureePresenceMinutes}" />
-        </div>
-      </div>
-      <p class="note-saisie" style="margin-top:12px">
-        ${
-          sousSeuil
-            ? '⚠️ Durée inférieure à 3 heures : une alerte qualité sera émise en contrôle.'
-            : 'Durée conforme au repère de 3 heures utilisé en contrôle.'
-        }
-      </p>`;
+  private corpsPrerequis(): string {
+    return lignesBinaires([
+      {
+        cle: 'estProgramme',
+        titre: 'La venue du patient était-elle programmée ?',
+        valeur: this.etat.estProgramme,
+      },
+      {
+        cle: 'lettreAdressage',
+        titre: 'La demande médicale préalable est-elle au dossier ?',
+        valeur: this.etat.lettreAdressage,
+      },
+      {
+        cle: 'syntheseMedicale',
+        titre: 'La synthèse médicale a-t-elle été signée le jour même ?',
+        valeur: this.etat.syntheseMedicale,
+      },
+      {
+        cle: 'lettreLiaison',
+        titre: 'La lettre de liaison a-t-elle été remise au patient ?',
+        valeur: this.etat.lettreLiaison,
+      },
+    ]);
   }
 
   private corpsActes(): string {
@@ -521,7 +462,7 @@ class Assistant {
                 <div class="element-meta">
                   ${
                     choisi.issuReferentiel
-                      ? `Référentiel CCAM : plateau technique lourd ${libelleBooleen(
+                      ? `Référentiel CCAM · plateau technique lourd ${libelleBooleen(
                           choisi.reference?.necessite_plateau_lourd ?? null,
                           'oui',
                           'non',
@@ -529,28 +470,18 @@ class Assistant {
                           choisi.reference?.acte_marqueur_hdj ?? null,
                           'oui',
                           'non',
-                        )}`
-                      : 'Acte saisi manuellement — précisez ses caractéristiques'
+                        )} — repris du référentiel`
+                      : 'Acte saisi manuellement.'
                   }
                 </div>
               </div>
               <button type="button" class="btn-retirer" data-action="retirer-acte"
                       data-index="${index}">Retirer</button>
             </div>
-            <div class="element-questions">
-              <div class="mini-question">
-                <span>Nécessite un plateau technique lourd ?</span>
-                ${boutonsValeur('acte-plateau', index, choisi.acte.est_plateau_lourd)}
-              </div>
-              <div class="mini-question">
-                <span>Réalisable en externe (cabinet, ville) ?</span>
-                ${boutonsValeur('acte-externe', index, choisi.acte.est_realisable_externe)}
-              </div>
-            </div>
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun acte sélectionné.<br />Vous pouvez passer cette question si la
+      : `<div class="vide">Aucun acte sélectionné.<br />Vous pouvez passer cette étape si la
          venue ne comporte aucun acte technique.</div>`;
 
     return `
@@ -574,40 +505,24 @@ class Assistant {
               <div>
                 <strong>${esc(choisi.medicament.libelle)}</strong>
                 <div class="element-meta">
-                  CIS ${esc(choisi.medicament.code_ucd)}${
-                    choisi.reference?.surveillance_renforcee === true ? ' · surveillance renforcée' : ''
+                  Réserve hospitalière : ${etiquette(
+                    choisi.reference?.est_reserve_hospitaliere ?? null,
+                    'oui',
+                    'non',
+                  )}${
+                    choisi.reference?.surveillance_renforcee === true
+                      ? ' · surveillance renforcée'
+                      : ''
                   }${choisi.reference?.est_liste_en_sus === true ? ' · liste en sus' : ''}
-                  ${choisi.issuReferentiel ? '' : ' · saisie manuelle'}
                 </div>
               </div>
               <button type="button" class="btn-retirer" data-action="retirer-medicament"
                       data-index="${index}">Retirer</button>
             </div>
-            <div class="element-questions">
-              <div class="mini-question">
-                <span>
-                  Produit de la réserve hospitalière ?
-                  ${etiquette(
-                    choisi.reference?.est_reserve_hospitaliere ?? null,
-                    'oui (référentiel)',
-                    'non (référentiel)',
-                  )}
-                </span>
-                ${boutonsValeur('med-reserve', index, choisi.medicament.reserve_hospitaliere)}
-              </div>
-              <div class="mini-question">
-                <span>Administration nécessitant une surveillance continue ?</span>
-                ${boutonsValeur(
-                  'med-surveillance',
-                  index,
-                  choisi.medicament.necessite_surveillance_continue,
-                )}
-              </div>
-            </div>
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun médicament sélectionné.<br />Vous pouvez passer cette question si
+      : `<div class="vide">Aucun médicament sélectionné.<br />Vous pouvez passer cette étape si
          la venue ne comporte aucun traitement.</div>`;
 
     return `
@@ -631,6 +546,22 @@ class Assistant {
     return this.suggestionsHtml ? `<ul class="suggestions">${this.suggestionsHtml}</ul>` : '';
   }
 
+  /* -------------------------------------------------- intervenants */
+
+  private professionPresente(profession: Profession): boolean {
+    return this.etat.intervenants.some((i) => i.profession === profession);
+  }
+
+  private basculesProfessions(): string {
+    return `<div class="bascule-grille">${PROFESSIONS.map(
+      (profession) =>
+        `<button type="button" class="btn-bascule" data-action="profession-bascule"
+                 data-valeur="${profession}"${presse(this.professionPresente(profession))}>
+           ${esc(LIBELLES_PROFESSION[profession])}
+         </button>`,
+    ).join('')}</div>`;
+  }
+
   private corpsIntervenants(): string {
     const elements = this.etat.intervenants.length
       ? this.etat.intervenants
@@ -639,9 +570,7 @@ class Assistant {
           <div class="element">
             <div class="element-tete">
               <div>
-                <strong>Intervenant ${index + 1} — ${esc(
-                  LIBELLES_PROFESSION[intervenant.profession],
-                )}</strong>
+                <strong>${esc(LIBELLES_PROFESSION[intervenant.profession])}</strong>
                 <div class="element-meta">
                   ${
                     intervenant.note_evolution_tracee
@@ -654,17 +583,6 @@ class Assistant {
                       data-index="${index}">Retirer</button>
             </div>
             <div class="element-questions">
-              <div class="mini-question" style="display:block">
-                <div style="margin-bottom:8px">Profession</div>
-                ${basculesExclusives(
-                  'profession',
-                  PROFESSIONS.map((profession) => ({
-                    valeur: `${index}:${profession}`,
-                    libelle: LIBELLES_PROFESSION[profession],
-                    actif: intervenant.profession === profession,
-                  })),
-                )}
-              </div>
               ${
                 intervenant.profession === 'MEDECIN'
                   ? `<div class="mini-question" style="display:block">
@@ -677,27 +595,68 @@ class Assistant {
                      </div>`
                   : ''
               }
-              <div class="mini-question" style="display:block">
-                <div style="margin-bottom:8px">Acte ou atelier réalisé auprès du patient</div>
-                <input type="text" data-champ="atelier-${index}"
-                       value="${esc(intervenant.acte_ou_atelier)}"
-                       placeholder="Entretien éducatif, surveillance, atelier diététique…" />
-              </div>
               <div class="mini-question">
                 <span>Note d’évolution rédigée dans le dossier ?</span>
-                ${boutonsValeur('note', index, intervenant.note_evolution_tracee)}
+                ${boutonsOuiNon('note', intervenant.note_evolution_tracee, 'note', index)}
               </div>
             </div>
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun intervenant renseigné : la pluriprofessionnalité ne pourra pas
-         être établie.</div>`;
+      : `<div class="vide">Aucun intervenant sélectionné.<br />Cliquez sur les professionnels
+         intervenus auprès du patient.</div>`;
+
+    const medecinPresent = this.professionPresente('MEDECIN');
 
     return `
-      <div class="selection">${elements}</div>
-      <button type="button" class="btn-nav suivant" style="margin-top:16px"
-              data-action="ajouter-intervenant">+ Ajouter un intervenant</button>`;
+      <p class="consigne">Intervenants auprès du patient</p>
+      ${this.basculesProfessions()}
+      ${
+        medecinPresent
+          ? `<button type="button" class="btn-bascule ajout-second"
+                    data-action="ajouter-medecin">＋ Un second médecin (autre spécialité)</button>`
+          : ''
+      }
+      <div class="selection">${elements}</div>`;
+  }
+
+  /* -------------------------------------------------- surveillance & durée */
+
+  private corpsDensite(): string {
+    const raccourcis = [60, 90, 120, 180, 240, 300, 360];
+    const sousSeuil = this.etat.dureePresenceMinutes < 180;
+    return `
+      ${lignesBinaires([
+        {
+          cle: 'surveillanceActive',
+          titre: 'Une surveillance clinique rapprochée a-t-elle été documentée ?',
+          precision: 'Constantes, tolérance, surveillance rapprochée tracées au dossier.',
+          valeur: this.etat.surveillanceActive,
+        },
+      ])}
+      <p class="consigne">Durée de présence du patient</p>
+      ${basculesExclusives(
+        'duree',
+        raccourcis.map((minutes) => ({
+          valeur: String(minutes),
+          libelle: minutes >= 120 ? `${minutes / 60} h` : `${minutes} min`,
+          actif: this.etat.dureePresenceMinutes === minutes,
+        })),
+      )}
+      <div class="grille-champs">
+        <div>
+          <label class="etiquette" for="champ-duree">Durée exacte de présence (minutes)</label>
+          <input type="number" id="champ-duree" data-champ="dureePresenceMinutes" min="0"
+                 max="1440" step="5" value="${this.etat.dureePresenceMinutes}" />
+        </div>
+      </div>
+      <p class="note-saisie" style="margin-top:12px">
+        ${
+          sousSeuil
+            ? '⚠️ Durée inférieure à 3 heures : une alerte qualité sera émise en contrôle.'
+            : 'Durée conforme au repère de 3 heures utilisé en contrôle.'
+        }
+      </p>`;
   }
 
   /* -------------------------------------------------- aide pédagogique */
@@ -755,9 +714,12 @@ class Assistant {
   /* -------------------------------------------------- progression */
 
   private rendreProgression(): void {
-    const rang = (INDEX.get(this.etapeId) ?? 0) + 1;
-    const total = ETAPES.length - 1;
-    const ratio = this.etapeId === 'resultat' ? 1 : Math.min(1, rang / total);
+    const parcours = this.parcours();
+    const total = parcours.length;
+    const ratio =
+      this.etapeId === 'resultat'
+        ? 1
+        : Math.min(1, (parcours.indexOf(this.etapeId) + 1) / total);
     this.jauge.style.width = `${Math.round(ratio * 100)}%`;
     this.texteProgression.textContent =
       this.etapeId === 'resultat'
@@ -772,12 +734,12 @@ class Assistant {
       this.etat.estProgramme !== null;
     if (!suffisant) {
       this.voyantVerdict.className = 'voyant verdict';
-      this.voyantVerdict.textContent = 'Verdict provisoire : —';
+      this.voyantVerdict.textContent = 'Décision : —';
       return;
     }
     const resultat = evaluerDossier(versDossier(this.etat));
     this.voyantVerdict.className = `voyant verdict ${resultat.severite}`;
-    this.voyantVerdict.textContent = `Verdict provisoire : ${resultat.statut}`;
+    this.voyantVerdict.textContent = `${resultat.libelle_decision}`;
   }
 
   /* -------------------------------------------------- résultat */
@@ -789,14 +751,16 @@ class Assistant {
     this.dernierResultat = resultat;
 
     const mentions: Record<ResultatAudit['statut'], string> = {
-      VALIDE_GHS: 'Les critères de l’instruction sont réunis : le séjour peut être facturé en GHS.',
+      VALIDE_GHS:
+        'Les critères de l’instruction sont réunis : la venue peut être facturée comme une hospitalisation de jour.',
       SUSPENDU_POUR_REGULARISATION:
         'Une pièce obligatoire manque, mais la densité est suffisante : régularisez avant validation DIM.',
       REJET_VERS_ACE:
         'La prise en charge relève des actes et consultations externes (ACE / CSO).',
       REJET_VERS_FORFAIT_SEANCE: 'Requalification en forfait de séance dédié.',
       REJET_HORS_MCO: 'Prise en charge hors du champ MCO de l’instruction.',
-      REJET_NON_PROGRAMME: 'Séjour non programmé : la facturation en GHS est exclue.',
+      REJET_NON_PROGRAMME:
+        'Venue non programmée : la facturation en hospitalisation de jour est exclue.',
     };
 
     const piliers = resultat.piliers.length
@@ -813,8 +777,8 @@ class Assistant {
 
     this.racine.innerHTML = `
       <div class="badge ${resultat.severite}">
-        <div class="intitule">Décision du moteur décisionnel</div>
-        <div class="statut">${esc(resultat.statut)}</div>
+        <div class="intitule">Décision</div>
+        <div class="statut">${esc(resultat.libelle_decision)}</div>
         <div class="mention">${esc(mentions[resultat.statut])}</div>
       </div>
 
@@ -888,7 +852,6 @@ class Assistant {
         <button type="button" class="btn-nav retour" data-action="reculer">
           ← Modifier mes réponses
         </button>
-        <span class="note-saisie">Séjour ${esc(dossier.id_sejour)}</span>
       </div>`;
   }
 
@@ -938,53 +901,20 @@ class Assistant {
         this.etat.medicaments.splice(index, 1);
         this.rendre();
         break;
-      case 'acte-plateau':
-      case 'acte-externe': {
-        const choisi = this.etat.actes[index];
-        if (choisi) {
-          choisi.acte =
-            action === 'acte-plateau'
-              ? { ...choisi.acte, est_plateau_lourd: valeur === 'true' }
-              : { ...choisi.acte, est_realisable_externe: valeur === 'true' };
-        }
-        this.rendre();
+      case 'profession-bascule':
+        this.basculerProfession(valeur as Profession);
         break;
-      }
-      case 'med-reserve':
-      case 'med-surveillance': {
-        const choisi = this.etat.medicaments[index];
-        if (choisi) {
-          choisi.medicament =
-            action === 'med-reserve'
-              ? { ...choisi.medicament, reserve_hospitaliere: valeur === 'true' }
-              : { ...choisi.medicament, necessite_surveillance_continue: valeur === 'true' };
-          if (action === 'med-reserve') choisi.reserveSource = 'arbitrage';
-        }
-        this.rendre();
-        break;
-      }
-      case 'ajouter-intervenant':
-        this.etat.intervenants.push(intervenantVide());
+      case 'ajouter-medecin':
+        this.etat.intervenants.push(intervenantPourProfession('MEDECIN'));
         this.rendre();
         break;
       case 'retirer-intervenant':
         this.etat.intervenants.splice(index, 1);
         this.rendre();
         break;
-      case 'profession': {
-        const [rang, profession] = valeur.split(':');
-        const intervenant = this.etat.intervenants[Number(rang)];
-        if (intervenant) {
-          intervenant.profession = profession as Profession;
-          if (profession !== 'MEDECIN') delete intervenant.specialite_medicale;
-          else intervenant.specialite_medicale ??= '';
-        }
-        this.rendre();
-        break;
-      }
       case 'note': {
         const intervenant = this.etat.intervenants[index];
-        if (intervenant) intervenant.note_evolution_tracee = valeur === 'true';
+        if (intervenant) intervenant.note_evolution_tracee = valeur === 'oui';
         this.rendre();
         break;
       }
@@ -1012,6 +942,18 @@ class Assistant {
     }
   };
 
+  /** Bascule une profession : présente → retirée, absente → ajoutée. */
+  private basculerProfession(profession: Profession): void {
+    if (this.professionPresente(profession)) {
+      this.etat.intervenants = this.etat.intervenants.filter(
+        (i) => i.profession !== profession,
+      );
+    } else {
+      this.etat.intervenants.push(intervenantPourProfession(profession));
+    }
+    this.rendre();
+  }
+
   private gererSaisie = (evenement: Event): void => {
     const cible = evenement.target as HTMLElement;
 
@@ -1025,18 +967,13 @@ class Assistant {
   };
 
   private majChamp(champ: string, valeur: string): void {
-    if (champ === 'identifiantSejour') this.etat.identifiantSejour = valeur;
-    else if (champ === 'dateSejour') this.etat.dateSejour = valeur;
-    else if (champ === 'dureePresenceMinutes') {
+    if (champ === 'dureePresenceMinutes') {
       const nombre = Number(valeur);
       this.etat.dureePresenceMinutes = Number.isFinite(nombre) ? Math.max(0, nombre) : 0;
       this.rendreVerdictProvisoire();
     } else if (champ.startsWith('specialite-')) {
       const intervenant = this.etat.intervenants[Number(champ.split('-')[1])];
       if (intervenant) intervenant.specialite_medicale = valeur;
-    } else if (champ.startsWith('atelier-')) {
-      const intervenant = this.etat.intervenants[Number(champ.split('-')[1])];
-      if (intervenant) intervenant.acte_ou_atelier = valeur;
     }
   }
 
