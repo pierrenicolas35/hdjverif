@@ -41,6 +41,26 @@ const MEDICAMENTS: readonly Record<string, unknown>[] = [
     dci: 'IMMUNOGLOBULINE HUMAINE NORMALE',
     est_reserve_hospitaliere: true,
     est_liste_en_sus: true,
+    surveillance_particuliere: true,
+    surveillance_renforcee: false,
+  },
+  {
+    cis: '64542736',
+    denomination: 'REMICADE 100 mg, poudre pour solution à diluer pour perfusion',
+    dci: 'INFLIXIMAB',
+    est_reserve_hospitaliere: true,
+    est_liste_en_sus: true,
+    surveillance_particuliere: false,
+    surveillance_renforcee: false,
+  },
+  {
+    cis: '62345678',
+    denomination: 'FER CARBOXYMALTOSE 100 mg/2 mL, solution injectable',
+    dci: 'FER CARBOXYMALTOSE',
+    // Valeur absente du référentiel : la source officielle ne tranche pas.
+    est_reserve_hospitaliere: null,
+    est_liste_en_sus: null,
+    surveillance_particuliere: null,
     surveillance_renforcee: false,
   },
 ];
@@ -132,6 +152,16 @@ const attendre = (ms: number): Promise<void> =>
 
 async function choisirPremiereSuggestion(action: string): Promise<void> {
   cliquer(`#zone-suggestions [data-action="${action}"]`);
+  await attendre(60);
+}
+
+/** Choisit la suggestion dont le libellé contient `fragment`. */
+async function choisirSuggestionContenant(fragment: string): Promise<void> {
+  const bouton = [...document.querySelectorAll<HTMLButtonElement>('#zone-suggestions button')].find(
+    (b) => (b.textContent ?? '').includes(fragment),
+  );
+  expect(bouton).toBeDefined();
+  bouton!.click();
   await attendre(60);
 }
 
@@ -607,5 +637,46 @@ describe('Volet d’aide', () => {
     const aideMedicaments = texte('#aide');
     expect(aideMedicaments).toContain('biothérapie digestive de réserve hospitalière');
     expect(aideMedicaments).not.toContain('Endoscopie œso-gastro-duodénale');
+  });
+});
+
+describe('Référentiel — valeur absente et surveillance particulière', () => {
+  it('affiche « valeur absente » sans conclure « hors réserve »', async () => {
+    retourAccueil();
+    atteindreActes();
+    suivant(); // médicaments
+    expect(questionCourante()).toContain('médicaments');
+
+    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
+    champ!.value = 'fer';
+    champ!.dispatchEvent(new Event('input', { bubbles: true }));
+    await attendre(420);
+
+    const suggestions = [...document.querySelectorAll('#zone-suggestions li')];
+    const ligne = suggestions
+      .map((li) => li.textContent ?? '')
+      .find((txt) => txt.includes('FER CARBOXYMALTOSE'));
+    expect(ligne).toBeDefined();
+    expect(ligne).toContain('valeur absente');
+    expect(ligne).not.toContain('· non');
+
+    await choisirSuggestionContenant('FER CARBOXYMALTOSE');
+    const meta = texte('.element-meta');
+    expect(meta).toContain('Réserve hospitalière');
+    expect(meta).toContain('valeur absente');
+  });
+
+  it('signale la surveillance particulière issue du référentiel', async () => {
+    retourAccueil();
+    atteindreActes();
+    suivant(); // médicaments
+
+    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
+    champ!.value = 'immunoglobuline';
+    champ!.dispatchEvent(new Event('input', { bubbles: true }));
+    await attendre(420);
+    await choisirPremiereSuggestion('suggestion-medicament');
+
+    expect(texte('.element-meta')).toContain('surveillance particulière liée au produit');
   });
 });

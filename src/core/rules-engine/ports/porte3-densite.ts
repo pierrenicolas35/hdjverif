@@ -5,10 +5,16 @@
  *
  *  1. Pilier Soins / surveillance active
  *     - surveillance active documentée, OU
- *     - administration d'un produit de la réserve hospitalière / nécessitant une
- *       surveillance continue, OU
+ *     - administration d'un produit de la réserve hospitalière OU nécessitant une
+ *       surveillance particulière pendant le traitement (libellé officiel du
+ *       référentiel), OU
  *     - contexte patient particulier (au moins une situation de vulnérabilité
  *       retenue au dossier).
+ *
+ *     Une **valeur absente** du référentiel (`reserve_hospitaliere === null`) ne
+ *     valide pas le pilier et n'est jamais convertie en « hors réserve » : elle
+ *     est restituée comme point à confirmer par la pharmacie à usage intérieur
+ *     (doctrine du 22/09/2026).
  *
  *  2. Pilier Plateau technique lourd / actes coordonnés
  *     - au moins un acte `est_plateau_lourd`, OU
@@ -28,6 +34,7 @@ import {
   codesCcamDistincts,
   contextePatientParticulier,
   medecinsActifs,
+  medicamentsReferenceIncomplete,
   medicamentsSurveillanceParticuliere,
   professionsParamedicalesDistinctes,
   specialitesMedicalesDistinctes,
@@ -51,6 +58,7 @@ export function evaluerPilier1(dossier: DossierHDJ): Pilier {
   const justifications: string[] = [];
   const produits = medicamentsSurveillanceParticuliere(dossier);
   const contexte = contextePatientParticulier(dossier);
+  const nonDetermines = medicamentsReferenceIncomplete(dossier);
   const valide =
     dossier.surveillance_active_documentee || produits.length > 0 || contexte.length > 0;
 
@@ -70,17 +78,25 @@ export function evaluerPilier1(dossier: DossierHDJ): Pilier {
 
   for (const produit of produits) {
     const motifs: string[] = [];
-    if (produit.reserve_hospitaliere) motifs.push('réserve hospitalière');
+    if (produit.reserve_hospitaliere === true) motifs.push('réserve hospitalière');
     if (produit.necessite_surveillance_continue) {
-      motifs.push('surveillance continue requise');
+      motifs.push('surveillance particulière pendant le traitement (référentiel)');
     }
     justifications.push(`${produit.code_ucd} — ${produit.libelle} (${motifs.join(', ')}).`);
+  }
+
+  for (const produit of nonDetermines) {
+    justifications.push(
+      `${produit.code_ucd} — ${produit.libelle} : réserve hospitalière absente du ` +
+        'référentiel (non déterminée). Aucune conclusion « hors réserve » n’est tirée de ' +
+        'cette absence : à confirmer par la pharmacie à usage intérieur.',
+    );
   }
 
   if (!valide) {
     justifications.push(
       'Aucune surveillance active documentée, aucun contexte patient particulier et aucun ' +
-        'produit à réserve hospitalière ou à surveillance continue administré.',
+        'produit à réserve hospitalière ou à surveillance particulière établie.',
     );
   }
 

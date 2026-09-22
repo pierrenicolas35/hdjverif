@@ -21,11 +21,10 @@
  *   • CCAM (jeu de données « CCAM Ameli », data.gouv.fr / InterHop), complété par la
  *     table de surcharge éditoriale locale `data/ccam-overlay.csv`.
  *
- * Aucun indicateur n'est laissé « non déterminé » par défaut : la réserve hospitalière est
- * toujours tranchée (`true`/`false`, voir la règle ci-dessus et le README). Les seules valeurs
- * `NULL` sont celles que les sources ne permettent pas de remplir (`est_liste_en_sus` sans
- * réserve établie, `dci` pour les 2 spécialités sans substance active déclarée) — et `NULL`
- * signifie « non déterminé », jamais « hors réserve ».
+ * Aucune valeur absente n'est convertie en refus : quand le CPD est muet (aucune condition de
+ * prescription ni de délivrance), la valeur reste `NULL` — l'application l'affiche comme « non
+ * déterminée » et demande la confirmation de la pharmacie à usage intérieur, sans jamais en
+ * tirer un « hors réserve hospitalière » (doctrine du 22/09/2026).
  *
  * Contrôles : `--dry-run` rejoue les cas de référence (produits de HDJ, produits de ville,
  * rattrapage par la liste de travail) et l'intégrité des sources avant toute écriture ;
@@ -69,9 +68,10 @@ const CAS_DE_REFERENCE = [
   { denomination: 'OPDIVO', reserve: true, motif: 'produit de HDJ, réserve hospitalière (CPD)' },
   { denomination: 'IMMUNOGLOBULINE HUMAINE DE L', reserve: true, motif: 'immunoglobuline (CPD)' },
   { denomination: 'OXYGENE MEDICINAL', reserve: true, motif: 'rattrapé par la liste de travail' },
+  { denomination: 'MABTHERA', reserve: false, motif: 'prescription hospitalière, hors réserve' },
   { denomination: 'DOLIPRANE', reserve: false, motif: 'produit de ville (CPD : liste II)' },
   { denomination: 'EFFERALGAN', reserve: false, motif: 'produit de ville (CPD)' },
-  { denomination: 'GRANIONS', reserve: false, motif: 'spécialité sans CPD (inférence)' },
+  { denomination: 'GRANIONS', reserve: null, motif: 'CPD muet : valeur absente (non déterminée)' },
 ];
 
 const log = (...args) => console.log('[import]', ...args);
@@ -132,9 +132,18 @@ function controler(medicaments, origineReserve) {
     erreurs += 1;
     constats.push(`✗ source CPD incomplète : ${stats.reserve} produits de réserve (< 600)`);
   }
-  if (stats.indetermine > 0) {
+  // Invariant : aucun CPD renseigné ⇒ la valeur ne peut pas être absente.
+  if (origineReserve.indetermineAvecCpd > 0) {
     erreurs += 1;
-    constats.push(`✗ ${stats.indetermine} spécialité(s) laissée(s) « non déterminée »`);
+    constats.push(
+      `✗ ${origineReserve.indetermineAvecCpd} spécialité(s) « non déterminée(s) » alors que le CPD est renseigné`,
+    );
+  }
+  if (stats.surveillanceParticuliere < 1000) {
+    erreurs += 1;
+    constats.push(
+      `✗ surveillance particulière : ${stats.surveillanceParticuliere} spécialités (< 1000)`,
+    );
   }
   const couvertureDci = 100 * (stats.avecDci / stats.total);
   if (couvertureDci < 99) {
@@ -142,13 +151,27 @@ function controler(medicaments, origineReserve) {
     constats.push(`✗ DCI manquante pour plus de 1 % des spécialités : vérifier CIS_COMPO`);
   }
 
-  constats.push(`· réserve hospitalière : ${stats.reserve} oui · ${stats.hors} non · ${stats.indetermine} non déterminés`);
+  constats.push(
+    `· réserve hospitalière : ${stats.reserve} oui · ${stats.hors} non · ` +
+      `${stats.indetermine} valeur(s) absente(s) (CPD muet, affichée « non déterminée »)`,
+  );
   constats.push(
     `· origine : libellé CPD officiel ${origineReserve.cpd} · liste de travail ${origineReserve.liste}` +
-      ` · inférence « CPD muet » ${origineReserve.infere}`,
+      ` · CPD muet ${origineReserve.indetermine}`,
+  );
+  constats.push(
+    `· surveillance particulière (libellé CPD) : ${stats.surveillanceParticuliere} oui`,
   );
   constats.push(`· DCI renseignée : ${couvertureDci.toFixed(1)} % (${stats.avecDci}/${stats.total})`);
   constats.push(`· liste en sus (approximation) : ${stats.listeEnSus} oui`);
+
+  const surveillanceAttendue = medicaments.find((m) => m.denomination.startsWith('MABTHERA'));
+  const surveillanceOk = surveillanceAttendue?.surveillance_particuliere === true;
+  if (!surveillanceOk) erreurs += 1;
+  constats.push(
+    `${surveillanceOk ? '✓' : '✗'} MABTHERA : surveillance particulière = ` +
+      `${String(surveillanceAttendue?.surveillance_particuliere)} (attendu true — libellé CPD)`,
+  );
   return { constats, erreurs, stats };
 }
 
@@ -246,6 +269,7 @@ async function principal() {
       'dci',
       'est_reserve_hospitaliere',
       'est_liste_en_sus',
+      'surveillance_particuliere',
       'surveillance_renforcee',
     ];
     exporter(medicaments, colonnesMedicaments, 'referentiel_medicaments.csv');

@@ -11,9 +11,21 @@
 create extension if not exists unaccent;
 
 -- ---------------------------------------------------------------------
+-- Colonne « surveillance particulière » (libellé CPD officiel).
+-- NULL = valeur absente du référentiel (non déterminée), jamais « non ».
+-- ---------------------------------------------------------------------
+alter table public.referentiel_medicaments
+  add column if not exists surveillance_particuliere boolean;
+
+comment on column public.referentiel_medicaments.surveillance_particuliere is
+  'Libellé CPD « médicament nécessitant une surveillance particulière pendant le traitement » : trace de la variable « surveillance particulière » de l''annexe 4, point 2.b.iii. NULL = valeur absente du référentiel.';
+
+-- ---------------------------------------------------------------------
 -- Recherche de médicaments
 -- ---------------------------------------------------------------------
-create or replace function public.rechercher_medicaments(
+drop function if exists public.rechercher_medicaments(text, integer);
+
+create function public.rechercher_medicaments(
   p_terme  text,
   p_limite integer default 12
 )
@@ -23,6 +35,7 @@ returns table (
   dci                    text,
   est_reserve_hospitaliere boolean,
   est_liste_en_sus       boolean,
+  surveillance_particuliere boolean,
   surveillance_renforcee boolean
 )
 language sql
@@ -39,6 +52,7 @@ as $$
     m.dci,
     m.est_reserve_hospitaliere,
     m.est_liste_en_sus,
+    m.surveillance_particuliere,
     m.surveillance_renforcee
   from public.referentiel_medicaments m, cible
   where cible.t is not null

@@ -27,6 +27,8 @@ import {
   MEDECIN_ENDOCRINO,
   PSYCHOLOGUE,
   UCD_ANTICORPS_MONOCLONAL,
+  UCD_RESERVE_ABSENTE,
+  UCD_SURVEILLANCE_PARTICULIERE,
   dossier,
   intervenant,
 } from './fixtures.js';
@@ -409,5 +411,51 @@ describe('Validation du dossier', () => {
       dossier({ intervenants: [intervenant('MEDECIN', { id: 'med-spec' })] }),
     );
     expect(erreurs.map((e) => e.champ)).toContain('intervenants[0].specialite_medicale');
+  });
+});
+
+/* ================================================================== *
+ * Pilier « soins » — doctrine de la valeur absente (22/09/2026)
+ * ================================================================== */
+
+describe('Pilier 1 — réserve hospitalière absente du référentiel', () => {
+  it('ne convertit jamais une valeur absente en « hors réserve »', () => {
+    const resultat = evaluerDossier(dossier({ medicaments: [UCD_RESERVE_ABSENTE] }));
+
+    // L'absence ne justifie pas le pilier : la décision reste un rejet…
+    expect(resultat.statut).toBe('REJET_VERS_ACE');
+    const pilier1 = resultat.piliers.find((p) => p.id === 'PILIER_1_SOINS_SURVEILLANCE');
+    expect(pilier1?.valide).toBe(false);
+
+    // … mais elle est restituée comme valeur absente, jamais comme un « non ».
+    const justifications = pilier1?.justifications.join(' ') ?? '';
+    expect(justifications).toContain('absente du référentiel');
+    expect(justifications).toContain('non déterminée');
+    expect(justifications).toContain('pharmacie à usage intérieur');
+
+    const alertes = resultat.alertes_controle.join(' ');
+    expect(alertes).toContain('Réserve hospitalière absente du référentiel');
+    expect(alertes).toContain('pharmacie à usage intérieur');
+    expect(alertes).toContain(UCD_RESERVE_ABSENTE.libelle);
+  });
+
+  it('retient le pilier « soins » sur la surveillance particulière du référentiel', () => {
+    const resultat = evaluerDossier(dossier({ medicaments: [UCD_SURVEILLANCE_PARTICULIERE] }));
+
+    expect(resultat.statut).toBe('VALIDE_GHS');
+    expect(resultat.piliers_valides).toContain('PILIER_1_SOINS_SURVEILLANCE');
+    const justifications =
+      resultat.piliers
+        .find((p) => p.id === 'PILIER_1_SOINS_SURVEILLANCE')
+        ?.justifications.join(' ') ?? '';
+    expect(justifications).toContain('surveillance particulière pendant le traitement');
+    // Une valeur établie à « non » ne produit aucune alerte d'incertitude.
+    expect(resultat.alertes_controle.join(' ')).not.toContain('absente du référentiel');
+  });
+
+  it('n’ajoute aucune alerte d’incertitude quand la réserve est établie', () => {
+    const resultat = evaluerDossier(dossier({ medicaments: [UCD_ANTICORPS_MONOCLONAL] }));
+    expect(resultat.statut).toBe('VALIDE_GHS');
+    expect(resultat.alertes_controle.join(' ')).not.toContain('absente du référentiel');
   });
 });

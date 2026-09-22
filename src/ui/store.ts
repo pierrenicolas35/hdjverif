@@ -154,11 +154,15 @@ export function medicamentChoisiDepuisReferentiel(ref: MedicamentRef): Medicamen
     medicament: {
       code_ucd: ref.cis,
       libelle: ref.denomination,
-      // Le référentiel fait foi. Une valeur absente n'est pas interprétée comme
-      // une exclusion : elle est traitée comme « hors réserve hospitalière »,
-      // sans interroger à nouveau l'utilisateur.
-      reserve_hospitaliere: ref.est_reserve_hospitaliere === true,
-      necessite_surveillance_continue: ref.surveillance_renforcee === true,
+      // Le référentiel fait foi, y compris quand il ne tranche pas : une valeur
+      // absente (`null`) reste « non déterminée ». Elle n'est jamais convertie en
+      // « hors réserve hospitalière » — elle ne justifie donc pas le pilier
+      // « soins » et déclenche une alerte demandant la confirmation de la PUI.
+      reserve_hospitaliere: ref.est_reserve_hospitaliere,
+      // Libellé officiel du référentiel « médicament nécessitant une surveillance
+      // particulière pendant le traitement » (variable de l'annexe 4, point 2.b.iii).
+      // Seule une valeur établie compte : l'absence ne présume rien.
+      necessite_surveillance_continue: ref.surveillance_particuliere === true,
     },
   };
 }

@@ -7,10 +7,12 @@
  *
  * Alertes qualité non bloquantes (fonction `alertesQualite`) :
  *  - durée de présence < 180 minutes : vigilance T2A renforcée sur la densité ;
- *  - lettre de liaison non remise : traçabilité incomplète au dossier.
+ *  - lettre de liaison non remise : traçabilité incomplète au dossier ;
+ *  - réserve hospitalière absente du référentiel : valeur non déterminée, à confirmer
+ *    par la pharmacie à usage intérieur — jamais convertie en « hors réserve ».
  */
 
-import { denombrerInterventions } from '../helpers.js';
+import { denombrerInterventions, medicamentsReferenceIncomplete } from '../helpers.js';
 import type { DossierHDJ, PilierEvaluation } from '../types.js';
 import { constat, type IssuePorte } from './types.js';
 
@@ -38,6 +40,19 @@ export function alertesQualite(dossier: DossierHDJ): readonly string[] {
     alertes.push(
       'Lettre de liaison non remise : traçabilité incomplète au dossier du patient ' +
         '(mention requise à l’article R. 1112-1-2 du code de la santé publique).',
+    );
+  }
+
+  const nonDetermines = medicamentsReferenceIncomplete(dossier);
+  if (nonDetermines.length > 0) {
+    alertes.push(
+      'Réserve hospitalière absente du référentiel — valeur non déterminée pour : ' +
+        nonDetermines
+          .map((m) => `${m.libelle} (code ${m.code_ucd})`)
+          .join(', ') +
+        '. Cette absence n’est pas interprétée comme « hors réserve hospitalière » : ' +
+        'elle ne justifie pas à elle seule les moyens mobilisés et demande la confirmation ' +
+        'de la pharmacie à usage intérieur.',
     );
   }
 

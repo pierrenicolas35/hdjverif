@@ -219,7 +219,13 @@ function basculesExclusives(
 
 /** Étiquette d'information issue du référentiel. */
 function etiquette(valeur: boolean | null, libelleOui: string, libelleNon: string): string {
-  if (valeur === null) return '<span class="etiquette-info inconnu">non déterminé</span>';
+  if (valeur === null) {
+    return (
+      '<span class="etiquette-info inconnu" title="Valeur absente du référentiel : non ' +
+      'déterminée, à confirmer par la pharmacie à usage intérieur. Une valeur absente n’est ' +
+      'pas interprétée comme « hors réserve hospitalière ».">valeur absente</span>'
+    );
+  }
   return valeur
     ? `<span class="etiquette-info oui">${esc(libelleOui)}</span>`
     : `<span class="etiquette-info non">${esc(libelleNon)}</span>`;
@@ -518,8 +524,8 @@ class Assistant {
                     'oui',
                     'non',
                   )}${
-                    choisi.reference?.surveillance_renforcee === true
-                      ? ' · surveillance renforcée'
+                    choisi.reference?.surveillance_particuliere === true
+                      ? ' · surveillance particulière liée au produit'
                       : ''
                   }${choisi.reference?.est_liste_en_sus === true ? ' · liste en sus' : ''}
                 </div>
@@ -1112,8 +1118,15 @@ class Assistant {
                 data-valeur="${esc(m.cis)}">
                 <span class="titre-ligne">${esc(m.denomination)}</span>
                 <span class="detail-ligne">${m.dci ? `DCI ${esc(m.dci)} · ` : ''}réserve
-                  hospitalière : ${libelleBooleen(m.est_reserve_hospitaliere, 'oui', 'non', 'non déterminé')}${
-                    m.surveillance_renforcee ? ' · surveillance renforcée' : ''
+                  hospitalière : ${libelleBooleen(
+                    m.est_reserve_hospitaliere,
+                    'oui',
+                    'non',
+                    'valeur absente',
+                  )}${
+                    m.surveillance_particuliere
+                      ? ' · surveillance particulière liée au produit'
+                      : ''
                   }</span>
               </button></li>`,
           )

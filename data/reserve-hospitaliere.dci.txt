@@ -19,6 +19,9 @@
 #              condition de prescription ou de délivrance (CPD muet) : elle rattrape les
 #              produits manifestement hospitaliers qui n'y figurent pas (ex. oxygène
 #              médicinal). Elle ne peut jamais contredire un libellé CPD.
+#              Quand le CPD est muet et qu'aucun motif ne correspond, la valeur reste
+#              ABSENTE (NULL) : elle est affichée « non déterminée » et n'est jamais
+#              convertie en « hors réserve hospitalière » (doctrine du 22/09/2026).
 #
 #              Extension par DCI OFFICIELLES : mesurée puis ÉCARTÉE. Ajouter aux motifs
 #              les 418 DCI des produits marqués « usage hospitalier » faisait basculer

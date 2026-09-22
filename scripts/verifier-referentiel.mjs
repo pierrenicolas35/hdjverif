@@ -10,10 +10,13 @@
  * données, de `scripts/controle-avant-rendu` pour les plannings.
  *
  * Vérifie :
- *   1. l'intégrité : nombre de spécialités, réserve déterminée, DCI renseignée ;
+ *   1. l'intégrité : nombre de spécialités, réserve hospitalière et surveillance particulière
+ *      déterminées, DCI renseignée ;
  *   2. les cas de référence (produits de HDJ / produits de ville) ;
  *   3. la recherche par **DCI** (`infliximab` → REMICADE), qui était cassée lorsque la
- *      colonne `dci` contenait le nom commercial.
+ *      colonne `dci` contenait le nom commercial ;
+ *   4. la colonne `surveillance_particuliere` (libellé CPD) et la doctrine de la valeur
+ *      absente : une spécialité hors CPD reste « non déterminée » (`null`), jamais « non ».
  *
  * Code retour : 0 si tout est conforme, 1 sinon.
  */
@@ -60,7 +63,10 @@ async function compter(filtres = []) {
 /** Récupère une spécialité par préfixe de dénomination. */
 async function specialite(prefixe) {
   const requete = new URL(`${URL_SUPABASE}/rest/v1/referentiel_medicaments`);
-  requete.searchParams.set('select', 'cis,denomination,dci,est_reserve_hospitaliere');
+  requete.searchParams.set(
+    'select',
+    'cis,denomination,dci,est_reserve_hospitaliere,surveillance_particuliere',
+  );
   requete.searchParams.set('denomination', `like.${prefixe}*`);
   requete.searchParams.set('limit', '1');
   const reponse = await fetch(requete, { headers: entetes });
@@ -106,17 +112,44 @@ async function principal() {
   const hors = await compter([['est_reserve_hospitaliere', 'is.false']]);
   const indetermine = await compter([['est_reserve_hospitaliere', 'is.null']]);
   const sansDci = await compter([['dci', 'is.null']]);
+  const surveillance = await compter([['surveillance_particuliere', 'is.true']]);
+  const surveillanceIndeterminee = await compter([['surveillance_particuliere', 'is.null']]);
 
   console.log('— Intégrité —');
   ligne(total > 13000, `${total} spécialités au référentiel`);
   ligne(reserve >= 600, `${reserve} spécialités en réserve hospitalière (CPD « usage HOSPITALIER »)`);
   ligne(
-    indetermine === 0,
-    `réserve hospitalière déterminée pour toutes les spécialités (${hors} hors réserve, ${indetermine} non déterminées)`,
+    hors > 9000 && indetermine < 2000,
+    `réserve hospitalière : ${reserve} oui, ${hors} non, ${indetermine} valeur(s) absente(s) ` +
+      '(absence = CPD muet, affichée « non déterminée », jamais convertie en « non »)',
+  );
+  ligne(
+    surveillance >= 1000,
+    `surveillance particulière (libellé CPD) : ${surveillance} spécialités ` +
+      `(${surveillanceIndeterminee} valeur(s) absente(s))`,
   );
   ligne(
     total - sansDci >= 0.99 * total,
     `DCI renseignée pour ${total - sansDci}/${total} spécialités (${sansDci} sans DCI)`,
+  );
+
+  console.log('\n— Doctrine de la valeur absente —');
+  const sansCpd = await specialite('GRANIONS');
+  if (!sansCpd) {
+    ligne(false, 'GRANIONS : absent du référentiel');
+  } else {
+    ligne(
+      sansCpd.est_reserve_hospitaliere === null,
+      `spécialité hors CPD (${sansCpd.denomination.slice(0, 40)}) → ` +
+        `réserve=${String(sansCpd.est_reserve_hospitaliere)} (attendu null : valeur absente)`,
+    );
+  }
+  const mabthera = await specialite('MABTHERA');
+  ligne(
+    mabthera?.surveillance_particuliere === true,
+    `MABTHERA (rituximab) → surveillance_particuliere=${String(
+      mabthera?.surveillance_particuliere,
+    )} (attendu true : libellé CPD)`,
   );
 
   console.log('\n— Cas de référence —');

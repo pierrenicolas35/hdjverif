@@ -65,6 +65,25 @@ export const UCD_FER_INJECTABLE: MedicamentUCD = {
   necessite_surveillance_continue: false,
 };
 
+/**
+ * Produit dont la réserve hospitalière est **absente du référentiel**
+ * (`null`) : l'absence ne vaut jamais « hors réserve hospitalière ».
+ */
+export const UCD_RESERVE_ABSENTE: MedicamentUCD = {
+  code_ucd: '3400940',
+  libelle: 'Fer carboxymaltose (réserve hospitalière absente du référentiel)',
+  reserve_hospitaliere: null,
+  necessite_surveillance_continue: false,
+};
+
+/** Produit hors réserve mais à surveillance particulière (libellé CPD officiel). */
+export const UCD_SURVEILLANCE_PARTICULIERE: MedicamentUCD = {
+  code_ucd: '3400941',
+  libelle: 'Anticorps monoclonal à surveillance particulière (donnée de test)',
+  reserve_hospitaliere: false,
+  necessite_surveillance_continue: true,
+};
+
 export const UCD_ANTICORPS_MONOCLONAL: MedicamentUCD = {
   code_ucd: '3400999',
   libelle: 'Anticorps monoclonal à réserve hospitalière (donnée de test)',

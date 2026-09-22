@@ -82,14 +82,30 @@ export function codesCcamDistincts(dossier: DossierHDJ): readonly string[] {
 
 /**
  * Médicaments emportant une présomption de surveillance particulière :
- * produit de la réserve hospitalière ou surveillance continue requise.
+ * produit de la réserve hospitalière ou administration nécessitant une
+ * surveillance particulière (libellé officiel du référentiel).
+ *
+ * Seules les valeurs **établies** (`true`) comptent : une réserve hospitalière
+ * absente du référentiel (`null`) ne présume rien — ni dans un sens, ni dans
+ * l'autre.
  */
 export function medicamentsSurveillanceParticuliere(
   dossier: DossierHDJ,
 ): readonly MedicamentUCD[] {
   return dossier.medicaments.filter(
-    (m) => m.reserve_hospitaliere || m.necessite_surveillance_continue,
+    (m) => m.reserve_hospitaliere === true || m.necessite_surveillance_continue,
   );
+}
+
+/**
+ * Médicaments dont la réserve hospitalière est **absente du référentiel**
+ * (`null`) : la valeur doit être confirmée par la pharmacie à usage intérieur.
+ * L'absence n'est jamais convertie en « hors réserve hospitalière ».
+ */
+export function medicamentsReferenceIncomplete(
+  dossier: DossierHDJ,
+): readonly MedicamentUCD[] {
+  return dossier.medicaments.filter((m) => m.reserve_hospitaliere === null);
 }
 
 /**

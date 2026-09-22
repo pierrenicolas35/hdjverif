@@ -21,9 +21,15 @@ export interface MedicamentRef {
   readonly cis: string;
   readonly denomination: string;
   readonly dci: string | null;
-  /** `null` = non déterminé dans le référentiel (à trancher par l'utilisateur). */
+  /** `null` = valeur absente du référentiel (non déterminée, à trancher par la PUI). */
   readonly est_reserve_hospitaliere: boolean | null;
   readonly est_liste_en_sus: boolean | null;
+  /**
+   * Libellé CPD « médicament nécessitant une surveillance particulière pendant le
+   * traitement ». `null` = valeur absente du référentiel (non déterminée).
+   */
+  readonly surveillance_particuliere: boolean | null;
+  /** Champ BDPM de pharmacovigilance (sans effet sur la décision). */
   readonly surveillance_renforcee: boolean | null;
 }
 
@@ -180,6 +186,7 @@ const MEDICAMENTS_SECOURS: readonly MedicamentRef[] = [
     dci: 'IMMUNOGLOBULINE HUMAINE NORMALE',
     est_reserve_hospitaliere: true,
     est_liste_en_sus: true,
+    surveillance_particuliere: true,
     surveillance_renforcee: false,
   },
   {
@@ -188,6 +195,7 @@ const MEDICAMENTS_SECOURS: readonly MedicamentRef[] = [
     dci: 'INFLIXIMAB',
     est_reserve_hospitaliere: true,
     est_liste_en_sus: true,
+    surveillance_particuliere: false,
     surveillance_renforcee: true,
   },
   {
@@ -196,6 +204,7 @@ const MEDICAMENTS_SECOURS: readonly MedicamentRef[] = [
     dci: 'RISDIPLAM',
     est_reserve_hospitaliere: true,
     est_liste_en_sus: true,
+    surveillance_particuliere: false,
     surveillance_renforcee: false,
   },
   {
@@ -204,14 +213,16 @@ const MEDICAMENTS_SECOURS: readonly MedicamentRef[] = [
     dci: 'PARACETAMOL',
     est_reserve_hospitaliere: false,
     est_liste_en_sus: false,
+    surveillance_particuliere: false,
     surveillance_renforcee: false,
   },
   {
     cis: '62345678',
     denomination: 'FER CARBOXYMALTOSE 100 mg/2 mL, solution injectable',
     dci: 'FER CARBOXYMALTOSE',
-    est_reserve_hospitaliere: null,
+    est_reserve_hospitaliere: true,
     est_liste_en_sus: null,
+    surveillance_particuliere: false,
     surveillance_renforcee: false,
   },
 ];

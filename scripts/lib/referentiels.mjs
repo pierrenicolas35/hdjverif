@@ -122,6 +122,14 @@ export function dciDepuisSubstances(substances) {
 export const LIBELLE_RESERVE_HOSPITALIERE = "reserve a l'usage hospitalier";
 
 /**
+ * Libellé officiel du besoin de surveillance particulier pendant le traitement.
+ * C'est la trace à laquelle renvoie l'instruction au titre de la variable
+ * « surveillance particulière » (annexe 4, point 2.b.iii).
+ */
+export const LIBELLE_SURVEILLANCE_PARTICULIERE =
+  'medicament necessitant une surveillance particuliere pendant le traitement';
+
+/**
  * Libellés CPD par CIS.
  * @returns {Map<string, string[]>}
  */
@@ -141,6 +149,24 @@ export function lireCpd(contenu) {
 /** Vrai si l'un des libellés CPD est exactement le libellé de réserve hospitalière. */
 export function porteReserveHospitaliere(libellesCpd) {
   return (libellesCpd ?? []).some((l) => normaliser(l).startsWith(LIBELLE_RESERVE_HOSPITALIERE));
+}
+
+/**
+ * Vrai si l'un des libellés CPD impose une surveillance particulière pendant le traitement.
+ * Même règle de tri-état que la réserve : libellé → `true`, CPD connu sans le libellé →
+ * `false`, CPD muet → `null` (valeur absente du référentiel).
+ *
+ * @returns {boolean|null}
+ */
+export function determinerSurveillanceParticuliere(libellesCpd) {
+  if (
+    (libellesCpd ?? []).some((l) =>
+      normaliser(l).startsWith(LIBELLE_SURVEILLANCE_PARTICULIERE),
+    )
+  ) {
+    return true;
+  }
+  return (libellesCpd ?? []).length > 0 ? false : null;
 }
 
 /* ------------------------------------------------------------------ *
@@ -186,20 +212,18 @@ export function qualifierParListe(cible, motifs) {
  * Règle de priorité (documentée dans le README) :
  *   1. le libellé CPD « réservé à l'usage HOSPITALIER » → `true` (source officielle) ;
  *   2. CPD connu **sans** ce libellé → `false` : la source officielle tranche « non » ;
- *   3. CPD inconnu → **inférence documentée** : l'absence de toute condition de prescription
- *      ou de délivrance vaut « hors réserve hospitalière » (une spécialité réservée à l'usage
- *      hospitalier porte nécessairement ce libellé). La liste de travail locale peut encore
- *      confirmer un `true` (produits sans condition CPD mais manifestement hospitaliers,
- *      ex. oxygène médicinal) ; ses exclusions protègent des faux positifs.
+ *   3. CPD muet (aucune condition de prescription ni de délivrance) → liste de travail locale
+ *      si un motif correspond (`true`), sinon `null` — **valeur absente**, jamais convertie en
+ *      « hors réserve hospitalière » : l'application l'affiche comme non déterminée et demande
+ *      la confirmation de la pharmacie à usage intérieur (doctrine du 22/09/2026).
  *
- * @returns {boolean} `true` (réserve hospitalière), `false` (hors réserve, tranché ou inféré).
+ * @returns {boolean|null} `null` = valeur absente du référentiel (non déterminée).
  */
 export function determinerReserveHospitaliere({ libellesCpd, denomination, dci, motifs }) {
   if (porteReserveHospitaliere(libellesCpd)) return true;
   const cpdConnu = (libellesCpd ?? []).length > 0;
   if (cpdConnu) return false;
-  const parListe = qualifierParListe(`${denomination ?? ''} ${dci ?? ''}`, motifs);
-  return parListe ?? false;
+  return qualifierParListe(`${denomination ?? ''} ${dci ?? ''}`, motifs);
 }
 
 /* ------------------------------------------------------------------ *
@@ -214,14 +238,18 @@ export function determinerReserveHospitaliere({ libellesCpd, denomination, dci, 
  * relève de la réserve hospitalière (approximation documentée) et laissée à `null`
  * sinon — « non déterminé », et non « hors liste », pour ne pas produire un faux « non ».
  *
+ * `surveillance_particuliere` : libellé officiel « médicament nécessitant une surveillance
+ * particulière pendant le traitement » (tri-état, `null` = valeur absente du référentiel).
+ * Il alimente la présomption de surveillance particulière du pilier « soins ».
+ *
  * @returns {{cis: string, denomination: string, dci: string|null,
  *            est_reserve_hospitaliere: boolean|null, est_liste_en_sus: boolean|null,
- *            surveillance_renforcee: boolean}[]}
+ *            surveillance_particuliere: boolean|null, surveillance_renforcee: boolean}[]}
  */
 export function construireMedicaments({ contenuBdpm, contenuCompo, contenuCpd, motifs }) {
   const composition = lireComposition(contenuCompo);
   const cpd = lireCpd(contenuCpd);
-  const origineReserve = { cpd: 0, liste: 0, infere: 0, cpdConnu: 0 };
+  const origineReserve = { cpd: 0, liste: 0, indetermine: 0, indetermineAvecCpd: 0, cpdConnu: 0 };
 
   const lignes = lireSpecialitesCommercialisees(contenuBdpm).map((s) => {
     const substances = composition.get(s.cis);
@@ -238,7 +266,10 @@ export function construireMedicaments({ contenuBdpm, contenuCompo, contenuCpd, m
 
     if (porteReserveHospitaliere(libellesCpd)) origineReserve.cpd += 1;
     else if (reserve) origineReserve.liste += 1;
-    else if ((libellesCpd ?? []).length === 0) origineReserve.infere += 1;
+    else if (reserve === null) {
+      origineReserve.indetermine += 1;
+      if ((libellesCpd ?? []).length > 0) origineReserve.indetermineAvecCpd += 1;
+    }
 
     return {
       cis: s.cis,
@@ -246,6 +277,7 @@ export function construireMedicaments({ contenuBdpm, contenuCompo, contenuCpd, m
       dci,
       est_reserve_hospitaliere: reserve,
       est_liste_en_sus: reserve === true ? true : null,
+      surveillance_particuliere: determinerSurveillanceParticuliere(libellesCpd),
       surveillance_renforcee: s.surveillanceRenforcee,
     };
   });
@@ -348,6 +380,7 @@ export function statistiquesReserve(lignes) {
     indetermine: lignes.filter((l) => l.est_reserve_hospitaliere === null).length,
     avecDci: lignes.filter((l) => l.dci !== null).length,
     listeEnSus: lignes.filter((l) => l.est_liste_en_sus === true).length,
+    surveillanceParticuliere: lignes.filter((l) => l.surveillance_particuliere === true).length,
   };
 }
 

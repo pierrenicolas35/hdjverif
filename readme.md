@@ -153,7 +153,10 @@ produisent toujours le même résultat.
 **Piliers de densité (porte 3)**
 
 1. **Soins / surveillance active** — surveillance documentée, ou administration d’un produit de
-   la réserve hospitalière (art. R. 5121-82 CSP) ou à surveillance continue.
+   la réserve hospitalière (art. R. 5121-82 CSP) ou nécessitant une surveillance particulière
+   pendant le traitement (libellé officiel du référentiel). Une valeur **absente** du
+   référentiel ne valide pas le pilier et ne le bloque pas : elle est signalée comme point à
+   confirmer par la pharmacie à usage intérieur.
 2. **Plateau technique lourd / actes coordonnés** — au moins un acte sur plateau lourd, ou au
    moins deux actes CCAM dénombrables distincts. L’ECG `DEQP003` est exclu du décompte
    (annexe 4, point 2.b.iii).
@@ -169,7 +172,9 @@ produisent toujours le même résultat.
 - **GHS intermédiaire** dans les autres cas (typiquement une prise en charge de médecine reposant
   sur **3 interventions** coordonnées).
 
-**Alertes qualité** (non bloquantes) : durée de présence < 180 min ; lettre de liaison non remise.
+**Alertes qualité** (non bloquantes) : durée de présence < 180 min ; lettre de liaison non
+remise ; **réserve hospitalière absente du référentiel** (valeur non déterminée, à confirmer par
+la pharmacie à usage intérieur).
 
 ## 4. Référentiels Supabase
 
@@ -177,7 +182,7 @@ Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 
 | Table | Contenu | Source |
 |---|---|---|
-| `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
+| `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, **surveillance particulière**, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
 | `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
 
 Dans l’assistant :
@@ -200,13 +205,38 @@ issue du **libellé officiel « réservé à l’usage HOSPITALIER »** du fichi
 |---|---|---|
 | porte le libellé « réservé à l’usage HOSPITALIER » | `true` | source officielle (CPD) |
 | a des conditions de prescription/délivrance **sans** ce libellé | `false` | source officielle (CPD) |
-| n’a **aucune** condition de prescription ni de délivrance | `true` si un motif de `data/reserve-hospitaliere.dci.txt` correspond, sinon `false` | inférence documentée : une spécialité réservée à l’usage hospitalier porte nécessairement ce libellé |
+| n’a **aucune** condition de prescription ni de délivrance (CPD muet) | `true` si un motif de `data/reserve-hospitaliere.dci.txt` correspond, sinon **`NULL`** | **valeur absente** : la source ne tranche pas |
 
 Résultat sur la base : **701 spécialités en réserve hospitalière** (677 par le libellé CPD,
-24 rattrapées par la liste de travail — oxygène médicinal, citrate de bétaïne…), **12 908 hors
-réserve**, **aucune non déterminée**. La liste de travail `data/reserve-hospitaliere.dci.txt`
+24 rattrapées par la liste de travail — oxygène médicinal, citrate de bétaïne…), **11 621 hors
+réserve**, **1 287 valeurs absentes**. La liste de travail `data/reserve-hospitaliere.dci.txt`
 n’est plus qu’un **filet de sécurité** : elle ne peut jamais contredire le CPD, et ses exclusions
 (`!motif`) neutralisent les homonymies (préparations homéopathiques, produits de ville).
+
+### Valeur absente : jamais convertie en « hors réserve »
+
+**Doctrine du 22/09/2026.** Quand la source officielle est muette, la valeur reste
+**absente** (`NULL`). L’application l’affiche « valeur absente » et l’assistant en tire une
+**alerte**, pas un refus :
+
+- le pilier « soins » n’est pas validé par une valeur absente (elle ne présume rien) ;
+- l’absence **n’est jamais** un motif de rejet, ni présentée comme « hors réserve
+  hospitalière » ;
+- l’alerte demande la **confirmation de la pharmacie à usage intérieur**.
+
+Autrement dit : une absence ne peut pas faire basculer une facturation vers l’ACE — seul un
+« non » **établi** le fait.
+
+### Surveillance particulière (libellé officiel)
+
+La colonne `surveillance_particuliere` reprend le libellé CPD « **médicament nécessitant une
+surveillance particulière pendant le traitement** » (1 469 spécialités). C’est la trace à
+laquelle renvoie la variable **« surveillance particulière ou contexte patient »** de l’annexe 4,
+point 2.b.iii (GHS plein indépendamment du nombre d’interventions). Elle valide le pilier
+« soins » au même titre que la réserve hospitalière — ce qui couvre les produits perfusés en HDJ
+qui relèvent de la « prescription hospitalière » sans être en réserve, **MABTHERA (rituximab)**
+par exemple. La présomption n’est retenue que si le libellé est **établi** : l’absence ne
+présume rien.
 
 > **Décision tracée.** Étendre la liste de travail aux 418 DCI des produits marqués « usage
 > hospitalier » a été mesuré puis écarté : la recherche par sous-chaîne faisait basculer
@@ -223,15 +253,13 @@ n’est plus qu’un **filet de sécurité** : elle ne peut jamais contredire le
   utilisées ici. Elle est renseignée à `TRUE` lorsque la spécialité relève de la réserve
   hospitalière (approximation documentée) et laissée à `NULL` sinon — « non déterminé », et non
   « hors liste ». Cet indicateur **n’intervient dans aucune décision** : il n’est qu’affiché.
-- `surveillance_renforcee` : reprise du champ « surveillance renforcée » de la BDPM.
-- **Conséquence de la source officielle** : des produits perfusés en HDJ mais relevant de la
-  « **prescription hospitalière** » et non de la « réserve hospitalière » — MABTHERA (rituximab),
-  HERCEPTIN (trastuzumab), TYSABRI sous-cutané — sont désormais marqués `false`. La
-  justification de la HDJ passe alors par le pilier « surveillance documentée ». Piste
-  d’amélioration : exposer le libellé CPD « médicament nécessitant une surveillance particulière
-  pendant le traitement » (1 750 spécialités), qui correspond exactement à la variable
-  « surveillance particulière ou contexte patient » de la notice ATIH du codage HDJ.
-- Une **validation par la pharmacie à usage intérieur** reste nécessaire.
+- `surveillance_renforcee` : champ de **pharmacovigilance** de la BDPM (plan de gestion des
+  risques). Il est affiché à titre informatif et **n’intervient plus dans la décision** :
+  la présomption de surveillance du référentiel est portée par `surveillance_particuliere`,
+  dont le libellé est celui de l’instruction.
+- `est_reserve_hospitaliere` et `surveillance_particuliere` peuvent valoir `NULL` : c’est une
+  **valeur absente**, affichée comme telle. Une **validation par la pharmacie à usage
+  intérieur** reste nécessaire.
 - `acte_marqueur_hdj` / `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode
   d’accès** de la nomenclature CCAM (un acte en « abord ouvert » ou « accès transpariétal »
   nécessite un plateau lourd ; une imagerie « sans accès » est réalisable en externe), corrigés
@@ -287,8 +315,8 @@ tableau de bord Supabase.
 
 ```bash
 npm install
-npm test              # 97 tests : moteur, portes, assistant (référentiel simulé),
-                      #            lecture des référentiels officiels
+npm test              # 106 tests : moteur, portes, assistant (référentiel simulé),
+                      #             lecture des référentiels officiels
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

@@ -65,6 +65,7 @@ export {
   denombrerInterventions,
   intervenantsActifs,
   niveauGhs,
+  medicamentsReferenceIncomplete,
 } from './helpers.js';
 export { validerDossier, dossierValide } from './validation.js';
 export type { ErreurValidation } from './validation.js';

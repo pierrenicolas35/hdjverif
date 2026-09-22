@@ -143,9 +143,21 @@ export interface ActeCCAM {
 export interface MedicamentUCD {
   readonly code_ucd: string;
   readonly libelle: string;
-  /** Medicament à réserve hospitalière (PHU/PHU-rétrocession). */
-  readonly reserve_hospitaliere: boolean;
-  /** Administration imposant une surveillance clinique continue. */
+  /**
+   * Médicament à réserve hospitalière (art. R. 5121-82 CSP).
+   *
+   * `null` = **valeur absente du référentiel** : la source officielle ne tranche pas.
+   * Une valeur absente n'est jamais interprétée comme « hors réserve » : elle ne
+   * justifie pas le pilier « soins » et déclenche une alerte demandant la
+   * confirmation de la pharmacie à usage intérieur.
+   */
+  readonly reserve_hospitaliere: boolean | null;
+  /**
+   * Administration imposant une surveillance particulière (libellé CPD
+   * « médicament nécessitant une surveillance particulière pendant le traitement »).
+   * C'est la trace à laquelle renvoie la variable « surveillance particulière ou
+   * contexte patient » de l'annexe 4, point 2.b.iii.
+   */
   readonly necessite_surveillance_continue: boolean;
 }
 

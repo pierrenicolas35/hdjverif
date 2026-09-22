@@ -48,6 +48,7 @@ const BDPM = [
   ligneBdpm('33333333', 'MEDICAMENT RETIRE 10 mg, comprimé', 'Non commercialisée'),
   ligneBdpm('44444444', 'PRODUIT SANS CPD 250 mg, granulés'),
   ligneBdpm('55555555', 'DOPAMINE BOIRON, degré de dilution compris entre 3CH et 30CH'),
+  ligneBdpm('66666666', 'MABTHERA 100 mg, solution à diluer pour perfusion'),
 ].join('\n');
 
 const COMPO = [
@@ -58,6 +59,7 @@ const COMPO = [
   ligneCompo('55555555', 'DOPAMINE POUR PRÉPARATIONS HOMÉOPATHIQUES'),
   ligneCompo('11111111', 'INFLIXIMAB ', 'FT'),
   ligneCompo('11111111', 'INFLIXIMAB '),
+  ligneCompo('66666666', 'RITUXIMAB'),
 ].join('\n');
 
 const CPD = [
@@ -65,6 +67,8 @@ const CPD = [
   ligneCpd('11111111', 'liste I'),
   ligneCpd('22222222', 'liste II'),
   ligneCpd('22222222', 'prescription en toutes lettres sur ordonnance sécurisée'),
+  ligneCpd('66666666', 'prescription hospitalière'),
+  ligneCpd('66666666', 'médicament nécessitant une surveillance particulière pendant le traitement'),
 ].join('\n');
 
 const MOTIFS = ref.lireMotifsReserve(
@@ -91,7 +95,13 @@ describe('normalisation et découpage', () => {
 describe('lecture de la BDPM', () => {
   it('ne retient que les spécialités commercialisées', () => {
     const specialites = ref.lireSpecialitesCommercialisees(BDPM);
-    expect(specialites.map((s) => s.cis)).toEqual(['11111111', '22222222', '44444444', '55555555']);
+    expect(specialites.map((s) => s.cis)).toEqual([
+      '11111111',
+      '22222222',
+      '44444444',
+      '55555555',
+      '66666666',
+    ]);
   });
 
   it('lit la surveillance renforcée', () => {
@@ -175,6 +185,24 @@ describe('liste de travail (CPD muet)', () => {
   });
 });
 
+describe('surveillance particulière : libellé officiel du CPD', () => {
+  it('reconnaît le libellé et distingue les trois états', () => {
+    expect(
+      ref.determinerSurveillanceParticuliere([
+        'médicament nécessitant une surveillance particulière pendant le traitement',
+      ]),
+    ).toBe(true);
+    expect(ref.determinerSurveillanceParticuliere(['liste I'])).toBe(false);
+    expect(ref.determinerSurveillanceParticuliere(undefined)).toBeNull();
+  });
+
+  it('n’attribue aucune présomption à partir de l’absence de libellé', () => {
+    // « surveillance renforcée » (pharmacovigilance) n’est plus détournée en
+    // présomption de surveillance particulière.
+    expect(ref.determinerSurveillanceParticuliere(['surveillance renforcée'])).toBe(false);
+  });
+});
+
 describe('assemblage du référentiel des médicaments', () => {
   const { lignes, origineReserve } = ref.construireMedicaments({
     contenuBdpm: BDPM,
@@ -184,8 +212,8 @@ describe('assemblage du référentiel des médicaments', () => {
   });
 
   it('produit une ligne par spécialité commercialisée', () => {
-    expect(lignes).toHaveLength(4);
-    expect(origineReserve.cpdConnu).toBe(2);
+    expect(lignes).toHaveLength(5);
+    expect(origineReserve.cpdConnu).toBe(3);
   });
 
   it('renseigne la DCI réelle, jamais le nom commercial', () => {
@@ -197,7 +225,20 @@ describe('assemblage du référentiel des médicaments', () => {
   it('qualifie la réserve hospitalière sur les trois voies', () => {
     expect(lignes.find((m) => m.cis === '11111111')?.est_reserve_hospitaliere).toBe(true); // CPD
     expect(lignes.find((m) => m.cis === '22222222')?.est_reserve_hospitaliere).toBe(false); // CPD connu
-    expect(lignes.find((m) => m.cis === '44444444')?.est_reserve_hospitaliere).toBe(false); // inféré
+    expect(lignes.find((m) => m.cis === '44444444')?.est_reserve_hospitaliere).toBeNull(); // CPD muet
+  });
+
+  it('laisse la valeur absente telle quelle quand le CPD est muet (jamais « hors réserve »)', () => {
+    // Propre au CPD muet : aucune conclusion n'est tirée du silence de la source.
+    expect(lignes.find((m) => m.cis === '44444444')?.est_liste_en_sus).toBeNull();
+    // Les exclusions explicites de la liste de travail, elles, tranchent « non ».
+    expect(lignes.find((m) => m.cis === '55555555')?.est_reserve_hospitaliere).toBe(false);
+  });
+
+  it('renseigne la surveillance particulière des trois états', () => {
+    expect(lignes.find((m) => m.cis === '66666666')?.surveillance_particuliere).toBe(true);
+    expect(lignes.find((m) => m.cis === '11111111')?.surveillance_particuliere).toBe(false);
+    expect(lignes.find((m) => m.cis === '44444444')?.surveillance_particuliere).toBeNull();
   });
 
   it('n’affirme « liste en sus » que lorsque la réserve est établie', () => {
@@ -205,18 +246,21 @@ describe('assemblage du référentiel des médicaments', () => {
     expect(lignes.find((m) => m.cis === '22222222')?.est_liste_en_sus).toBeNull();
   });
 
-  it('ne laisse aucune spécialité « non déterminée »', () => {
+  it('compte les trois états et la couverture', () => {
     const stats = ref.statistiquesReserve(lignes);
-    expect(stats.indetermine).toBe(0);
     expect(stats.reserve).toBe(1);
     expect(stats.hors).toBe(3);
-    expect(stats.avecDci).toBe(4);
+    expect(stats.indetermine).toBe(1);
+    expect(stats.avecDci).toBe(5);
+    expect(stats.surveillanceParticuliere).toBe(1);
   });
 
-  it('compte l’origine des décisions', () => {
+  it('compte l’origine des décisions et l’invariant du CPD', () => {
     expect(origineReserve.cpd).toBe(1);
     expect(origineReserve.liste).toBe(0);
-    expect(origineReserve.infere).toBe(2);
+    expect(origineReserve.indetermine).toBe(1);
+    // Aucune valeur absente ne peut provenir d'une spécialité dont le CPD est renseigné.
+    expect(origineReserve.indetermineAvecCpd).toBe(0);
   });
 });
 
