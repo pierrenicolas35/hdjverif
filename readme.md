@@ -122,9 +122,12 @@ src/
     fiche.ts                      Fiche de traçabilité T2A
     styles.css                    Charte CHU Grenoble Alpes (en-tête bleu, fond blanc)
 supabase/                         SQL du projet Supabase (durcissement, RPC de recherche)
-scripts/import-referentiels.mjs   Import des référentiels officiels
+scripts/
+  import-referentiels.mjs         Import des référentiels officiels vers Supabase
+  verifier-referentiel.mjs        Porte de contrôle du référentiel publié (lecture seule)
+  lib/referentiels.mjs            Lecture des sources officielles (BDPM, CCAM) — pur, testé
 data/                             Listes de travail (réserve hospitalière, surcharges CCAM)
-tests/                            Moteur (5 cas obligatoires), portes, assistant
+tests/                            Moteur (5 cas obligatoires), portes, assistant, référentiels
 ```
 
 **Principe** : l’interface ne décide rien. Elle collecte les réponses, les convertit en
@@ -174,7 +177,7 @@ Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 
 | Table | Contenu | Source |
 |---|---|---|
-| `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, DCI, réserve hospitalière, liste en sus, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie), fichier `CIS_bdpm.txt` |
+| `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
 | `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
 
 Dans l’assistant :
@@ -187,12 +190,41 @@ Dans l’assistant :
 - si le référentiel est **injoignable**, un repli local embarqué prend le relais et l’état est
   signalé dans l’en-tête.
 
+### Comment la réserve hospitalière est déterminée
+
+La colonne `est_reserve_hospitaliere` ne repose plus sur une appréciation de libellés : elle est
+issue du **libellé officiel « réservé à l’usage HOSPITALIER »** du fichier `CIS_CPD_bdpm.txt`
+(art. R. 5121-82 du code de la santé publique), qui est opposable.
+
+| Situation de la spécialité | Valeur | Origine |
+|---|---|---|
+| porte le libellé « réservé à l’usage HOSPITALIER » | `true` | source officielle (CPD) |
+| a des conditions de prescription/délivrance **sans** ce libellé | `false` | source officielle (CPD) |
+| n’a **aucune** condition de prescription ni de délivrance | `true` si un motif de `data/reserve-hospitaliere.dci.txt` correspond, sinon `false` | inférence documentée : une spécialité réservée à l’usage hospitalier porte nécessairement ce libellé |
+
+Résultat sur la base : **701 spécialités en réserve hospitalière** (677 par le libellé CPD,
+24 rattrapées par la liste de travail — oxygène médicinal, citrate de bétaïne…), **12 908 hors
+réserve**, **aucune non déterminée**. La liste de travail `data/reserve-hospitaliere.dci.txt`
+n’est plus qu’un **filet de sécurité** : elle ne peut jamais contredire le CPD, et ses exclusions
+(`!motif`) neutralisent les homonymies (préparations homéopathiques, produits de ville).
+
+> **Décision tracée.** Étendre la liste de travail aux 418 DCI des produits marqués « usage
+> hospitalier » a été mesuré puis écarté : la recherche par sous-chaîne faisait basculer
+> **160 présentations de ville** (acétylcystéine, chlorhexidine, alginate, bicarbonate…) en
+> « réserve hospitalière », exactement le faux positif à éviter. Le motif reste donc une classe
+> thérapeutique, jamais une DCI isolée.
+
 ### Points de vigilance sur les données
 
-- `est_reserve_hospitaliere` et `est_liste_en_sus` : `TRUE` pour les listes de travail
-  (`data/reserve-hospitaliere.dci.txt`), **`NULL` = non déterminé**. L’assistant ne redemande
-  jamais l’information : une valeur absente est traitée comme « hors réserve hospitalière ». Une
-  **validation par la pharmacie à usage intérieur** reste nécessaire.
+- `dci` : **DCI réelle** (substance active de `CIS_COMPO_bdpm.txt`) — et non le nom commercial.
+  Deux spécialités n’en ont pas (aucune substance active déclarée) ; la recherche par DCI
+  (`infliximab` → REMICADE, `pembrolizumab` → KEYTRUDA) fonctionne pour toutes les autres.
+- `est_liste_en_sus` : la liste en sus (arrêté) n’est pas déductible des sources publiques
+  utilisées ici. Elle est renseignée à `TRUE` lorsque la spécialité relève de la réserve
+  hospitalière (approximation documentée) et laissée à `NULL` sinon — « non déterminé », et non
+  « hors liste ». Cet indicateur **n’intervient dans aucune décision** : il n’est qu’affiché.
+- `surveillance_renforcee` : reprise du champ « surveillance renforcée » de la BDPM.
+- Une **validation par la pharmacie à usage intérieur** reste nécessaire.
 - `acte_marqueur_hdj` / `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode
   d’accès** de la nomenclature CCAM (un acte en « abord ouvert » ou « accès transpariétal »
   nécessite un plateau lourd ; une imagerie « sans accès » est réalisable en externe), corrigés
@@ -207,17 +239,36 @@ possible depuis le navigateur**.
 ### Mise à jour des référentiels
 
 ```bash
+# 1. Contrôle à blanc : télécharge les sources officielles, prépare et vérifie les lignes
+#    (cas de référence, intégrité des sources) sans rien écrire.
+npm run import:referentiels:controle            # ou --export pour un CSV de secours
+
+# 2. Import réel (écriture réservée au rôle service_role)
 export SUPABASE_URL=https://<ref>.supabase.co
 export SUPABASE_SERVICE_ROLE_KEY=<clé service_role>   # ne jamais publier
-node scripts/import-referentiels.mjs
-# puis appliquer supabase/hardening.sql et supabase/rpc-recherche.sql
+npm run import:referentiels
+
+# 3. Porte de contrôle après import (lecture seule, clé anon de l'application)
+npm run verifier:referentiel                    # code retour 0 = conforme
+
+# 4. Le cas échéant : appliquer supabase/hardening.sql et supabase/rpc-recherche.sql
 ```
+
+`npm run verifier:referentiel` interroge la base **exactement comme l’application** et refuse (code retour 1) un référentiel dont la réserve hospitalière ne serait pas déterminée, dont la
+DCI serait absente, ou dont une recherche par DCI (`infliximab`, `pembrolizumab`…) ne trouverait
+pas la spécialité attendue. C’est la porte de contrôle des **données**, pendant de celle des
+documents livrés.
+
+Sans clé `service_role`, `npm run import:referentiels:controle -- --export` produit les deux CSV
+prêts à charger (`referentiel_medicaments.csv`, `referentiel_ccam.csv`) pour un import par le
+tableau de bord Supabase.
 
 ## 5. Tests
 
 ```bash
 npm install
-npm test              # 76 tests : moteur, portes, assistant (référentiel simulé)
+npm test              # 97 tests : moteur, portes, assistant (référentiel simulé),
+                      #            lecture des référentiels officiels
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

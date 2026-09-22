@@ -2,219 +2,154 @@
 /**
  * Import des référentiels officiels vers Supabase.
  *
- *   node scripts/import-referentiels.mjs
+ *   node scripts/import-referentiels.mjs                 # import réel (clé service_role requise)
+ *   node scripts/import-referentiels.mjs --dry-run       # prépare, contrôle et n'écrit rien
+ *   node scripts/import-referentiels.mjs --dry-run --export   # + export CSV de secours
  *
  * Variables d'environnement :
- *   SUPABASE_URL              URL du projet (ex. https://xxxx.supabase.co)
- *   SUPABASE_SERVICE_ROLE_KEY clé service_role (écriture ; ne jamais publier)
- *   CACHE_DIR                 répertoire de cache des sources (défaut .cache/referentiels)
+ *   SUPABASE_URL               URL du projet (ex. https://xxxx.supabase.co)
+ *   SUPABASE_SERVICE_ROLE_KEY  clé service_role (écriture ; ne jamais publier)
+ *   CACHE_DIR                  répertoire de cache des sources (défaut .cache/referentiels)
  *
- * Sources :
- *   • Médicaments  : Base de données publique des médicaments (BDPM, ANSM/Assurance Maladie)
- *                    fichier CIS_bdpm.txt — compte CIS, dénomination, surveillance renforcée.
- *   • CCAM         : Nomenclature CCAM — jeu de données « CCAM Ameli » (data.gouv.fr / InterHop),
- *                    complété par une table de surcharge éditoriale locale.
+ * Sources (toutes officielles) :
+ *   • Médicaments (BDPM, ANSM / Assurance Maladie) :
+ *       - `CIS_bdpm.txt`       — spécialités commercialisées ;
+ *       - `CIS_COMPO_bdpm.txt` — composition : alimente la **DCI** (`dci`) ;
+ *       - `CIS_CPD_bdpm.txt`   — conditions de prescription et de délivrance : alimente
+ *                                `est_reserve_hospitaliere` par le libellé officiel
+ *                                « réservé à l'usage HOSPITALIER » (art. R. 5121-82 CSP).
+ *   • CCAM (jeu de données « CCAM Ameli », data.gouv.fr / InterHop), complété par la
+ *     table de surcharge éditoriale locale `data/ccam-overlay.csv`.
  *
- * Les indicateurs `est_reserve_hospitaliere` et `est_liste_en_sus` sont posés à NULL
- * lorsqu'ils ne sont pas déterminés : NULL signifie « non déterminé » (à trancher par
- * la PUI / le DIM) et non « hors réserve ».
+ * Aucun indicateur n'est laissé « non déterminé » par défaut : la réserve hospitalière est
+ * toujours tranchée (`true`/`false`, voir la règle ci-dessus et le README). Les seules valeurs
+ * `NULL` sont celles que les sources ne permettent pas de remplir (`est_liste_en_sus` sans
+ * réserve établie, `dci` pour les 2 spécialités sans substance active déclarée) — et `NULL`
+ * signifie « non déterminé », jamais « hors réserve ».
+ *
+ * Contrôles : `--dry-run` rejoue les cas de référence (produits de HDJ, produits de ville,
+ * rattrapage par la liste de travail) et l'intégrité des sources avant toute écriture ;
+ * `node scripts/verifier-referentiel.mjs` contrôle ensuite la base publiée en lecture seule
+ * (clé `anon`).
  */
 
-import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+
+import {
+  construireActes,
+  construireMedicaments,
+  lireMotifsReserve,
+  lireSurchargesCcam,
+  statistiquesReserve,
+  versCsv,
+} from './lib/referentiels.mjs';
 
 const CACHE_DIR = process.env.CACHE_DIR ?? '.cache/referentiels';
 const DATA_DIR = 'data';
 const TAILLE_LOT = 500;
 
-const URL_BDPM =
-  'https://base-donnees-publique.medicaments.gouv.fr/download/file/CIS_bdpm.txt';
-const URL_CCAM =
-  'https://static.data.gouv.fr/resources/ccam-ameli/20250209-213212/interhop-actes-ameli.csv';
+const BASE_BDPM = 'https://base-donnees-publique.medicaments.gouv.fr/download/file';
+const SOURCES = {
+  bdpm: { url: `${BASE_BDPM}/CIS_bdpm.txt`, fichier: 'CIS_bdpm.txt', encodage: 'latin1' },
+  compo: { url: `${BASE_BDPM}/CIS_COMPO_bdpm.txt`, fichier: 'CIS_COMPO_bdpm.txt', encodage: 'latin1' },
+  cpd: { url: `${BASE_BDPM}/CIS_CPD_bdpm.txt`, fichier: 'CIS_CPD_bdpm.txt', encodage: 'latin1' },
+  ccam: {
+    url: 'https://static.data.gouv.fr/resources/ccam-ameli/20250209-213212/interhop-actes-ameli.csv',
+    fichier: 'ccam-ameli.csv',
+    encodage: 'utf8',
+  },
+};
 
-/* ------------------------------------------------------------------ *
- * Utilitaires
- * ------------------------------------------------------------------ */
+/** Cas de référence : ce que le référentiel doit impérativement affirmer après import. */
+const CAS_DE_REFERENCE = [
+  { denomination: 'REMICADE', reserve: true, motif: 'produit de HDJ, réserve hospitalière (CPD)' },
+  { denomination: 'AVASTIN', reserve: true, motif: 'produit de HDJ, réserve hospitalière (CPD)' },
+  { denomination: 'KEYTRUDA', reserve: true, motif: 'produit de HDJ, réserve hospitalière (CPD)' },
+  { denomination: 'OPDIVO', reserve: true, motif: 'produit de HDJ, réserve hospitalière (CPD)' },
+  { denomination: 'IMMUNOGLOBULINE HUMAINE DE L', reserve: true, motif: 'immunoglobuline (CPD)' },
+  { denomination: 'OXYGENE MEDICINAL', reserve: true, motif: 'rattrapé par la liste de travail' },
+  { denomination: 'DOLIPRANE', reserve: false, motif: 'produit de ville (CPD : liste II)' },
+  { denomination: 'EFFERALGAN', reserve: false, motif: 'produit de ville (CPD)' },
+  { denomination: 'GRANIONS', reserve: false, motif: 'spécialité sans CPD (inférence)' },
+];
 
 const log = (...args) => console.log('[import]', ...args);
 
-/** Normalisation pour la recherche par sous-chaîne (minuscules, sans accents). */
-function normaliser(texte) {
-  return texte
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
-}
+/* ------------------------------------------------------------------ *
+ * Téléchargement (avec cache local)
+ * ------------------------------------------------------------------ */
 
-async function telecharger(url, fichier) {
-  const chemin = join(CACHE_DIR, fichier);
-  if (existsSync(chemin)) {
-    log(`cache  : ${fichier}`);
-    return chemin;
+async function recuperer(cle) {
+  const source = SOURCES[cle];
+  const chemin = join(CACHE_DIR, source.fichier);
+  if (!existsSync(chemin)) {
+    log(`téléch. : ${source.url}`);
+    const reponse = await fetch(source.url, {
+      headers: { 'User-Agent': 'hdjverif-import/1.0' },
+    });
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status} sur ${source.url}`);
+    const buffer = Buffer.from(await reponse.arrayBuffer());
+    if (buffer.length < 1024) throw new Error(`Source tronquée : ${source.fichier}`);
+    mkdirSync(CACHE_DIR, { recursive: true });
+    writeFileSync(chemin, buffer);
+    log(`         ${source.fichier} (${(buffer.length / 1024).toFixed(0)} Ko)`);
+  } else {
+    log(`cache   : ${source.fichier}`);
   }
-  log(`téléch.: ${url}`);
-  const reponse = await fetch(url, { headers: { 'User-Agent': 'hdjverif-import/1.0' } });
-  if (!reponse.ok) throw new Error(`HTTP ${reponse.status} sur ${url}`);
-  const buffer = Buffer.from(await reponse.arrayBuffer());
-  writeFileSync(chemin, buffer);
-  log(`        ${fichier} (${(buffer.length / 1024).toFixed(0)} Ko)`);
-  return chemin;
+  return readFileSync(chemin, source.encodage);
 }
 
 /* ------------------------------------------------------------------ *
- * Sources brutes
+ * Contrôles avant écriture
  * ------------------------------------------------------------------ */
 
-/** Lit CIS_bdpm.txt (ISO-8859-1, tabulé) → { cis, denomination, surveillanceRenforcee }. */
-function lireBdpm(chemin) {
-  const contenu = readFileSync(chemin, 'latin1');
-  const lignes = contenu.split(/\r?\n/).filter((l) => l.trim() !== '');
-  const medicaments = [];
+/** Contrôle les cas de référence, la couverture et la présence des DCI. */
+function controler(medicaments, origineReserve) {
+  const stats = statistiquesReserve(medicaments);
+  const constats = [];
+  let erreurs = 0;
 
-  for (const ligne of lignes) {
-    const c = ligne.split('\t');
-    const cis = (c[0] ?? '').trim();
-    const denomination = (c[1] ?? '').trim();
-    const etatCommercialisation = (c[6] ?? '').trim();
-    const surveillance = (c[c.length - 1] ?? '').trim();
-    if (!cis || !denomination) continue;
-    if (etatCommercialisation !== 'Commercialisée') continue;
-
-    medicaments.push({
-      cis,
-      denomination,
-      surveillance_renforcee: surveillance.toLowerCase().startsWith('oui'),
-    });
+  for (const cas of CAS_DE_REFERENCE) {
+    const cible = medicaments.find((m) => m.denomination.startsWith(cas.denomination));
+    const obtenu = cible ? cible.est_reserve_hospitaliere : 'absent';
+    const ok = obtenu === cas.reserve;
+    if (!ok) erreurs += 1;
+    constats.push(
+      `${ok ? '✓' : '✗'} ${cas.denomination.padEnd(26)} réserve=${String(obtenu).padEnd(5)}` +
+        ` (attendu ${cas.reserve} — ${cas.motif})`,
+    );
   }
-  return medicaments;
-}
 
-/** Extrait une DCI approchée depuis la dénomination BDPM (« DCI, dosage, forme »). */
-function extraireDci(denomination) {
-  const premiere = denomination.split(',')[0]?.trim() ?? '';
-  if (!premiere) return null;
-  // Les dénominations « de marque » sont souvent suivies du dosage ; on ne
-  // conserve que la partie alphabétique de tête.
-  const sansDosage = premiere.replace(/\s+\d.*$/, '').trim();
-  return sansDosage.length >= 3 ? sansDosage : null;
-}
-
-/** Lit la nomenclature CCAM (CSV) → actes exploitables. */
-function lireCcam(chemin) {
-  const contenu = readFileSync(chemin, 'utf8');
-  const lignes = contenu.split(/\r?\n/);
-  const entetes = decouperCsv(lignes[0], ',');
-  const actes = [];
-  const codesVus = new Set();
-  for (const ligne of lignes.slice(1)) {
-    if (!ligne.trim()) continue;
-    const c = decouperCsv(ligne, ',');
-    const ligneObj = Object.fromEntries(entetes.map((h, i) => [h, c[i] ?? '']));
-    const code = (ligneObj['ccam'] ?? '').trim();
-    const libelle = (ligneObj['label'] ?? '').trim();
-    const chapitre = (ligneObj['chapterCode'] ?? '').trim();
-    if (code.length !== 7 || !libelle || !chapitre) continue;
-    if (codesVus.has(code)) continue; // la source comporte des doublons
-    codesVus.add(code);
-    actes.push({
-      code,
-      libelle,
-      modeAcces: (ligneObj['modeAccesLabel'] ?? '').trim(),
-    });
+  // Intégrité des sources : une source tronquée doit arrêter l'import.
+  if (origineReserve.cpdConnu < 10000) {
+    erreurs += 1;
+    constats.push(
+      `✗ source CPD incomplète : ${origineReserve.cpdConnu} spécialités couvertes (< 10 000)`,
+    );
   }
-  return actes;
-}
-
-/** Découpe CSV minimale gérant les guillemets doubles. */
-function decouperCsv(ligne, separateur = ',') {
-  const cellules = [];
-  let courante = '';
-  let enGuillemets = false;
-  for (let i = 0; i < ligne.length; i += 1) {
-    const ch = ligne[i];
-    if (enGuillemets) {
-      if (ch === '"') {
-        if (ligne[i + 1] === '"') {
-          courante += '"';
-          i += 1;
-        } else enGuillemets = false;
-      } else courante += ch;
-    } else if (ch === '"') enGuillemets = true;
-    else if (ch === separateur) {
-      cellules.push(courante);
-      courante = '';
-    } else courante += ch;
+  if (stats.reserve < 600) {
+    erreurs += 1;
+    constats.push(`✗ source CPD incomplète : ${stats.reserve} produits de réserve (< 600)`);
   }
-  cellules.push(courante);
-  return cellules;
-}
-
-/* ------------------------------------------------------------------ *
- * Règles d'attribution
- * ------------------------------------------------------------------ */
-
-/** Modes d'accès nécessitant une salle interventionnelle (plateau technique lourd). */
-const MODES_PLATEAU_LOURD = new Set([
-  'abord ouvert',
-  'accès transpariétal',
-  'accès endoscopique transpariétal',
-  'accès intraluminal transpariétal',
-  'accès transorificiel',
-  'accès endoscopique transorificiel',
-  "acte par rayons x, avec accès autre qu'abord ouvert",
-  "acte par ultrasons ou remnographie avec accès autre qu'abord ouvert",
-]);
-
-/** Modes d'accès d'imagerie réalisable hors plateau interventionnel. */
-const MODES_EXTERNE = new Set([
-  'acte par ultrasons, sans accès',
-  'acte par rayons x, sans accès',
-  'acte par remnographie sans accès',
-]);
-
-/** Charge la table de surcharge CCAM. */
-function lireSurchargesCcam() {
-  const chemin = join(DATA_DIR, 'ccam-overlay.csv');
-  if (!existsSync(chemin)) return new Map();
-  const lignes = readFileSync(chemin, 'utf8')
-    .split(/\r?\n/)
-    .filter((l) => l.trim() && !l.startsWith('#'));
-  const entetes = lignes.shift().split(';');
-  const surcharges = new Map();
-  for (const ligne of lignes) {
-    const c = ligne.split(';');
-    const obj = Object.fromEntries(entetes.map((h, i) => [h, (c[i] ?? '').trim()]));
-    if (!obj.code) continue;
-    surcharges.set(obj.code, {
-      acte_marqueur_hdj: boolOuNull(obj.acte_marqueur_hdj),
-      exclusif_externe: boolOuNull(obj.exclusif_externe),
-      necessite_plateau_lourd: boolOuNull(obj.necessite_plateau_lourd),
-    });
+  if (stats.indetermine > 0) {
+    erreurs += 1;
+    constats.push(`✗ ${stats.indetermine} spécialité(s) laissée(s) « non déterminée »`);
   }
-  return surcharges;
-}
-
-const boolOuNull = (v) => (v === 'true' ? true : v === 'false' ? false : null);
-
-/** Charge les motifs « réserve hospitalière » (positifs et exclusions). */
-function lireMotifsReserve() {
-  const chemin = join(DATA_DIR, 'reserve-hospitaliere.dci.txt');
-  const positifs = [];
-  const exclusions = [];
-  for (const brute of readFileSync(chemin, 'utf8').split(/\r?\n/)) {
-    const ligne = brute.trim();
-    if (!ligne || ligne.startsWith('#')) continue;
-    if (ligne.startsWith('!')) exclusions.push(normaliser(ligne.slice(1)));
-    else positifs.push(normaliser(ligne));
+  const couvertureDci = 100 * (stats.avecDci / stats.total);
+  if (couvertureDci < 99) {
+    erreurs += 1;
+    constats.push(`✗ DCI manquante pour plus de 1 % des spécialités : vérifier CIS_COMPO`);
   }
-  return { positifs, exclusions };
-}
 
-function estReserveHospitaliere(denomination, dci, motifs) {
-  const cible = normaliser(`${denomination} ${dci ?? ''}`);
-  if (motifs.exclusions.some((m) => cible.includes(m))) return false;
-  if (motifs.positifs.some((m) => cible.includes(m))) return true;
-  return null; // non déterminé
+  constats.push(`· réserve hospitalière : ${stats.reserve} oui · ${stats.hors} non · ${stats.indetermine} non déterminés`);
+  constats.push(
+    `· origine : libellé CPD officiel ${origineReserve.cpd} · liste de travail ${origineReserve.liste}` +
+      ` · inférence « CPD muet » ${origineReserve.infere}`,
+  );
+  constats.push(`· DCI renseignée : ${couvertureDci.toFixed(1)} % (${stats.avecDci}/${stats.total})`);
+  constats.push(`· liste en sus (approximation) : ${stats.listeEnSus} oui`);
+  return { constats, erreurs, stats };
 }
 
 /* ------------------------------------------------------------------ *
@@ -224,7 +159,13 @@ function estReserveHospitaliere(denomination, dci, motifs) {
 async function ecrireSupabase(table, lignes, cleConflit) {
   const url = process.env.SUPABASE_URL;
   const cle = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !cle) throw new Error('SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis.');
+  if (!url || !cle) {
+    throw new Error(
+      'SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis pour l’écriture.\n' +
+        '  La clé service_role se lit dans le tableau de bord Supabase :\n' +
+        '  Project Settings → API → service_role (secret). Ne jamais la publier.',
+    );
+  }
 
   let ecrites = 0;
   for (let i = 0; i < lignes.length; i += TAILLE_LOT) {
@@ -250,72 +191,82 @@ async function ecrireSupabase(table, lignes, cleConflit) {
   process.stdout.write('\n');
 }
 
+function exporter(lignes, colonnes, fichier) {
+  const repertoire = join(CACHE_DIR, 'export');
+  mkdirSync(repertoire, { recursive: true });
+  const chemin = join(repertoire, fichier);
+  writeFileSync(chemin, `${versCsv(lignes, colonnes)}\n`, 'utf8');
+  log(`export  : ${chemin} (${lignes.length} lignes)`);
+  return chemin;
+}
+
 /* ------------------------------------------------------------------ *
  * Programme
  * ------------------------------------------------------------------ */
 
 async function principal() {
   mkdirSync(CACHE_DIR, { recursive: true });
+  const dryRun = process.argv.includes('--dry-run');
 
   // --- Médicaments --------------------------------------------------
-  const cheminBdpm = await telecharger(URL_BDPM, 'CIS_bdpm.txt');
-  const bruts = lireBdpm(cheminBdpm);
-  const motifs = lireMotifsReserve();
-
-  const medicaments = bruts.map((m) => {
-    const dci = extraireDci(m.denomination);
-    const reserve = estReserveHospitaliere(m.denomination, dci, motifs);
-    return {
-      cis: m.cis,
-      denomination: m.denomination,
-      dci,
-      est_reserve_hospitaliere: reserve,
-      // Première approximation documentée : la réserve hospitalière et la liste
-      // en sus coïncident pour l'essentiel des spécialités concernées. À affiner
-      // par la PUI à partir de l'arrêté « liste en sus » en vigueur.
-      est_liste_en_sus: reserve,
-      surveillance_renforcee: m.surveillance_renforcee,
-    };
+  const [contenuBdpm, contenuCompo, contenuCpd] = await Promise.all([
+    recuperer('bdpm'),
+    recuperer('compo'),
+    recuperer('cpd'),
+  ]);
+  const motifs = lireMotifsReserve(
+    readFileSync(join(DATA_DIR, 'reserve-hospitaliere.dci.txt'), 'utf8'),
+  );
+  const { lignes: medicaments, origineReserve } = construireMedicaments({
+    contenuBdpm,
+    contenuCompo,
+    contenuCpd,
+    motifs,
   });
 
-  const nbReserve = medicaments.filter((m) => m.est_reserve_hospitaliere === true).length;
-  log(`médicaments : ${medicaments.length} lignes (${nbReserve} marquées réserve hospitalière, ` +
-    `${medicaments.filter((m) => m.est_reserve_hospitaliere === null).length} non déterminées)`);
+  const { constats, erreurs, stats } = controler(medicaments, origineReserve);
+  log(`médicaments : ${stats.total} spécialités commercialisées`);
+  for (const c of constats) log(`  ${c}`);
+  if (erreurs > 0) throw new Error(`${erreurs} contrôle(s) en échec : la base n’a pas été modifiée.`);
 
   // --- CCAM ---------------------------------------------------------
-  const cheminCcam = await telecharger(URL_CCAM, 'ccam-ameli.csv');
-  const actesBruts = lireCcam(cheminCcam);
-  const surcharges = lireSurchargesCcam();
-
-  const actes = actesBruts.map((a) => {
-    const lourd = MODES_PLATEAU_LOURD.has(a.modeAcces);
-    const externe = MODES_EXTERNE.has(a.modeAcces);
-    const surcharge = surcharges.get(a.code);
-    return {
-      code: a.code,
-      libelle: a.libelle,
-      acte_marqueur_hdj: surcharge?.acte_marqueur_hdj ?? lourd,
-      exclusif_externe: surcharge?.exclusif_externe ?? externe,
-      necessite_plateau_lourd: surcharge?.necessite_plateau_lourd ?? lourd,
-    };
-  });
-
+  const contenuCcam = await recuperer('ccam');
+  const surcharges = lireSurchargesCcam(readFileSync(join(DATA_DIR, 'ccam-overlay.csv'), 'utf8'));
+  const actes = construireActes({ contenuCcam, surcharges });
   log(
     `CCAM        : ${actes.length} actes ` +
       `(${actes.filter((a) => a.necessite_plateau_lourd).length} plateau lourd, ` +
       `${actes.filter((a) => a.exclusif_externe).length} externe)`,
   );
 
-  if (process.argv.includes('--dry-run')) {
+  if (process.argv.includes('--export')) {
+    const colonnesMedicaments = [
+      'cis',
+      'denomination',
+      'dci',
+      'est_reserve_hospitaliere',
+      'est_liste_en_sus',
+      'surveillance_renforcee',
+    ];
+    exporter(medicaments, colonnesMedicaments, 'referentiel_medicaments.csv');
+    exporter(
+      actes,
+      ['code', 'libelle', 'acte_marqueur_hdj', 'exclusif_externe', 'necessite_plateau_lourd'],
+      'referentiel_ccam.csv',
+    );
+  }
+
+  if (dryRun) {
     log('mode --dry-run : aucune écriture.');
-    log('exemple médicament :', JSON.stringify(medicaments[0]));
-    log('exemple acte       :', JSON.stringify(actes[0]));
+    log(`exemple médicament : ${JSON.stringify(medicaments.find((m) => m.denomination.startsWith('REMICADE')))}`);
+    log(`exemple acte       : ${JSON.stringify(actes[0])}`);
     return;
   }
 
   await ecrireSupabase('referentiel_medicaments', medicaments, 'cis');
   await ecrireSupabase('referentiel_ccam', actes, 'code');
   log('import terminé.');
+  log('contrôle à rejouer : node scripts/verifier-referentiel.mjs');
 }
 
 principal().catch((erreur) => {

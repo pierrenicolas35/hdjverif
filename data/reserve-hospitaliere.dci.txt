@@ -1,9 +1,10 @@
 # Liste de travail « réserve hospitalière » (médicaments réservés à l'usage hospitalier)
 #
-# OBJET      : alimenter referentiel_medicaments.est_reserve_hospitaliere dans Supabase.
+# OBJET      : filet de sécurité de referentiel_medicaments.est_reserve_hospitaliere.
 # FORMAT     : un motif par ligne, recherché en sous-chaîne, insensible à la casse et
 #              aux accents, sur la dénomination BDPM et/ou la DCI.
 #              Les lignes vides et les commentaires (#) sont ignorés.
+#              Les lignes `!motif` sont des exclusions (voir plus bas).
 #
 # PROVENANCE : liste de travail constituée à partir des classes thérapeutiques
 #              relevant de la réserve hospitalière au sens de l'article R. 5121-82
@@ -11,12 +12,25 @@
 #              hospitalier) et, pour la plupart d'entre elles, inscrites sur la liste
 #              en sus des GHS.
 #
-# AVERTISSEMENT : cette liste est un PROPOSITION DE TRAVAIL destinée à pré-remplir le
-#              référentiel. Elle ne se substitue pas à la liste officielle : elle doit
-#              être revue et validée par la pharmacie à usage intérieur (PUI) de
-#              l'établissement. Les médicaments non reconnus restent à NULL dans la
-#              base, ce qui signifie « non déterminé » (et non « hors réserve ») :
-#              l'application invite alors l'utilisateur à trancher.
+# PORTÉE     : depuis le 22/09/2026, la source de référence de la réserve hospitalière
+#              n'est plus cette liste mais le fichier officiel **CIS_CPD_bdpm.txt** de la
+#              BDPM, dont le libellé « réservé à l'usage HOSPITALIER » est opposable.
+#              Cette liste n'intervient QUE pour les spécialités dépourvues de toute
+#              condition de prescription ou de délivrance (CPD muet) : elle rattrape les
+#              produits manifestement hospitaliers qui n'y figurent pas (ex. oxygène
+#              médicinal). Elle ne peut jamais contredire un libellé CPD.
+#
+#              Extension par DCI OFFICIELLES : mesurée puis ÉCARTÉE. Ajouter aux motifs
+#              les 418 DCI des produits marqués « usage hospitalier » faisait basculer
+#              160 présentations de ville (acétylcystéine, chlorhexidine, alginate,
+#              bicarbonate…) en « réserve hospitalière », parce que ces substances
+#              existent aussi sous forme hospitalière et que la liste travaille en
+#              sous-chaîne. Les motifs restent donc des classes thérapeutiques, jamais
+#              des DCI isolées.
+#
+# AVERTISSEMENT : cette liste est une PROPOSITION DE TRAVAIL. Elle ne se substitue pas à
+#              la liste officielle : elle doit être revue et validée par la pharmacie à
+#              usage intérieur (PUI) de l'établissement.
 #
 # MAINTENANCE : mettre à jour ce fichier puis rejouer
 #              `node scripts/import-referentiels.mjs`.
@@ -344,7 +358,8 @@ levocarnitine
 carglumic acid
 
 # --- Produits non réservés (exclusions explicites, priorité haute) --------
-# Toute correspondance ci-dessous force est_reserve_hospitaliere = false.
+# Toute correspondance ci-dessous annule un motif positif : elle force
+# est_reserve_hospitaliere = false (une exclusion prime toujours un positif).
 !paracétamol
 !ibuprofène
 !amoxicilline
@@ -357,3 +372,11 @@ carglumic acid
 !kardégic
 !ventoline
 !levothyrox
+
+# --- Exclusions « préparations » (faux positifs par homonymie) ------------
+# Un motif positif (ex. dopamine) frappe aussi les préparations homéopathiques
+# et les teintures mères du même nom, qui ne sont pas des médicaments de réserve.
+!préparations homéopathiques
+!boiron
+!lehning
+!weleda
