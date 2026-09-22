@@ -224,6 +224,13 @@ n’est plus qu’un **filet de sécurité** : elle ne peut jamais contredire le
   hospitalière (approximation documentée) et laissée à `NULL` sinon — « non déterminé », et non
   « hors liste ». Cet indicateur **n’intervient dans aucune décision** : il n’est qu’affiché.
 - `surveillance_renforcee` : reprise du champ « surveillance renforcée » de la BDPM.
+- **Conséquence de la source officielle** : des produits perfusés en HDJ mais relevant de la
+  « **prescription hospitalière** » et non de la « réserve hospitalière » — MABTHERA (rituximab),
+  HERCEPTIN (trastuzumab), TYSABRI sous-cutané — sont désormais marqués `false`. La
+  justification de la HDJ passe alors par le pilier « surveillance documentée ». Piste
+  d’amélioration : exposer le libellé CPD « médicament nécessitant une surveillance particulière
+  pendant le traitement » (1 750 spécialités), qui correspond exactement à la variable
+  « surveillance particulière ou contexte patient » de la notice ATIH du codage HDJ.
 - Une **validation par la pharmacie à usage intérieur** reste nécessaire.
 - `acte_marqueur_hdj` / `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode
   d’accès** de la nomenclature CCAM (un acte en « abord ouvert » ou « accès transpariétal »
@@ -262,6 +269,19 @@ documents livrés.
 Sans clé `service_role`, `npm run import:referentiels:controle -- --export` produit les deux CSV
 prêts à charger (`referentiel_medicaments.csv`, `referentiel_ccam.csv`) pour un import par le
 tableau de bord Supabase.
+
+> **Où trouver la clé d’écriture.** Le jeton **Management API** du projet
+> (`SUPABASE_ACCESS_TOKEN`, préfixe `sbp_`) suffit : il permet de récupérer la clé
+> `service_role` sans jamais la publier.
+>
+> ```bash
+> curl -s "https://api.supabase.com/v1/projects/<ref>/api-keys?reveal=true" \
+>   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN"
+> # → renseigner SUPABASE_SERVICE_ROLE_KEY avec la valeur de « service_role », puis importer
+> ```
+>
+> Le durcissement Row Level Security reste actif : la clé `anon` de l’application est toujours
+> refusée en écriture (HTTP 401), seul le rôle `service_role` écrit.
 
 ## 5. Tests
 
