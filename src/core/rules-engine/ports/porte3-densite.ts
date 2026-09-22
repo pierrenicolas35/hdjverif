@@ -6,7 +6,9 @@
  *  1. Pilier Soins / surveillance active
  *     - surveillance active documentée, OU
  *     - administration d'un produit de la réserve hospitalière / nécessitant une
- *       surveillance continue.
+ *       surveillance continue, OU
+ *     - contexte patient particulier (au moins une situation de vulnérabilité
+ *       retenue au dossier).
  *
  *  2. Pilier Plateau technique lourd / actes coordonnés
  *     - au moins un acte `est_plateau_lourd`, OU
@@ -24,11 +26,13 @@
 import {
   actesDenombrables,
   codesCcamDistincts,
+  contextePatientParticulier,
   medecinsActifs,
   medicamentsSurveillanceParticuliere,
   professionsParamedicalesDistinctes,
   specialitesMedicalesDistinctes,
 } from '../helpers.js';
+import { LIBELLES_CONTEXTE_PATIENT } from '../types.js';
 import type { DossierHDJ, PilierEvaluation } from '../types.js';
 
 type Pilier = Omit<PilierEvaluation, 'id' | 'libelle'>;
@@ -46,11 +50,21 @@ const LIBELLES = {
 export function evaluerPilier1(dossier: DossierHDJ): Pilier {
   const justifications: string[] = [];
   const produits = medicamentsSurveillanceParticuliere(dossier);
-  const valide = dossier.surveillance_active_documentee || produits.length > 0;
+  const contexte = contextePatientParticulier(dossier);
+  const valide =
+    dossier.surveillance_active_documentee || produits.length > 0 || contexte.length > 0;
 
   if (dossier.surveillance_active_documentee) {
     justifications.push(
       'Surveillance active documentée par l’IDE (constantes, tolérance, surveillance rapprochée).',
+    );
+  }
+
+  if (contexte.length > 0) {
+    justifications.push(
+      `Contexte patient particulier : ${contexte
+        .map((critere) => LIBELLES_CONTEXTE_PATIENT[critere])
+        .join(' ; ')}.`,
     );
   }
 
@@ -65,8 +79,8 @@ export function evaluerPilier1(dossier: DossierHDJ): Pilier {
 
   if (!valide) {
     justifications.push(
-      'Aucune surveillance active documentée et aucun produit à réserve hospitalière ' +
-        'ou à surveillance continue administré.',
+      'Aucune surveillance active documentée, aucun contexte patient particulier et aucun ' +
+        'produit à réserve hospitalière ou à surveillance continue administré.',
     );
   }
 

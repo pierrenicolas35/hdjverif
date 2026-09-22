@@ -10,8 +10,17 @@
  * `DossierHDJ` puis soumis à `evaluerDossier`.
  */
 
-import { PROFESSIONS, evaluerDossier } from '../core/rules-engine/index.js';
-import type { DossierHDJ, Profession, ResultatAudit } from '../core/rules-engine/index.js';
+import {
+  CRITERES_CONTEXTE_PATIENT,
+  PROFESSIONS,
+  evaluerDossier,
+} from '../core/rules-engine/index.js';
+import type {
+  CritereContextePatient,
+  DossierHDJ,
+  Profession,
+  ResultatAudit,
+} from '../core/rules-engine/index.js';
 import { contenuFiche, imprimerFiche, telechargerFiche } from './fiche.js';
 import {
   AIDE_ETAPES,
@@ -86,6 +95,11 @@ const ETAPES: readonly Etape[] = [
     domaine: 'Surveillance et durée',
     question: 'Une surveillance particulière est-elle prévue pendant la venue ?',
   },
+  {
+    id: 'contexte',
+    domaine: 'Contexte patient',
+    question: 'Le patient présente-t-il une situation de vulnérabilité ?',
+  },
   { id: 'resultat', domaine: 'Décision', question: 'Décision' },
 ];
 
@@ -97,7 +111,31 @@ const ETAPES: readonly Etape[] = [
  * demande médicale préalable au dossier, synthèse du jour, lettre de liaison)
  * ne sont donc pas posées : voir `versDossier()`.
  */
-const ETAPES_DENSITE: readonly string[] = ['actes', 'medicaments', 'intervenants', 'densite'];
+const ETAPES_DENSITE: readonly string[] = [
+  'actes',
+  'medicaments',
+  'intervenants',
+  'densite',
+  'contexte',
+];
+
+/**
+ * Libellés courts des critères de contexte patient, pour les bascules de
+ * l'écran de saisie. Les libellés opposables (énumération de l'instruction)
+ * restent dans `LIBELLES_CONTEXTE_PATIENT`, utilisés par le moteur et la fiche.
+ */
+const LIBELLES_COURTS_CONTEXTE: Readonly<Record<CritereContextePatient, string>> = {
+  AGE: 'Âge du patient',
+  HANDICAP: 'Handicap',
+  PATHOLOGIE_PSYCHIATRIQUE: 'Pathologie psychiatrique',
+  ETAT_GRABATAIRE: 'État grabataire',
+  ANTECEDENTS: 'Antécédents / échec en externe',
+  PRECARITE_SOCIALE: 'Précarité sociale',
+  DIFFICULTES_COOPERATION: 'Coopération difficile ou expression limitée',
+  SUSPICION_MALTRAITANCE: 'Suspicion de maltraitance / protection',
+  PRISE_EN_CHARGE_URGENCE: 'Venue en urgence, hors UHCD',
+  AUTRE_SITUATION: 'Autre situation documentée',
+};
 
 const INDEX = new Map(ETAPES.map((etape, i) => [etape.id, i]));
 
@@ -351,6 +389,8 @@ class Assistant {
         'Cliquez sur les professionnels qui interviendront auprès du patient : le bouton reste enfoncé. Précisez seulement si une note d’évolution sera rédigée.',
       densite:
         'Une surveillance rapprochée prévue et tracée justifie à elle seule un GHS plein ; la durée de présence n’est qu’un point d’attention.',
+      contexte:
+        'Une situation de vulnérabilité retenue au dossier justifie à elle seule un GHS plein : le nombre d’interventions n’entre plus en compte.',
     };
     return textes[this.etapeId] ?? '';
   }
@@ -369,6 +409,8 @@ class Assistant {
         return this.corpsIntervenants();
       case 'densite':
         return this.corpsDensite();
+      case 'contexte':
+        return this.corpsContexte();
       default:
         return '';
     }
@@ -626,6 +668,39 @@ class Assistant {
       </p>`;
   }
 
+  /* -------------------------------------------------- contexte patient */
+
+  /**
+   * Situations de vulnérabilité du « contexte patient ».
+   *
+   * Énumération de l'instruction (annexe 4, point 2.b.iii) : une seule situation
+   * suffit à justifier un GHS plein, quel que soit le nombre d'interventions.
+   * Aucune sélection = pas de contexte patient particulier.
+   */
+  private corpsContexte(): string {
+    const retenus = new Set<CritereContextePatient>(this.etat.contextePatient);
+    return `
+      <p class="consigne">Situations retenues au dossier</p>
+      <div class="bascule-grille">
+        ${CRITERES_CONTEXTE_PATIENT.map(
+          (critere) => `
+          <button type="button" class="btn-bascule" data-action="critere-contexte"
+                  data-valeur="${critere}"${presse(retenus.has(critere))}>
+            ${esc(LIBELLES_COURTS_CONTEXTE[critere])}
+          </button>`,
+        ).join('')}
+      </div>
+      <p class="note-saisie">
+        ${
+          retenus.size > 0
+            ? `Une situation suffit : le GHS plein est retenu quel que soit le nombre
+               d’interventions. Ces éléments doivent être tracés au dossier du patient.`
+            : `Aucune situation particulière : c’est le nombre d’interventions qui déterminera le
+               GHS (plein à partir de 4 interventions, intermédiaire à 3).`
+        }
+      </p>`;
+  }
+
   /* -------------------------------------------------- aide pédagogique */
 
   private rendreAide(): void {
@@ -706,7 +781,8 @@ class Assistant {
       e.actes.length > 0 ||
       e.medicaments.length > 0 ||
       e.intervenants.length > 0 ||
-      e.surveillanceActive === true;
+      e.surveillanceActive === true ||
+      e.contextePatient.length > 0;
 
     if (!raccourci && !densiteAmorcee) {
       this.voyantVerdict.className = 'voyant verdict';
@@ -868,6 +944,14 @@ class Assistant {
         this.etat.dureePresenceMinutes = Number(valeur);
         this.rendre();
         break;
+      case 'critere-contexte': {
+        const critere = valeur as CritereContextePatient;
+        this.etat.contextePatient = this.etat.contextePatient.includes(critere)
+          ? this.etat.contextePatient.filter((c) => c !== critere)
+          : [...this.etat.contextePatient, critere];
+        this.rendre();
+        break;
+      }
       case 'suggestion-acte':
         void this.ajouterActe(valeur);
         break;

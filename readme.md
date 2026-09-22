@@ -44,15 +44,22 @@ Ces quatre éléments restent des **engagements de la prise en charge programmé
 rappelés à cocher sur la fiche de traçabilité, et le moteur les considère comme réunis.
 
 Les questions portent donc uniquement sur ce qui **détermine la facturation** : type de prise en
-charge, actes prévus, médicaments prévus, professionnels qui interviendront, surveillance prévue
-et durée de présence.
+charge, actes prévus, médicaments prévus, professionnels qui interviendront, surveillance prévue,
+durée de présence et **contexte patient**.
 
 ### Écrans et interactions
 
 - **Aucune donnée administrative** : ni numéro de séjour, ni date. Rien de ce qui identifie le
   patient n’est saisi ni affiché (y compris dans la fiche de traçabilité et la synthèse).
-- **Six écrans** + la décision : discipline, type de prise en charge, actes, médicaments, équipe,
-  surveillance et durée. Les questions homogènes sont **regroupées** pour limiter les clics.
+- **Sept écrans** + la décision : discipline, type de prise en charge, actes, médicaments, équipe,
+  surveillance et durée, **contexte patient**. Les questions homogènes sont **regroupées** pour
+  limiter les clics.
+- **Contexte patient (vulnérabilité)** : l’écran reprend l’énumération de l’instruction — âge,
+  handicap, pathologie psychiatrique, état grabataire, antécédents (échec ou impossibilité de la
+  prise en charge en externe), précarité sociale, difficultés de coopération ou d’expression,
+  suspicion de maltraitance, venue en urgence hors UHCD, autre situation documentée. **Une seule
+  situation suffit** : le GHS « plein » est alors retenu quel que soit le nombre d’interventions,
+  et les critères retenus sont imprimés sur la fiche de traçabilité.
 - **Un langage de soignant, au futur** : « Quels actes techniques sont prévus pendant la venue ? »,
   « Quels professionnels interviendront auprès du patient ? », « Une surveillance rapprochée du
   patient est-elle prévue ? ». Le vocabulaire juridique (*champ de l’instruction*, *densité*,
@@ -73,9 +80,10 @@ et durée de présence.
 - **Décision en direct** dans l’en-tête, formulée en langage courant, dès qu’un élément de la
   prise en charge est saisi ou qu’un raccourci la tranche.
 - **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable citée,
-  et cas typiques de la discipline choisie (*Relève du GHS* / *Relève de l’externe* /
-  *Piège fréquent* / *Hors champ*). 14 disciplines sont proposées ; le choix est facultatif et ne
-  modifie aucun critère de décision.
+  et cas typiques **ancrés sur la question posée** : la grille couvre les six étapes pour chacune
+  des 14 disciplines, de sorte que l’aide ne parle jamais d’une autre question
+  (*Relève du GHS* / *Relève de l’externe* / *Piège fréquent* / *Hors champ*). Le choix de la
+  discipline est facultatif et ne modifie aucun critère de décision.
 - **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou une prise en charge
   SMR/psychiatrie conduit directement au résultat, sans dérouler l’assistant.
 - **Fiche de traçabilité T2A** imprimable (PDF) ou exportable en `.txt`, avec zones de visa et
@@ -209,7 +217,7 @@ node scripts/import-referentiels.mjs
 
 ```bash
 npm install
-npm test              # 71 tests : moteur, portes, assistant (référentiel simulé)
+npm test              # 76 tests : moteur, portes, assistant (référentiel simulé)
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

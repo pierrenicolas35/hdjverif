@@ -34,6 +34,8 @@ export {
 export type { CodeReference, EntreeReference, TexteReference } from './references.js';
 
 export {
+  CRITERES_CONTEXTE_PATIENT,
+  LIBELLES_CONTEXTE_PATIENT,
   PROFESSIONS,
   PROFESSIONS_PARAMEDICALES,
   REGIMES_CHAMP,
@@ -41,6 +43,7 @@ export {
 export type {
   ActeCCAM,
   Constat,
+  CritereContextePatient,
   DossierHDJ,
   EtapePorte,
   Intervenant,
@@ -57,6 +60,11 @@ export type {
   StatutPorte,
 } from './types.js';
 
-export { denombrerInterventions, intervenantsActifs, niveauGhs } from './helpers.js';
+export {
+  contextePatientParticulier,
+  denombrerInterventions,
+  intervenantsActifs,
+  niveauGhs,
+} from './helpers.js';
 export { validerDossier, dossierValide } from './validation.js';
 export type { ErreurValidation } from './validation.js';

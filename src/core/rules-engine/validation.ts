@@ -6,8 +6,13 @@
  * utilisateur, import de fichier, appel API).
  */
 
-import { PROFESSIONS, REGIMES_CHAMP } from './types.js';
-import type { DossierHDJ, Profession, RegimeChamp } from './types.js';
+import { CRITERES_CONTEXTE_PATIENT, PROFESSIONS, REGIMES_CHAMP } from './types.js';
+import type {
+  CritereContextePatient,
+  DossierHDJ,
+  Profession,
+  RegimeChamp,
+} from './types.js';
 
 export interface ErreurValidation {
   readonly champ: string;
@@ -56,6 +61,15 @@ export function validerDossier(dossier: DossierHDJ): readonly ErreurValidation[]
   dossier.medicaments.forEach((medicament, index) => {
     if (!medicament.code_ucd?.trim()) {
       ajouter(`medicaments[${index}].code_ucd`, 'Code UCD requis.');
+    }
+  });
+
+  dossier.contexte_patient.forEach((critere, index) => {
+    if (!CRITERES_CONTEXTE_PATIENT.includes(critere as CritereContextePatient)) {
+      ajouter(
+        `contexte_patient[${index}]`,
+        `Critère de contexte patient inconnu : ${String(critere)}.`,
+      );
     }
   });
 

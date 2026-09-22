@@ -20,6 +20,7 @@ import {
   ACTE_ECG,
   ACTE_FOGD,
   ACTE_PERFUSION_FER,
+  CAS_DIABETE_CONFORME,
   DIETETICIEN,
   IDE,
   MEDECIN_CARDIO,
@@ -200,6 +201,33 @@ describe('Porte 3 — pilier 1 (soins / surveillance active)', () => {
     );
     expect(resultat.statut).toBe('VALIDE_GHS');
     expect(resultat.piliers_valides).toContain('PILIER_1_SOINS_SURVEILLANCE');
+  });
+
+  it('contexte patient particulier → pilier 1 validé et GHS plein', () => {
+    const resultat = evaluerDossier(
+      dossier({
+        contexte_patient: ['PRECARITE_SOCIALE'],
+        intervenants: [IDE],
+      }),
+    );
+    expect(resultat.statut).toBe('VALIDE_GHS');
+    expect(resultat.niveau_ghs).toBe('PLEIN');
+    expect(resultat.piliers_valides).toContain('PILIER_1_SOINS_SURVEILLANCE');
+
+    const pilier = resultat.piliers.find((p) => p.id === 'PILIER_1_SOINS_SURVEILLANCE');
+    expect(pilier?.justifications.join(' ')).toContain('Précarité sociale');
+  });
+
+  it('un contexte patient particulier rend le GHS plein quelle que soit la densité', () => {
+    // Trois interventions coordonnées : GHS intermédiaire en temps normal…
+    expect(evaluerDossier(CAS_DIABETE_CONFORME).niveau_ghs).toBe('INTERMEDIAIRE');
+    // …plein dès qu'une situation de vulnérabilité est retenue au dossier.
+    const avecContexte = evaluerDossier({
+      ...CAS_DIABETE_CONFORME,
+      contexte_patient: ['AGE'],
+    });
+    expect(avecContexte.statut).toBe('VALIDE_GHS');
+    expect(avecContexte.niveau_ghs).toBe('PLEIN');
   });
 });
 

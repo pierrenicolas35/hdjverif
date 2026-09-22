@@ -182,12 +182,14 @@ describe('Écran d’accueil — choix d’une discipline clinique', () => {
     expect(questionCourante()).toContain('type de prise en charge');
   });
 
-  it('adapte les cas affichés à la discipline sélectionnée', () => {
+  it('adapte les cas affichés à la discipline et à la question posée', () => {
     retourAccueil();
-    choisirDiscipline('ENDOCRINOLOGIE');
+    choisirDiscipline('ENDOCRINOLOGIE'); // ouvre l'écran « type de prise en charge »
     const aide = texte('#aide');
     expect(aide).toContain('Endocrinologie, diabétologie, nutrition');
-    expect(aide).toContain('Relève du GHS');
+    // Le cas affiché porte sur la question posée : ici, le type de prise en charge.
+    expect(aide).toContain('cure de chimiothérapie');
+    expect(aide).not.toContain('renouvellement d’ordonnance'); // cas de l'étape « surveillance »
 
     cliquer('[data-action="reculer"]'); // retour à l'accueil pour changer de discipline
     choisirDiscipline('PSYCHIATRIE');
@@ -274,6 +276,7 @@ describe('Assistant — aucune donnée administrative', () => {
     choisirProfession('DIETETICIEN');
     suivant(); // surveillance
     repondre('surveillanceActive', 'non');
+    suivant(); // contexte patient
     suivant(); // décision
     expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
   });
@@ -416,6 +419,7 @@ describe('Assistant — parcours complet', () => {
 
     repondre('surveillanceActive', 'non');
     cliquer('[data-action="duree"][data-valeur="300"]');
+    suivant(); // contexte patient
     suivant(); // décision
 
     expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
@@ -442,12 +446,15 @@ describe('Assistant — parcours complet', () => {
     choisirProfession('IDE');
     suivant(); // densité
     repondre('surveillanceActive', 'non');
+    suivant(); // contexte patient
     suivant(); // décision
 
     expect(texte('.statut')).toBe('HDJ validée — facturation en GHS plein');
   });
 
   it('permet de revenir en arrière et de corriger une réponse', () => {
+    cliquer('[data-action="reculer"]');
+    expect(questionCourante()).toContain('situation de vulnérabilité');
     cliquer('[data-action="reculer"]');
     expect(questionCourante()).toContain('surveillance particulière');
     cliquer('[data-action="reculer"]');
@@ -498,6 +505,65 @@ describe('Assistant — raccourcis décisionnels', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Contexte patient — critères de vulnérabilité de l'instruction
+ * ------------------------------------------------------------------ */
+
+describe('Contexte patient — situations de vulnérabilité', () => {
+  /** Trois interventions coordonnées, sans acte ni produit : GHS intermédiaire. */
+  function atteindreContexte(): void {
+    retourAccueil();
+    atteindreActes();
+    suivant(); // médicaments
+    suivant(); // équipe
+    choisirProfession('MEDECIN');
+    choisirProfession('IDE');
+    choisirProfession('DIETETICIEN');
+    suivant(); // surveillance et durée
+    repondre('surveillanceActive', 'non');
+    suivant(); // contexte patient
+  }
+
+  it('propose les situations de vulnérabilité énumérées par l’instruction', () => {
+    atteindreContexte();
+    expect(questionCourante()).toContain('situation de vulnérabilité');
+
+    const boutons = [...document.querySelectorAll('[data-action="critere-contexte"]')];
+    const valeurs = boutons.map((b) => (b as HTMLElement).dataset['valeur']);
+    expect(valeurs).toEqual([
+      'AGE',
+      'HANDICAP',
+      'PATHOLOGIE_PSYCHIATRIQUE',
+      'ETAT_GRABATAIRE',
+      'ANTECEDENTS',
+      'PRECARITE_SOCIALE',
+      'DIFFICULTES_COOPERATION',
+      'SUSPICION_MALTRAITANCE',
+      'PRISE_EN_CHARGE_URGENCE',
+      'AUTRE_SITUATION',
+    ]);
+    expect(texte('#aide')).toContain('contexte patient');
+  });
+
+  it('une seule situation retenue suffit à obtenir un GHS plein', () => {
+    atteindreContexte();
+    suivant(); // décision, sans aucune situation retenue
+    expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
+
+    cliquer('[data-action="reculer"]'); // retour au contexte patient
+    cliquer('[data-action="critere-contexte"][data-valeur="PRECARITE_SOCIALE"]');
+    expect(
+      document
+        .querySelector('[data-action="critere-contexte"][data-valeur="PRECARITE_SOCIALE"]')
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
+    suivant(); // décision
+    expect(texte('.statut')).toBe('HDJ validée — facturation en GHS plein');
+    expect(texte('#carte')).toContain('Contexte patient particulier');
+    expect(texte('#carte')).toContain('Précarité sociale');
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Volet d'aide
  * ------------------------------------------------------------------ */
 
@@ -529,5 +595,17 @@ describe('Volet d’aide', () => {
     expect(texte('#aide')).toContain('Annexe 4');
     expect(texte('#aide')).toContain('Cas typiques');
     expect(texte('#aide')).toContain('Gastro-entérologie et hépatologie');
+  });
+
+  it('change de cas typique quand on change de question', () => {
+    retourAccueil();
+    choisirDiscipline('GASTRO');
+    atteindreActes();
+    expect(texte('#aide')).toContain('Endoscopie œso-gastro-duodénale');
+
+    suivant(); // médicaments
+    const aideMedicaments = texte('#aide');
+    expect(aideMedicaments).toContain('biothérapie digestive de réserve hospitalière');
+    expect(aideMedicaments).not.toContain('Endoscopie œso-gastro-duodénale');
   });
 });

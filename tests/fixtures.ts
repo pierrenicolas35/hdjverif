@@ -132,6 +132,7 @@ export function dossier(partial: Partial<DossierHDJ> = {}): DossierHDJ {
     synthese_medicale_tracee: true,
     lettre_liaison_remise: true,
     surveillance_active_documentee: false,
+    contexte_patient: [],
     actes_ccam: [],
     medicaments: [],
     intervenants: [],

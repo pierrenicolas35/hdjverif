@@ -46,6 +46,68 @@ export const PROFESSIONS_PARAMEDICALES: readonly Profession[] = [
 ] as const;
 
 /**
+ * Situations de vulnérabilité relevant du « contexte patient ».
+ *
+ * L'instruction (annexe 4, point 2.b.iii) renvoie à l'énumération de l'arrêté :
+ * « Le contexte patient renvoie aux situations suivantes : âge du patient ;
+ * handicap ; pathologie psychiatrique ; état grabataire ; antécédents du patient
+ * (présence d'une autre pathologie ou d'un traitement, échec ou impossibilité de
+ * réaliser la prise en charge dans un environnement de type externe) ; précarité
+ * sociale ; difficultés de coopération ou incapacité à s'exprimer ; suspicion de
+ * maltraitance chez le majeur protégé, chez le mineur ou la mise en place de
+ * mesures de protection d'une femme victime de violence au sein du couple ;
+ * lorsque la prise en charge de moins d'une journée est réalisée en urgence ou
+ * de manière non programmée, en dehors d'une unité d'hospitalisation de courte
+ * durée […] ; le cas échéant, en raison d'autres situations qui seront précisées
+ * dans le dossier du patient. »
+ *
+ * Un « contexte patient particulier » suffit à justifier un GHS « plein »,
+ * quel que soit le nombre d'interventions dénombrées.
+ */
+export const CRITERES_CONTEXTE_PATIENT: readonly CritereContextePatient[] = [
+  'AGE',
+  'HANDICAP',
+  'PATHOLOGIE_PSYCHIATRIQUE',
+  'ETAT_GRABATAIRE',
+  'ANTECEDENTS',
+  'PRECARITE_SOCIALE',
+  'DIFFICULTES_COOPERATION',
+  'SUSPICION_MALTRAITANCE',
+  'PRISE_EN_CHARGE_URGENCE',
+  'AUTRE_SITUATION',
+] as const;
+
+/** Critère de vulnérabilité du patient retenu au dossier. */
+export type CritereContextePatient =
+  | 'AGE'
+  | 'HANDICAP'
+  | 'PATHOLOGIE_PSYCHIATRIQUE'
+  | 'ETAT_GRABATAIRE'
+  | 'ANTECEDENTS'
+  | 'PRECARITE_SOCIALE'
+  | 'DIFFICULTES_COOPERATION'
+  | 'SUSPICION_MALTRAITANCE'
+  | 'PRISE_EN_CHARGE_URGENCE'
+  | 'AUTRE_SITUATION';
+
+/** Libellés opposables des critères de contexte patient. */
+export const LIBELLES_CONTEXTE_PATIENT: Readonly<Record<CritereContextePatient, string>> = {
+  AGE: 'Âge du patient',
+  HANDICAP: 'Handicap',
+  PATHOLOGIE_PSYCHIATRIQUE: 'Pathologie psychiatrique',
+  ETAT_GRABATAIRE: 'État grabataire',
+  ANTECEDENTS:
+    'Antécédents du patient (autre pathologie ou traitement, échec ou impossibilité de la prise en charge en externe)',
+  PRECARITE_SOCIALE: 'Précarité sociale',
+  DIFFICULTES_COOPERATION: 'Difficultés de coopération ou incapacité à s’exprimer',
+  SUSPICION_MALTRAITANCE:
+    'Suspicion de maltraitance (majeur protégé, mineur, protection d’une femme victime de violences au sein du couple)',
+  PRISE_EN_CHARGE_URGENCE:
+    'Prise en charge de moins d’une journée réalisée en urgence ou de manière non programmée, hors UHCD',
+  AUTRE_SITUATION: 'Autre situation précisée au dossier du patient',
+};
+
+/**
  * Intervenant mobilisé sur le séjour.
  *
  * `note_evolution_tracee` est OBLIGATOIRE et déterminant : seule une
@@ -125,6 +187,14 @@ export interface DossierHDJ {
   readonly lettre_liaison_remise: boolean;
   /** Surveillance clinique rapprochée documentée par l'IDE. */
   readonly surveillance_active_documentee: boolean;
+  /**
+   * Situations de vulnérabilité retenues au titre du « contexte patient ».
+   *
+   * Une seule situation suffit : le GHS « plein » est alors justifié quel que
+   * soit le nombre d'interventions dénombrées (annexe 4, point 2.b.iii). Le
+   * tableau vide signifie « aucun contexte patient particulier ».
+   */
+  readonly contexte_patient: readonly CritereContextePatient[];
   readonly actes_ccam: readonly ActeCCAM[];
   readonly medicaments: readonly MedicamentUCD[];
   readonly intervenants: readonly Intervenant[];

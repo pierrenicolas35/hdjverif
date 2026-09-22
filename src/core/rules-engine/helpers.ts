@@ -3,9 +3,10 @@
  * Fonctions pures, sans effet de bord.
  */
 
-import { PROFESSIONS_PARAMEDICALES } from './types.js';
+import { CRITERES_CONTEXTE_PATIENT, PROFESSIONS_PARAMEDICALES } from './types.js';
 import type {
   ActeCCAM,
+  CritereContextePatient,
   DossierHDJ,
   Intervenant,
   MedicamentUCD,
@@ -140,6 +141,8 @@ export function denombrerInterventions(dossier: DossierHDJ): number {
  * Le GHS « plein » est retenu dès lors que la prise en charge comporte :
  *  - une surveillance particulière (surveillance active documentée, produit de
  *    la réserve hospitalière ou à surveillance continue), ou
+ *  - un contexte patient particulier (au moins une situation de vulnérabilité
+ *    retenue au dossier), ou
  *  - un acte classant / une prise en charge sur plateau technique (acte lourd ou
  *    au moins deux actes CCAM dénombrables distincts), ou
  *  - au moins quatre interventions dénombrées.
@@ -153,10 +156,29 @@ export function niveauGhs(dossier: DossierHDJ): NiveauGHS {
     dossier.surveillance_active_documentee ||
     medicamentsSurveillanceParticuliere(dossier).length > 0;
 
+  const contextePatient = contextePatientParticulier(dossier).length > 0;
+
   const plateauTechnique =
     actesDenombrables(dossier).some((acte) => acte.est_plateau_lourd) ||
     codesCcamDistincts(dossier).length >= 2;
 
-  if (surveillanceParticuliere || plateauTechnique) return 'PLEIN';
+  if (surveillanceParticuliere || contextePatient || plateauTechnique) return 'PLEIN';
   return denombrerInterventions(dossier) >= 4 ? 'PLEIN' : 'INTERMEDIAIRE';
+}
+
+/**
+ * Situations de vulnérabilité retenues au titre du « contexte patient ».
+ *
+ * Une seule situation suffit à caractériser un « contexte patient particulier »
+ * (annexe 4, point 2.b.iii) : le GHS plein est alors justifié indépendamment du
+ * nombre d'interventions réalisées. Les éléments doivent être retracés dans le
+ * dossier du patient (annexe 4, point 5).
+ */
+export function contextePatientParticulier(
+  dossier: DossierHDJ,
+): readonly CritereContextePatient[] {
+  // Un critère inconnu est ignoré : le moteur ne se fie qu'à l'énumération.
+  return dossier.contexte_patient.filter((critere) =>
+    CRITERES_CONTEXTE_PATIENT.includes(critere),
+  );
 }

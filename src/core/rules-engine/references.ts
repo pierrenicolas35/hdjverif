@@ -53,6 +53,7 @@ export type CodeReference =
   | 'PORTE_2_ACTE_ISOLE'
   | 'PORTE_2_FORFAIT_SE'
   | 'PORTE_3_SURVEILLANCE_PARTICULIERE'
+  | 'PORTE_3_CONTEXTE_PATIENT'
   | 'PORTE_3_PRODUIT_RESERVE_HOSPITALIERE'
   | 'PORTE_3_ACTE_CLASSANT'
   | 'PORTE_3_DECOMPTE_ACTES'
@@ -138,8 +139,21 @@ export const REFERENCES: Readonly<Record<CodeReference, EntreeReference>> = {
       "L'ensemble de ces situations justifie la facturation d'un GHS dit « plein », quel que soit " +
       "le nombre d'interventions dénombrées.",
   },
-  PORTE_3_PRODUIT_RESERVE_HOSPITALIERE: {
-    localisation: 'Annexe 4, point 2.b.iii',
+  PORTE_3_CONTEXTE_PATIENT: {
+    localisation:
+      'Annexe 4, point 2.b.iii (« La prise en compte de la surveillance particulière ou du contexte patient »)',
+    citation:
+      "Le contexte patient renvoie aux situations suivantes : âge du patient ; handicap ; " +
+      "pathologie psychiatrique ; état grabataire ; antécédents du patient (présence d'une autre " +
+      "pathologie ou d'un traitement, échec ou impossibilité de réaliser la prise en charge dans " +
+      "un environnement de type externe) ; précarité sociale ; difficultés de coopération ou " +
+      "incapacité à s'exprimer ; suspicion de maltraitance chez le majeur protégé, chez le mineur " +
+      "ou la mise en place de mesures de protection d'une femme victime de violence au sein du " +
+      "couple ; lorsque la prise en charge de moins d'une journée est réalisée en urgence ou de " +
+      "manière non programmée, en dehors d'une unité d'hospitalisation de courte durée […] ; le " +
+      "cas échéant, en raison d'autres situations qui seront précisées dans le dossier du patient.",
+  },
+  PORTE_3_PRODUIT_RESERVE_HOSPITALIERE: {    localisation: 'Annexe 4, point 2.b.iii',
     fondement: 'CSP, art. R. 5121-82',
     citation:
       "soit parce que la prise en charge comporte l'administration de produits de la réserve " +

@@ -7,6 +7,7 @@
 
 import type {
   ActeCCAM,
+  CritereContextePatient,
   DossierHDJ,
   Intervenant,
   MedicamentUCD,
@@ -88,6 +89,12 @@ export interface EtatAssistant {
   /** Surveillance et durée. */
   surveillanceActive: boolean | null;
   dureePresenceMinutes: number;
+
+  /**
+   * Situations de vulnérabilité retenues au titre du « contexte patient »
+   * (annexe 4, point 2.b.iii) : une seule suffit à justifier un GHS plein.
+   */
+  contextePatient: CritereContextePatient[];
 }
 
 export function etatInitial(): EtatAssistant {
@@ -100,6 +107,7 @@ export function etatInitial(): EtatAssistant {
     intervenants: [],
     surveillanceActive: null,
     dureePresenceMinutes: 240,
+    contextePatient: [],
   };
 }
 
@@ -215,6 +223,7 @@ export function versDossier(etat: EtatAssistant): DossierHDJ {
     synthese_medicale_tracee: true,
     lettre_liaison_remise: true,
     surveillance_active_documentee: etat.surveillanceActive ?? false,
+    contexte_patient: etat.contextePatient,
     actes_ccam: etat.actes.map((a) => a.acte),
     medicaments: etat.medicaments.map((m) => m.medicament),
     intervenants,
