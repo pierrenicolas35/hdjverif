@@ -124,11 +124,6 @@ function repondre(cle: string, valeur: 'oui' | 'non'): void {
   cliquer(`.btn-oui-non[data-cle="${cle}"][data-valeur="${valeur}"]`);
 }
 
-/** Répond à la question « note d'évolution » d'un intervenant donné. */
-function repondreNote(index: number, valeur: 'oui' | 'non'): void {
-  cliquer(`.btn-oui-non[data-action="note"][data-index="${index}"][data-valeur="${valeur}"]`);
-}
-
 function suivant(): void {
   cliquer('[data-action="avancer"]');
 }
@@ -406,22 +401,31 @@ describe('Intervenants — sélection par bascules de profession', () => {
     expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(1);
   });
 
-  it('la note d’évolution se règle par des boutons Oui / Non', () => {
+  it('ne demande ni spécialité ni note d’évolution : un rappel les remplace', () => {
+    atteindreIntervenants();
     choisirProfession('MEDECIN');
-    expect(
-      document
-        .querySelector('[data-action="note"][data-index="0"][data-valeur="oui"]')
-        ?.getAttribute('aria-pressed'),
-    ).toBe('true');
 
-    repondreNote(0, 'non');
-    expect(texte('.selection')).toContain('non comptée');
-    repondreNote(0, 'oui');
-    expect(
-      document
-        .querySelector('[data-action="note"][data-index="0"][data-valeur="oui"]')
-        ?.getAttribute('aria-pressed'),
-    ).toBe('true');
+    expect(document.querySelector('[data-action="note"]')).toBeNull();
+    expect(document.querySelector('[data-champ^="specialite-"]')).toBeNull();
+
+    const rappel = texte('.rappel-saisie');
+    expect(rappel).toContain('Rappel');
+    expect(rappel).toContain('note d’évolution');
+    expect(rappel).toContain('réputée présente');
+    // Un seul médecin : le rappel sur les spécialités distinctes n'a pas lieu d'être.
+    expect(rappel).not.toContain('spécialités ou surspécialités distinctes');
+  });
+
+  it('rappelle la condition des deux spécialités dès qu’un second médecin est ajouté', () => {
+    atteindreIntervenants();
+    choisirProfession('MEDECIN');
+    cliquer('[data-action="ajouter-medecin"]');
+
+    expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(2);
+    expect(texte('.rappel-saisie')).toContain('spécialités ou surspécialités distinctes');
+    expect(texte('.rappel-saisie')).toContain('à tracer au dossier');
+    // Le bouton d'ajout disparaît une fois le second médecin présent.
+    expect(document.querySelector('[data-action="ajouter-medecin"]')).toBeNull();
   });
 });
 
@@ -442,9 +446,6 @@ describe('Assistant — parcours complet', () => {
     choisirProfession('MEDECIN');
     choisirProfession('IDE');
     choisirProfession('DIETETICIEN');
-    const specialite = document.querySelector<HTMLInputElement>('[data-champ="specialite-0"]');
-    specialite!.value = 'Endocrinologie';
-    specialite!.dispatchEvent(new Event('input', { bubbles: true }));
     suivant(); // densité
 
     repondre('surveillanceActive', 'non');

@@ -950,6 +950,21 @@ input:focus {
   flex: 1 1 auto;
 }
 
+/* Rappel des engagements de dossier (encadré, jamais une question) */
+.rappel-saisie {
+  text-align: left;
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  background: var(--chu-bleu-tres-clair);
+  border: 1px solid var(--chu-bleu-clair);
+  border-left: 3px solid var(--chu-bleu);
+  border-radius: 6px;
+}
+
 /* =====================================================================
    Résultat
    ===================================================================== */

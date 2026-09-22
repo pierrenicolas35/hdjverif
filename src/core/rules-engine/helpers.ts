@@ -120,6 +120,11 @@ export function medicamentsReferenceIncomplete(
  *     distinctes lorsqu'ils sont plusieurs ; un médecin seul peut voir
  *     l'ensemble de ses interventions dénombrées.
  *
+ * Quand **aucune** spécialité médicale n'est renseignée (saisie limitée à la
+ * profession, cas de l'assistant), chaque médecin compte pour un intervenant
+ * distinct : la condition est alors un engagement de dossier, rappelé au
+ * praticien et vérifié en contrôle T2A.
+ *
  * Ce décompte est restitué à titre informatif (gradation GHS intermédiaire à
  * compter de 3 interventions, GHS plein à compter de 4) ; il ne conditionne
  * pas à lui seul la décision du moteur, qui s'appuie sur les piliers de densité.
@@ -140,7 +145,7 @@ export function denombrerInterventions(dossier: DossierHDJ): number {
         .map((m) => m.specialite_medicale?.trim().toLowerCase())
         .filter((s): s is string => Boolean(s)),
     );
-    nbMedecins = specialites.size;
+    nbMedecins = specialites.size > 0 ? specialites.size : medecins.length;
   }
 
   // 2. Paramédicaux / socio-éducatifs.

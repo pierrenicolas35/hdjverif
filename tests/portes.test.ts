@@ -283,6 +283,34 @@ describe('Porte 3 — pilier 3 (pluriprofessionnalité concertée)', () => {
     expect(resultat.statut).toBe('REJET_VERS_ACE');
   });
 
+  it('option 3A — deux médecins sans spécialité renseignée → validé sous engagement de dossier', () => {
+    const resultat = evaluerDossier(
+      dossier({
+        actes_ccam: [ACTE_BIO_COMPLEXE],
+        intervenants: [
+          intervenant('MEDECIN', { id: 'med-1' }),
+          intervenant('MEDECIN', { id: 'med-2' }),
+        ],
+      }),
+    );
+
+    expect(resultat.piliers_valides).toContain('PILIER_3_PLURIPROFESSIONNALITE');
+    const justifications =
+      resultat.piliers
+        .find((p) => p.id === 'PILIER_3_PLURIPROFESSIONNALITE')
+        ?.justifications.join(' ') ?? '';
+    // La condition de fond reste rappelée : elle se vérifie au dossier du patient.
+    expect(justifications).toContain('deux spécialités ou surspécialités distinctes');
+    // Deux médecins comptent pour deux interventions.
+    expect(denombrerInterventions(dossier({
+      actes_ccam: [ACTE_BIO_COMPLEXE],
+      intervenants: [
+        intervenant('MEDECIN', { id: 'med-1' }),
+        intervenant('MEDECIN', { id: 'med-2' }),
+      ],
+    }))).toBe(3);
+  });
+
   it('option 3B — un médecin + deux professions paramédicales distinctes → validé', () => {
     const resultat = evaluerDossier(
       dossier({
@@ -406,11 +434,11 @@ describe('Validation du dossier', () => {
     expect(erreurs.map((e) => e.champ)).toContain('intervenants[0].profession');
   });
 
-  it('exige une spécialité pour un médecin', () => {
+  it('n’exige plus de spécialité pour un médecin (saisie limitée à la profession)', () => {
     const erreurs = validerDossier(
       dossier({ intervenants: [intervenant('MEDECIN', { id: 'med-spec' })] }),
     );
-    expect(erreurs.map((e) => e.champ)).toContain('intervenants[0].specialite_medicale');
+    expect(erreurs).toHaveLength(0);
   });
 });
 

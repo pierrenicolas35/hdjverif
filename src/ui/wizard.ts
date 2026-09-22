@@ -392,7 +392,7 @@ class Assistant {
       medicaments:
         'Recherchez le produit par son nom ou sa DCI : la fiche indique elle-même s’il s’agit d’un médicament de réserve hospitalière.',
       intervenants:
-        'Cliquez sur les professionnels qui interviendront auprès du patient : le bouton reste enfoncé. Précisez seulement si une note d’évolution sera rédigée.',
+        'Cliquez sur les professionnels qui interviendront auprès du patient : le bouton reste enfoncé. Rien d’autre à saisir, les engagements de dossier sont rappelés sous la liste.',
       densite:
         'Une surveillance rapprochée prévue et tracée justifie à elle seule un GHS plein ; la durée de présence n’est qu’un point d’attention.',
       contexte:
@@ -585,34 +585,9 @@ class Assistant {
             <div class="element-tete">
               <div>
                 <strong>${esc(LIBELLES_PROFESSION[intervenant.profession])}</strong>
-                <div class="element-meta">
-                  ${
-                    intervenant.note_evolution_tracee
-                      ? 'Note d’évolution prévue — intervention comptée'
-                      : 'Aucune note prévue — intervention non comptée'
-                  }
-                </div>
               </div>
               <button type="button" class="btn-retirer" data-action="retirer-intervenant"
                       data-index="${index}">Retirer</button>
-            </div>
-            <div class="element-questions">
-              ${
-                intervenant.profession === 'MEDECIN'
-                  ? `<div class="mini-question" style="display:block">
-                       <div style="margin-bottom:8px">
-                         Spécialité — nécessaire pour distinguer deux médecins
-                       </div>
-                       <input type="text" data-champ="specialite-${index}"
-                              value="${esc(intervenant.specialite_medicale ?? '')}"
-                              placeholder="Endocrinologie, cardiologie…" />
-                     </div>`
-                  : ''
-              }
-              <div class="mini-question">
-                <span>Une note d’évolution sera-t-elle rédigée dans le dossier ?</span>
-                ${boutonsOuiNon('note', intervenant.note_evolution_tracee, 'note', index)}
-              </div>
             </div>
           </div>`,
           )
@@ -620,18 +595,43 @@ class Assistant {
       : `<div class="vide">Aucun professionnel pour l’instant.<br />Cliquez sur les professionnels
          qui interviendront auprès du patient.</div>`;
 
-    const medecinPresent = this.professionPresente('MEDECIN');
+    const medecins = this.etat.intervenants.filter((i) => i.profession === 'MEDECIN').length;
 
     return `
       <p class="consigne">Professionnels prévus auprès du patient</p>
       ${this.basculesProfessions()}
       ${
-        medecinPresent
+        medecins === 1
           ? `<button type="button" class="btn-bascule ajout-second"
                     data-action="ajouter-medecin">＋ Un second médecin (autre spécialité)</button>`
           : ''
       }
-      <div class="selection">${elements}</div>`;
+      <div class="selection">${elements}</div>
+      ${this.rappelIntervenants(medecins)}`;
+  }
+
+  /**
+   * Rappel des engagements attachés à l'équipe.
+   *
+   * Ces deux points sont réputés réunis dans une HDJ en cours de programmation et
+   * ne sont donc pas interrogés : ils restent à tracer au dossier du patient, où
+   * le contrôle T2A les vérifie (annexe 4, point 2.b.iii).
+   */
+  private rappelIntervenants(nbMedecins: number): string {
+    return `
+      <p class="note-saisie rappel-saisie">
+        <strong>Rappel.</strong> La <strong>note d’évolution</strong> de chaque intervenant doit
+        être rédigée dans le dossier du patient : elle est réputée présente. Sans elle,
+        l’intervention n’est pas dénombrée en contrôle.
+        ${
+          nbMedecins >= 2
+            ? ' Les interventions de deux professionnels médicaux ne sont dénombrées '
+              + 'séparément que s’ils relèvent de <strong>deux spécialités ou '
+              + 'surspécialités distinctes</strong> (annexe 4, point 2.b.iii) : à tracer au '
+              + 'dossier du patient.'
+            : ''
+        }
+      </p>`;
   }
 
   /* -------------------------------------------------- surveillance & durée */
@@ -983,12 +983,6 @@ class Assistant {
         this.etat.intervenants.splice(index, 1);
         this.rendre();
         break;
-      case 'note': {
-        const intervenant = this.etat.intervenants[index];
-        if (intervenant) intervenant.note_evolution_tracee = valeur === 'oui';
-        this.rendre();
-        break;
-      }
       case 'fiche-imprimer':
         if (this.dernierDossier && this.dernierResultat) {
           imprimerFiche(this.dernierDossier, this.dernierResultat);
@@ -1042,9 +1036,6 @@ class Assistant {
       const nombre = Number(valeur);
       this.etat.dureePresenceMinutes = Number.isFinite(nombre) ? Math.max(0, nombre) : 0;
       this.rendreVerdictProvisoire();
-    } else if (champ.startsWith('specialite-')) {
-      const intervenant = this.etat.intervenants[Number(champ.split('-')[1])];
-      if (intervenant) intervenant.specialite_medicale = valeur;
     }
   }
 

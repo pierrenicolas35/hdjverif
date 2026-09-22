@@ -49,6 +49,7 @@ export function contenuFiche(dossier: DossierHDJ, resultat: ResultatAudit): stri
     `  [${dossier.lettre_liaison_remise ? 'x' : ' '}] Lettre de liaison remise (art. R. 1112-1-2 CSP)`,
     `  [${dossier.surveillance_active_documentee ? 'x' : ' '}] Traçabilité de la surveillance active (constantes, tolérance)`,
     '  [ ] Notes d’évolution individualisées de chaque intervenant',
+    '  [ ] Deux spécialités/surspécialités distinctes si plusieurs professionnels médicaux',
     '  [ ] Éléments de contexte patient / surveillance particulière',
     '',
   ].join('\n');

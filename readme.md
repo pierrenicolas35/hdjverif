@@ -27,6 +27,20 @@ Site : <https://pierrenicolas35.github.io/hdjverif/>
 
 **Principe** : ne demander que ce qui sert au calcul de la facturation d’HDJ.
 
+### Les engagements d’équipe : un rappel, pas une question
+
+Deux conditions de fond de l’annexe 4, point 2.b.iii sont **réputées réunies** dans une HDJ en
+cours de programmation, comme les faits de la porte 1 : elles ne sont donc pas demandées, mais
+rappelées à l’écran pour être **tracées au dossier du patient**, où le contrôle T2A les vérifie :
+
+1. la **note d’évolution** de chaque intervenant doit être rédigée dans le dossier — sans elle,
+   l’intervention n’est pas dénombrée ;
+2. les interventions de **deux professionnels médicaux** ne sont dénombrées séparément que s’ils
+   relèvent de **deux spécialités ou surspécialités distinctes**.
+
+Ces engagements sont repris dans l’audit : le pilier « pluriprofessionnalité concertée » formule
+la réserve lorsqu’aucune spécialité n’est renseignée.
+
 ### Une évaluation prospective
 
 L’outil sert à vérifier, **avant de programmer**, que les soins envisagés relèvent bien d’une
@@ -71,8 +85,9 @@ durée de présence et **contexte patient**.
 - **Équipe par boutons à bascule** : un bouton par profession (médecin, infirmier(ère),
   kinésithérapeute, diététicien(ne), psychologue, assistant(e) social(e), autre paramédical).
   Cliquer **maintient le bouton enfoncé** et sélectionne un intervenant ; re-cliquer le
-  désélectionne. Seule question complémentaire, par intervenant : **une note d’évolution
-  sera-t-elle rédigée ?** (Oui / Non).
+  désélectionne. Un second médecin s’ajoute par un bouton dédié (autre spécialité).
+  **Aucune autre saisie** : ni spécialité, ni question sur la note d’évolution — un **rappel**
+  encadré les remplace (voir ci-dessous).
 - **Référentiels faisant foi** : les caractéristiques d’un acte CCAM (plateau technique lourd,
   acte marqueur HDJ, réalisation en externe) et le classement d’un médicament (réserve
   hospitalière, surveillance renforcée) sont **repris du référentiel** et affichés. Ils ne sont
@@ -161,7 +176,9 @@ produisent toujours le même résultat.
    moins deux actes CCAM dénombrables distincts. L’ECG `DEQP003` est exclu du décompte
    (annexe 4, point 2.b.iii).
 3. **Pluriprofessionnalité concertée** — seuls les intervenants ayant
-   `note_evolution_tracee === true` comptent : **3A** ≥ 2 médecins de spécialités distinctes,
+   `note_evolution_tracee === true` comptent (par défaut : tous, la note étant réputée
+   rédigée) : **3A** ≥ 2 médecins de spécialités distinctes — ou **2 médecins sans spécialité
+   renseignée**, la condition étant alors rappelée comme engagement de dossier —,
    **3B** ≥ 1 médecin + ≥ 2 professions paramédicales/sociales distinctes.
 
 **Niveau de GHS (porte 4)** — l’instruction distingue le GHS « intermédiaire » du GHS « plein » :
@@ -315,7 +332,7 @@ tableau de bord Supabase.
 
 ```bash
 npm install
-npm test              # 106 tests : moteur, portes, assistant (référentiel simulé),
+npm test              # 108 tests : moteur, portes, assistant (référentiel simulé),
                       #             lecture des référentiels officiels
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict

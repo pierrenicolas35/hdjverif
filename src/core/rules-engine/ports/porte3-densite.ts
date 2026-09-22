@@ -152,11 +152,23 @@ export function evaluerPilier3(dossier: DossierHDJ): Pilier {
   const professionsParamedicales = professionsParamedicalesDistinctes(dossier);
 
   // Option 3A — au moins 2 médecins de spécialités distinctes.
-  const option3A = nbMedecins >= 2 && specialites.length >= 2;
+  //
+  // L'assistant ne demande plus la spécialité : quand aucune n'est renseignée, deux
+  // médecins ou plus sont retenus comme deux intervenants distincts, sous réserve de
+  // l'engagement de dossier rappelé ci-dessous (annexe 4, point 2.b.iii).
+  const specialiteRenseignee = medecinsActifs(dossier).some((m) =>
+    Boolean(m.specialite_medicale?.trim()),
+  );
+  const option3A = nbMedecins >= 2 && (specialites.length >= 2 || !specialiteRenseignee);
   if (option3A) {
     justifications.push(
-      `${nbMedecins} médecins de spécialités distinctes avec note d’évolution tracée : ` +
-        `${specialites.join(', ')}.`,
+      `${nbMedecins} professionnels médicaux avec note d’évolution tracée` +
+        (specialites.length >= 2 ? ` : ${specialites.join(', ')}.` : '.') +
+        (specialites.length >= 2
+          ? ''
+          : ' Leurs interventions ne sont dénombrées séparément que s’ils relèvent de deux ' +
+            'spécialités ou surspécialités distinctes : à tracer au dossier du patient ' +
+            '(annexe 4, point 2.b.iii).'),
     );
   } else if (nbMedecins >= 2) {
     justifications.push(

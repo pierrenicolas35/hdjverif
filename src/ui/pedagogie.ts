@@ -161,7 +161,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'PIEGE', 'Bilan de diabète : s’il s’agit d’une cure de chimiothérapie, c’est une séance forfaitisée — un bilan pluriprofessionnel relève bien de l’HDJ.'),
     cas('actes', 'ACE', 'ECG de dépistage pratiqué seul au décours d’une consultation : acte isolé, en principe externe.'),
     cas('medicaments', 'GHS', 'Mise en route d’un analogue de la somatostatine (réserve hospitalière) avec surveillance de la tolérance.'),
-    cas('intervenants', 'GHS', 'Bilan de diabète déséquilibré associant endocrinologue, IDE d’éducation et diététicien(ne), chacun ayant prévu sa note d’évolution.'),
+    cas('intervenants', 'GHS', 'Bilan de diabète déséquilibré associant endocrinologue, IDE d’éducation et diététicien(ne), notes d’évolution réputées au dossier.'),
     cas('densite', 'PIEGE', 'Venue de 45 minutes pour un simple renouvellement d’ordonnance : la durée prévue et l’absence de moyens trahissent une ACE.'),
     cas('contexte', 'GHS', 'Diabète instable chez un patient âgé, isolé, à risque d’hypoglycémie sévère : contexte patient à tracer au dossier.'),
   ],
@@ -169,7 +169,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'PIEGE', 'Patient adressé par les urgences : la prise en charge n’est pas programmée, elle ne relève pas de l’hospitalisation de jour.'),
     cas('actes', 'GHS', 'Exploration fonctionnelle avec cathétérisme et mesure hémodynamique sur plateau technique lourd.'),
     cas('medicaments', 'GHS', 'Perfusion d’un inotrope (lévosimendan) sous surveillance continue des constantes.'),
-    cas('intervenants', 'GHS', 'Cardiologue, IDE de surveillance et diététicien(ne) : deux professions paramédicales distinctes, notes prévues.'),
+    cas('intervenants', 'GHS', 'Cardiologue, IDE de surveillance et diététicien(ne) : deux professions paramédicales distinctes, notes d’évolution réputées au dossier.'),
     cas('densite', 'ACE', 'Épreuve d’effort isolée chez un patient stable : réalisable en cabinet, sans mobiliser la structure d’HDJ.'),
     cas('contexte', 'GHS', 'Insuffisance cardiaque décompensée chez un patient en précarité sociale, incapable de gérer seul son traitement.'),
   ],
@@ -177,7 +177,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'HORS_CHAMP', 'Cure de chimiothérapie : séance forfaitisée, elle n’a pas à démontrer la densité.'),
     cas('actes', 'GHS', 'Bilan d’extension regroupant plusieurs actes et avis coordonnés le même jour.'),
     cas('medicaments', 'GHS', 'Perfusion d’un anticorps monoclonal de réserve hospitalière hors cure, sous surveillance de la tolérance.'),
-    cas('intervenants', 'GHS', 'Oncologue, IDE de perfusion et psychologue, chacun ayant prévu sa note d’évolution.'),
+    cas('intervenants', 'GHS', 'Oncologue, IDE de perfusion et psychologue, notes d’évolution réputées au dossier.'),
     cas('densite', 'GHS', 'Surveillance de la tolérance et des constantes pendant la perfusion : surveillance particulière à tracer.'),
     cas('contexte', 'GHS', 'Patient très éloigné de l’établissement, sans aidant disponible : la situation doit être précisée au dossier.'),
   ],
@@ -185,7 +185,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'HORS_CHAMP', 'Bilan réalisé dans un hôpital de jour psychiatrique : financement propre, hors de cette évaluation.'),
     cas('actes', 'GHS', 'Bilan de sclérose en plaques coordonné : imagerie, consultation spécialisée et évaluation neuropsychologique.'),
     cas('medicaments', 'GHS', 'Perfusion d’immunoglobulines ou de natalizumab (réserve hospitalière) sous surveillance.'),
-    cas('intervenants', 'GHS', 'Bilan pluriprofessionnel : neurologue, kinésithérapeute et orthophoniste, notes prévues.'),
+    cas('intervenants', 'GHS', 'Bilan pluriprofessionnel : neurologue, kinésithérapeute et orthophoniste, notes d’évolution réputées au dossier.'),
     cas('densite', 'GHS', 'Surveillance rapprochée après une première perfusion d’immunoglobulines : à tracer au dossier de soins.'),
     cas('contexte', 'GHS', 'Troubles de la déglutition et de la marche chez un patient appareillé : contexte patient à documenter.'),
   ],
@@ -193,7 +193,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'PIEGE', 'Une infiltration programmée en consultation externe ne devient pas une HDJ parce qu’elle est planifiée.'),
     cas('actes', 'GHS', 'Bilan de polyarthrite regroupant plusieurs explorations sur la même journée.'),
     cas('medicaments', 'GHS', 'Perfusion d’une biothérapie (infliximab, rituximab) avec surveillance de la tolérance immédiate.'),
-    cas('intervenants', 'GHS', 'Rhumatologue, IDE et assistant(e) social(e) intervenant auprès du patient, notes prévues.'),
+    cas('intervenants', 'GHS', 'Rhumatologue, IDE et assistant(e) social(e) intervenant auprès du patient, notes d’évolution réputées au dossier.'),
     cas('densite', 'PIEGE', 'Une perfusion de biothérapie sans surveillance prévue au dossier ne suffit pas à caractériser la densité de la venue.'),
     cas('contexte', 'GHS', 'Rhumatisme inflammatoire chez une personne âgée isolée, avec troubles cognitifs : contexte patient à tracer.'),
   ],
@@ -209,7 +209,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'HORS_CHAMP', 'Séance d’hémodialyse : financée par forfait de séance, hors critères de gradation.'),
     cas('actes', 'GHS', 'Bilan pré-transplantation coordonné : plusieurs avis et examens sur la même journée.'),
     cas('medicaments', 'GHS', 'Administration d’époétine (réserve hospitalière) avec surveillance tensionnelle.'),
-    cas('intervenants', 'GHS', 'Néphrologue, IDE et assistant(e) social(e) : interventions coordonnées, notes prévues.'),
+    cas('intervenants', 'GHS', 'Néphrologue, IDE et assistant(e) social(e) : interventions coordonnées, notes d’évolution réputées au dossier.'),
     cas('densite', 'GHS', 'Surveillance rapprochée de la pression artérielle après injection : à tracer au dossier.'),
     cas('contexte', 'GHS', 'Patient dialysé fragile, en précarité, coopération difficile : contexte patient à documenter.'),
   ],
@@ -225,7 +225,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'HORS_CHAMP', 'Hôpital de jour pédopsychiatrique : financement propre, hors du champ de cette évaluation.'),
     cas('actes', 'GHS', 'Bilan de grand prématuré regroupant plusieurs évaluations coordonnées le même jour.'),
     cas('medicaments', 'GHS', 'Perfusion d’immunoglobulines ou de biothérapie (réserve hospitalière) sous surveillance de l’enfant.'),
-    cas('intervenants', 'GHS', 'Bilan de troubles du neurodéveloppement : pédiatre, psychologue et orthophoniste, notes prévues.'),
+    cas('intervenants', 'GHS', 'Bilan de troubles du neurodéveloppement : pédiatre, psychologue et orthophoniste, notes d’évolution réputées au dossier.'),
     cas('densite', 'GHS', 'Enfant polyhandicapé : surveillance prolongée et adaptation du rythme à documenter.'),
     cas('contexte', 'GHS', 'Suspicion de maltraitance chez un mineur : situation de vulnérabilité à tracer au dossier.'),
   ],
@@ -233,7 +233,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'HORS_CHAMP', 'Évaluation gériatrique réalisée dans un service de SMR : financement propre, hors HDJ MCO.'),
     cas('actes', 'GHS', 'Évaluation gériatrique multidimensionnelle : plusieurs évaluations articulées sur la journée.'),
     cas('medicaments', 'GHS', 'Réhydratation ou perfusion de fer, selon le produit de réserve hospitalière, avec surveillance des constantes.'),
-    cas('intervenants', 'GHS', 'Gériatre, psychologue et assistant(e) social(e) intervenant auprès du patient, notes prévues.'),
+    cas('intervenants', 'GHS', 'Gériatre, psychologue et assistant(e) social(e) intervenant auprès du patient, notes d’évolution réputées au dossier.'),
     cas('densite', 'PIEGE', 'Une évaluation très courte doit conduire à vérifier la réalité des interventions dénombrées.'),
     cas('contexte', 'GHS', 'Patient de 92 ans, état grabataire, vivant seul : contexte patient à tracer au dossier.'),
   ],
@@ -257,7 +257,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'PIEGE', 'Un acte associé à un forfait « sécurité environnement » ne peut en principe donner lieu à un GHS.'),
     cas('actes', 'GHS', 'Chirurgie ambulatoire : la présence d’un acte classant emporte la facturation d’un GHS plein.'),
     cas('medicaments', 'GHS', 'Antibioprophylaxie et antalgiques de réserve hospitalière administrés sur place, avec surveillance.'),
-    cas('intervenants', 'GHS', 'Chirurgien, anesthésiste et IDE de surveillance, chacun avec une note d’évolution prévue.'),
+    cas('intervenants', 'GHS', 'Chirurgien, anesthésiste et IDE de surveillance, notes d’évolution réputées au dossier.'),
     cas('densite', 'GHS', 'Surveillance post-opératoire en salle de réveil puis en unité d’hospitalisation de jour.'),
     cas('contexte', 'GHS', 'Patient en situation de handicap nécessitant une installation spécifique : contexte patient à tracer.'),
   ],
@@ -265,7 +265,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('champ', 'PIEGE', 'Une venue non programmée (adressage par les urgences) ne relève pas de l’hospitalisation de jour.'),
     cas('actes', 'GHS', 'Plusieurs actes de techniques différentes réalisés le même jour sur un plateau technique coordonné.'),
     cas('medicaments', 'GHS', 'Administration d’un produit de la réserve hospitalière : motif suffisant, quel que soit le nombre d’interventions.'),
-    cas('intervenants', 'GHS', 'Au moins un médecin et deux professions paramédicales ou sociales distinctes, notes prévues.'),
+    cas('intervenants', 'GHS', 'Au moins un médecin et deux professions paramédicales ou sociales distinctes, notes d’évolution réputées au dossier.'),
     cas('densite', 'PIEGE', 'Une surveillance annoncée mais non tracée au dossier n’est pas opposable en contrôle.'),
     cas('contexte', 'GHS', 'Situation de vulnérabilité retenue au dossier : GHS plein quel que soit le nombre d’interventions.'),
   ],
@@ -350,9 +350,10 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
   },
   intervenants: {
     pourquoi:
-      'Indiquez simplement les professionnels qui interviendront directement auprès du patient. ' +
-      'Il suffit de préciser, pour chacun, si une note d’évolution sera rédigée : un intervenant ' +
-      'sans note n’est pas dénombrable en contrôle.',
+      'Indiquez simplement les professionnels qui interviendront directement auprès du patient : ' +
+      'la liste des boutons suffit. Deux engagements restent à tenir au dossier (la note ' +
+      'd’évolution de chaque intervenant, et la condition de spécialités distinctes entre ' +
+      'professionnels médicaux) : ils sont rappelés sous la liste et vérifiés en contrôle.',
     regle:
       'Annexe 4, point 2.b.iii : interventions « réalisées directement auprès du patient » ; ' +
       'plusieurs médecins ne sont dénombrés que s’ils relèvent de deux spécialités distinctes.',

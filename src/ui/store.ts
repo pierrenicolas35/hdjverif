@@ -170,8 +170,13 @@ export function medicamentChoisiDepuisReferentiel(ref: MedicamentRef): Medicamen
 /**
  * Crée un intervenant pour la profession choisie.
  *
- * La note d'évolution est considérée tracée par défaut : l'utilisateur la
- * décoche explicitement (bouton « Non ») lorsqu'aucune note n'a été rédigée.
+ * La saisie se limite à la profession : ni spécialité, ni question sur la note
+ * d'évolution. Ces deux points sont **réputés réunis** dans une HDJ en cours de
+ * programmation — ils font l'objet d'un rappel à l'écran et restent à tracer au
+ * dossier du patient (annexe 4, point 2.b.iii) :
+ *   • la note d'évolution de chaque intervenant est présente au dossier ;
+ *   • deux professionnels médicaux ne comptent séparément que s'ils relèvent de
+ *     deux spécialités ou surspécialités distinctes.
  */
 export function intervenantPourProfession(profession: Profession): IntervenantSaisi {
   return {
@@ -179,7 +184,6 @@ export function intervenantPourProfession(profession: Profession): IntervenantSa
     profession,
     note_evolution_tracee: true,
     acte_ou_atelier: '',
-    ...(profession === 'MEDECIN' ? { specialite_medicale: '' } : {}),
   };
 }
 

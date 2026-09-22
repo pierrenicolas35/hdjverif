@@ -46,12 +46,6 @@ export function validerDossier(dossier: DossierHDJ): readonly ErreurValidation[]
         `Profession inconnue : ${String(intervenant.profession)}.`,
       );
     }
-    if (intervenant.profession === 'MEDECIN' && !intervenant.specialite_medicale?.trim()) {
-      ajouter(
-        `intervenants[${index}].specialite_medicale`,
-        'Spécialité médicale requise pour un médecin (nécessaire au pilier de pluriprofessionnalité).',
-      );
-    }
   });
 
   dossier.actes_ccam.forEach((acte, index) => {
