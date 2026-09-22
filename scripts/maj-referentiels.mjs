@@ -15,6 +15,10 @@
  *   3. échec à n'importe quelle étape → code retour 1, empreinte précédente conservée, donc la
  *      prochaine exécution retentera l'import.
  *
+ * La date de mise à jour effective est enregistrée dans `referentiel_maj`, que l'application
+ * affiche dans son en-tête (« Référentiel connecté · MAJ jj/mm/aaaa ») : elle ne bouge donc
+ * que lorsque les sources officielles changent réellement.
+ *
  * Installation : tâche cron mensuelle (voir readme, § « Mise à jour mensuelle »).
  *
  * Clé d'écriture : `SUPABASE_SERVICE_ROLE_KEY` si elle est fournie, sinon le jeton
@@ -146,6 +150,7 @@ async function principal() {
   await executerScript('scripts/import-referentiels.mjs', {
     SUPABASE_URL: URL_SUPABASE,
     SUPABASE_SERVICE_ROLE_KEY: cle,
+    SOURCES_EMPREINTE: empreinte,
   });
   await executerScript('scripts/verifier-referentiel.mjs', { SUPABASE_URL: URL_SUPABASE });
 

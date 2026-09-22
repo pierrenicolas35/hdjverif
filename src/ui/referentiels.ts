@@ -42,6 +42,14 @@ export interface ActeRef {
   readonly necessite_plateau_lourd: boolean | null;
 }
 
+/** Date de mise à jour d'une table de référentiel. */
+export interface MajReferentiel {
+  readonly nom: string;
+  readonly libelle: string;
+  readonly maj_le: string;
+  readonly lignes: number | null;
+}
+
 /** État de la liaison au référentiel. */
 export type EtatReferentiel = 'inconnu' | 'connecte' | 'degrade';
 
@@ -60,6 +68,62 @@ export function libelleEtatReferentiel(): string {
     default:
       return 'Référentiel : connexion en cours…';
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Mises à jour du référentiel
+ * ------------------------------------------------------------------ */
+
+/**
+ * Date de mise à jour de chaque table de référentiel (`referentiel_maj`).
+ * Renvoie `null` si le suivi n'est pas disponible : l'en-tête affiche alors l'état
+ * sans date, plutôt qu'aucune information.
+ */
+export async function dernieresMaj(): Promise<readonly MajReferentiel[] | null> {
+  try {
+    return await lireTable<MajReferentiel[]>(
+      'referentiel_maj?select=nom,libelle,maj_le,lignes&order=nom',
+    );
+  } catch {
+    return null;
+  }
+}
+
+const dateCourte = (iso: string): string => {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('fr-FR');
+};
+
+/**
+ * Libellé compact des mises à jour, affiché à côté de l'état de la connexion :
+ *   • même date pour les deux tables   → « MAJ 22/09/2026 » ;
+ *   • dates distinctes                 → « MAJ médicaments 22/09/2026 · CCAM 12/02/2026 ».
+ */
+export function libelleMaj(majs: readonly MajReferentiel[] | null): string {
+  if (!majs || majs.length === 0) return '';
+  const dates = majs.map((m) => dateCourte(m.maj_le));
+  if (dates.some((d) => d === '')) return '';
+  if (dates.every((d) => d === dates[0])) return `MAJ ${dates[0]}`;
+  return `MAJ ${majs
+    .map((m) => `${nomCourt(m)} ${dateCourte(m.maj_le)}`)
+    .join(' · ')}`;
+}
+
+/** Nom court d'une table pour l'affichage. */
+function nomCourt(maj: MajReferentiel): string {
+  return maj.nom === 'referentiel_medicaments' ? 'médicaments' : 'CCAM';
+}
+
+/** Détail complet, en infobulle de l'en-tête. */
+export function detailMaj(majs: readonly MajReferentiel[] | null): string {
+  if (!majs || majs.length === 0) return 'Dates de mise à jour indisponibles.';
+  return majs
+    .map((m) => {
+      const horodatage = new Date(m.maj_le).toLocaleString('fr-FR');
+      const volume = m.lignes === null ? '' : ` — ${m.lignes.toLocaleString('fr-FR')} lignes`;
+      return `${m.libelle} : ${horodatage}${volume}`;
+    })
+    .join('\n');
 }
 
 /* ------------------------------------------------------------------ *
@@ -84,6 +148,27 @@ async function appelerRpc<T>(
       method: 'POST',
       headers: entetes(),
       body: JSON.stringify(corps),
+      signal: controleur.signal,
+    });
+    if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);
+    const donnees = (await reponse.json()) as T;
+    etat = 'connecte';
+    return donnees;
+  } catch (erreur) {
+    etat = 'degrade';
+    throw erreur;
+  } finally {
+    clearTimeout(minuteur);
+  }
+}
+
+/** Lecture simple d'une table du référentiel (PostgREST, clé `anon`). */
+async function lireTable<T>(chemin: string): Promise<T> {
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), DELAI_REQUETE_MS);
+  try {
+    const reponse = await fetch(`${SUPABASE_URL}/rest/v1/${chemin}`, {
+      headers: entetes(),
       signal: controleur.signal,
     });
     if (!reponse.ok) throw new Error(`HTTP ${reponse.status}`);

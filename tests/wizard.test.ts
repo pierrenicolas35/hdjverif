@@ -9,6 +9,8 @@
  */
 
 import { readFileSync } from 'node:fs';
+
+import { detailMaj, libelleMaj } from '../src/ui/referentiels.js';
 import { resolve } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -65,6 +67,22 @@ const MEDICAMENTS: readonly Record<string, unknown>[] = [
   },
 ];
 
+/** Suivi des mises à jour : dates distinctes pour les deux tables. */
+const MAJ_REFERENTIELS: readonly Record<string, unknown>[] = [
+  {
+    nom: 'referentiel_ccam',
+    libelle: 'Nomenclature CCAM',
+    maj_le: '2026-02-09T21:33:08.000Z',
+    lignes: 1969,
+  },
+  {
+    nom: 'referentiel_medicaments',
+    libelle: 'Médicaments (BDPM)',
+    maj_le: '2026-09-22T10:52:32.000Z',
+    lignes: 13609,
+  },
+];
+
 function reponseJson(donnees: unknown): Response {
   return {
     ok: true,
@@ -81,6 +99,7 @@ beforeAll(async () => {
       const url = String(entree);
       const corps = init?.body ? (JSON.parse(init.body) as Record<string, unknown>) : {};
 
+      if (url.includes('referentiel_maj')) return reponseJson(MAJ_REFERENTIELS);
       if (url.includes('rechercher_ccam')) return reponseJson([ACTES['ZZQL002']]);
       if (url.includes('acte_ccam')) return reponseJson([ACTES[String(corps['p_code'])]]);
       if (url.includes('rechercher_medicaments')) {
@@ -679,5 +698,37 @@ describe('Référentiel — valeur absente et surveillance particulière', () =>
     await choisirPremiereSuggestion('suggestion-medicament');
 
     expect(texte('.element-meta')).toContain('surveillance particulière liée au produit');
+  });
+});
+
+describe('En-tête — dates de mise à jour des référentiels', () => {
+  it('affiche la date de chaque base à côté de l’état de connexion', async () => {
+    retourAccueil();
+    await attendre(60);
+    await attendre(60);
+
+    const voyant = document.querySelector('#voyant-referentiel');
+    expect(voyant?.textContent).toContain('Référentiel');
+    // Dates distinctes : chaque table est nommée.
+    expect(voyant?.textContent).toContain('médicaments 22/09/2026');
+    expect(voyant?.textContent).toContain('CCAM 09/02/2026');
+    // Le détail (volumes) est disponible en infobulle.
+    // Les volumes sont formatés en français : l'espace peut être insécable.
+    expect(voyant?.getAttribute('title')).toMatch(/13\s*609 lignes/);
+    expect(voyant?.getAttribute('title')).toMatch(/1\s*969 lignes/);
+  });
+
+  it('condense la date quand les deux bases ont la même mise à jour', () => {
+    const memeDate = [
+      { nom: 'referentiel_medicaments', libelle: 'Médicaments', maj_le: '2026-09-22T10:00:00Z', lignes: 10 },
+      { nom: 'referentiel_ccam', libelle: 'CCAM', maj_le: '2026-09-22T09:00:00Z', lignes: 20 },
+    ];
+    expect(libelleMaj(memeDate)).toBe('MAJ 22/09/2026');
+  });
+
+  it('n’affiche aucune date si le suivi est indisponible', () => {
+    expect(libelleMaj(null)).toBe('');
+    expect(libelleMaj([])).toBe('');
+    expect(detailMaj(null)).toContain('indisponibles');
   });
 });

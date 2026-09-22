@@ -16,7 +16,9 @@
  *   3. la recherche par **DCI** (`infliximab` → REMICADE), qui était cassée lorsque la
  *      colonne `dci` contenait le nom commercial ;
  *   4. la colonne `surveillance_particuliere` (libellé CPD) et la doctrine de la valeur
- *      absente : une spécialité hors CPD reste « non déterminée » (`null`), jamais « non ».
+ *      absente : une spécialité hors CPD reste « non déterminée » (`null`), jamais « non » ;
+ *   5. le suivi des mises à jour (`referentiel_maj`), affiché dans l'en-tête de l'application :
+ *      chaque table doit porter une date et un volume cohérents.
  *
  * Code retour : 0 si tout est conforme, 1 sinon.
  */
@@ -73,6 +75,13 @@ async function specialite(prefixe) {
   if (!reponse.ok) throw new Error(`HTTP ${reponse.status} : ${await reponse.text()}`);
   const lignes = await reponse.json();
   return lignes[0] ?? null;
+}
+
+/** Lecture simple d'une table (PostgREST, clé `anon`). */
+async function lireTable(chemin) {
+  const reponse = await fetch(`${URL_SUPABASE}/rest/v1/${chemin}`, { headers: entetes });
+  if (!reponse.ok) throw new Error(`HTTP ${reponse.status} : ${await reponse.text()}`);
+  return reponse.json();
 }
 
 /** Appelle la fonction de recherche de l'application (insensible casse/accents). */
@@ -151,6 +160,28 @@ async function principal() {
       mabthera?.surveillance_particuliere,
     )} (attendu true : libellé CPD)`,
   );
+
+  console.log('\n— Suivi des mises à jour (affiché dans l’en-tête) —');
+  let suivi = [];
+  try {
+    suivi = await lireTable('referentiel_maj?select=nom,libelle,maj_le,lignes&order=nom');
+  } catch (erreur) {
+    ligne(false, `table referentiel_maj inaccessible (${erreur.message})`);
+  }
+  for (const nom of ['referentiel_ccam', 'referentiel_medicaments']) {
+    const ligneSuivi = suivi.find((s) => s.nom === nom);
+    if (!ligneSuivi) {
+      ligne(false, `${nom} : aucune date de mise à jour enregistrée`);
+      continue;
+    }
+    const quand = new Date(ligneSuivi.maj_le);
+    const volume = nom === 'referentiel_medicaments' ? total : 1969;
+    ligne(
+      !Number.isNaN(quand.getTime()) && ligneSuivi.lignes === volume,
+      `${ligneSuivi.libelle} → mise à jour du ${quand.toLocaleDateString('fr-FR')} ` +
+        `(${ligneSuivi.lignes} lignes)`,
+    );
+  }
 
   console.log('\n— Cas de référence —');
   for (const [prefixe, attendu, motif] of CAS) {

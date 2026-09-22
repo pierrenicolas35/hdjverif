@@ -173,6 +173,16 @@ button {
   background: #ffb020;
 }
 
+/* Date de mise à jour des référentiels, à côté de l'état de la connexion */
+.voyant-maj {
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+  opacity: 0.88;
+  white-space: nowrap;
+}
+
 .voyant.verdict {
   background: #fff;
   color: var(--chu-bleu-fonce);

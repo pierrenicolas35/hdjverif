@@ -45,12 +45,16 @@ import {
 } from './store.js';
 import {
   acteParCode,
+  dernieresMaj,
+  detailMaj,
   etatDuReferentiel,
   libelleEtatReferentiel,
+  libelleMaj,
   rechercherActesCcam,
   rechercherMedicaments,
   verifierReferentiel,
   type ActeRef,
+  type MajReferentiel,
   type MedicamentRef,
 } from './referentiels.js';
 
@@ -263,6 +267,9 @@ class Assistant {
   private readonly voyantVerdict = el<HTMLElement>('voyant-verdict');
   private readonly voyantReferentiel = el<HTMLElement>('voyant-referentiel');
 
+  /** Dates de mise à jour des deux tables de référentiel (affichées dans l'en-tête). */
+  private majReferentiels: readonly MajReferentiel[] | null = null;
+
   /* -------------------------------------------------- cycle de vie */
 
   demarrer(): void {
@@ -270,15 +277,22 @@ class Assistant {
     this.racine.addEventListener('input', this.gererSaisie);
     this.afficherEtatReferentiel();
     void verifierReferentiel().then(() => this.afficherEtatReferentiel());
+    void dernieresMaj().then((majs) => {
+      this.majReferentiels = majs;
+      this.afficherEtatReferentiel();
+    });
     this.rendre();
   }
 
   private afficherEtatReferentiel(): void {
     const etat = etatDuReferentiel();
+    const maj = this.majReferentiels;
+    const dates = maj ? libelleMaj(maj) : '';
     this.voyantReferentiel.className = `voyant ${etat === 'degrade' ? 'degrade' : ''}`;
-    this.voyantReferentiel.innerHTML = `<span class="point"></span>${esc(
-      libelleEtatReferentiel(),
-    )}`;
+    this.voyantReferentiel.title = maj ? detailMaj(maj) : '';
+    this.voyantReferentiel.innerHTML =
+      `<span class="point"></span>${esc(libelleEtatReferentiel())}` +
+      (dates ? `<span class="voyant-maj">${esc(dates)}</span>` : '');
   }
 
   /* -------------------------------------------------- navigation */

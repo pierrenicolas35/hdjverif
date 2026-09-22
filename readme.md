@@ -136,7 +136,8 @@ src/
     pedagogie.ts                  Disciplines cliniques, cas typiques, aide par étape
     fiche.ts                      Fiche de traçabilité T2A
     styles.css                    Charte CHU Grenoble Alpes (en-tête bleu, fond blanc)
-supabase/                         SQL du projet Supabase (durcissement, RPC de recherche)
+supabase/                         SQL du projet Supabase (durcissement, RPC de recherche,
+                                  suivi des dates de mise à jour)
 scripts/
   import-referentiels.mjs         Import des référentiels officiels vers Supabase
   maj-referentiels.mjs            Mise à jour mensuelle légère (empreinte des sources)
@@ -305,8 +306,16 @@ npm run import:referentiels
 # 3. Porte de contrôle après import (lecture seule, clé anon de l'application)
 npm run verifier:referentiel                    # code retour 0 = conforme
 
-# 4. Le cas échéant : appliquer supabase/hardening.sql et supabase/rpc-recherche.sql
+# 4. Le cas échéant : appliquer supabase/hardening.sql, supabase/rpc-recherche.sql
+#    et, une seule fois, supabase/referentiel-maj.sql (suivi des dates de mise à jour)
 ```
+
+`supabase/referentiel-maj.sql` crée la table de suivi `referentiel_maj` (une ligne par table :
+date de dernière mise à jour effective, volume, empreinte des sources). L’import la renseigne
+automatiquement ; **l’en-tête de l’application affiche ces dates** à côté de l’état de la
+connexion (« Référentiel Supabase connecté · MAJ 22/09/2026 »), avec le détail en infobulle
+(date et heure exactes, nombre de lignes). La date ne bouge que lorsque les sources officielles
+changent réellement. Le contrôle du référentiel vérifie également ce suivi.
 
 `npm run verifier:referentiel` interroge la base **exactement comme l’application** et refuse (code retour 1) un référentiel dont la réserve hospitalière ne serait pas déterminée, dont la
 DCI serait absente, ou dont une recherche par DCI (`infliximab`, `pembrolizumab`…) ne trouverait

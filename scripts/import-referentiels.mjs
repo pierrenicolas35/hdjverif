@@ -15,6 +15,10 @@
  *   SUPABASE_SERVICE_ROLE_KEY  clé service_role (écriture ; ne jamais publier)
  *   CACHE_DIR                  répertoire de cache des sources (défaut .cache/referentiels)
  *
+ * Le suivi des dates de mise à jour est enregistré dans `referentiel_maj` (une ligne par
+ * table), lue par l'application pour afficher « Référentiel connecté · MAJ … ». La table se
+ * crée avec `supabase/referentiel-maj.sql` ; son absence n'empêche pas l'import.
+ *
  * Sources (toutes officielles) :
  *   • Médicaments (BDPM, ANSM / Assurance Maladie) :
  *       - `CIS_bdpm.txt`       — spécialités commercialisées ;
@@ -197,6 +201,36 @@ async function ecrireSupabase(table, lignes, cleConflit) {
   process.stdout.write('\n');
 }
 
+/**
+ * Enregistre la date de mise à jour effective des deux référentiels.
+ * Une table de suivi absente ou inaccessible ne fait pas échouer l'import : elle est
+ * simplement signalée.
+ */
+async function enregistrerMaj(entrees) {
+  const url = process.env.SUPABASE_URL;
+  const cle = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !cle) return;
+
+  const reponse = await fetch(`${url}/rest/v1/referentiel_maj?on_conflict=nom`, {
+    method: 'POST',
+    headers: {
+      apikey: cle,
+      Authorization: `Bearer ${cle}`,
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=minimal',
+    },
+    body: JSON.stringify(entrees),
+  });
+  if (!reponse.ok) {
+    log(
+      `suivi des mises à jour non enregistré (HTTP ${reponse.status}) : ` +
+        'appliquer supabase/referentiel-maj.sql',
+    );
+    return;
+  }
+  log(`suivi  : ${entrees.map((e) => e.libelle).join(', ')} datés du ${entrees[0].maj_le}`);
+}
+
 function exporter(lignes, colonnes, fichier) {
   const repertoire = join(CACHE_DIR, 'export');
   mkdirSync(repertoire, { recursive: true });
@@ -271,8 +305,28 @@ async function principal() {
     return;
   }
 
+  const horodatage = new Date().toISOString();
+  const empreinte = process.env.SOURCES_EMPREINTE ?? null;
   await ecrireSupabase('referentiel_medicaments', medicaments, 'cis');
   await ecrireSupabase('referentiel_ccam', actes, 'code');
+  await enregistrerMaj([
+    {
+      nom: 'referentiel_medicaments',
+      libelle: 'Médicaments (BDPM)',
+      maj_le: horodatage,
+      lignes: medicaments.length,
+      empreinte,
+      source: 'BDPM — CIS_bdpm, CIS_COMPO, CIS_CPD',
+    },
+    {
+      nom: 'referentiel_ccam',
+      libelle: 'Nomenclature CCAM',
+      maj_le: horodatage,
+      lignes: actes.length,
+      empreinte,
+      source: 'CCAM Ameli — data.gouv.fr',
+    },
+  ]);
   log('import terminé.');
   log('contrôle à rejouer : node scripts/verifier-referentiel.mjs');
 }
