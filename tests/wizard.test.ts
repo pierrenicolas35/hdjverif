@@ -10,6 +10,7 @@
 
 import { readFileSync } from 'node:fs';
 
+import { DISCIPLINES } from '../src/ui/pedagogie.js';
 import { detailMaj, libelleMaj } from '../src/ui/referentiels.js';
 import { resolve } from 'node:path';
 
@@ -730,5 +731,42 @@ describe('En-tête — dates de mise à jour des référentiels', () => {
     expect(libelleMaj(null)).toBe('');
     expect(libelleMaj([])).toBe('');
     expect(detailMaj(null)).toContain('indisponibles');
+  });
+});
+
+describe('Disciplines — icônes d’identification', () => {
+  it('donne une icône et un périmètre à chaque discipline', () => {
+    expect(DISCIPLINES.length).toBe(14);
+    for (const discipline of DISCIPLINES) {
+      expect(discipline.icone.trim(), discipline.id).not.toBe('');
+      expect(discipline.perimetre.trim(), discipline.id).not.toBe('');
+    }
+  });
+
+  it('n’utilise jamais deux fois la même icône', () => {
+    const icones = DISCIPLINES.map((d) => d.icone);
+    expect(new Set(icones).size).toBe(icones.length);
+  });
+
+  it('associe à chaque discipline l’organe ou l’acte attendu', () => {
+    const attendu: Readonly<Record<string, string>> = {
+      ENDOCRINOLOGIE: '🩸', // glycémie / diabète
+      CARDIOLOGIE: '🫀', // cœur anatomique
+      ONCOLOGIE: '🎗️',
+      NEUROLOGIE: '🧠',
+      RHUMATOLOGIE: '🦴',
+      GASTRO: '🔬', // explorations, biopsies (pas de 🫀 : ce n'est pas le cœur)
+      NEPHROLOGIE: '💧',
+      PNEUMOLOGIE: '🫁',
+      PEDIATRIE: '🧒',
+      GERIATRIE: '🧓', // neutre, non genré
+      DOULEUR: '🩹',
+      PSYCHIATRIE: '🧩',
+      CHIRURGIE: '✂️', // acte opératoire (le microscope n'est pas un geste chirurgical)
+      AUTRE: '🏥',
+    };
+    for (const [id, icone] of Object.entries(attendu)) {
+      expect(DISCIPLINES.find((d) => d.id === id)?.icone, id).toBe(icone);
+    }
   });
 });

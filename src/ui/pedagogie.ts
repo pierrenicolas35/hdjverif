@@ -38,6 +38,21 @@ export interface DefinitionDiscipline {
   readonly perimetre: string;
 }
 
+/**
+ * Icônes des disciplines.
+ *
+ * Chaque icône doit **décrire l'organe ou l'acte emblématique** de la discipline, et rester
+ * distincte des autres tuiles (aucun doublon). Deux disciplines n'ont pas de pictogramme
+ * dédié dans le jeu d'emojis : la gastro-entérologie (aucun emoji d'organe digestif n'existe)
+ * et la chirurgie (aucun emoji de scalpel), d'où l'usage du symbole le plus proche —
+ * explorations/biopsies pour l'une, instrument tranchant pour l'autre.
+ *
+ *   🩸 glycémie (diabète)        🫀 cœur anatomique        🎗️ ruban (cancer)
+ *   🧠 cerveau                   🦴 os                      🔬 explorations, biopsies
+ *   💧 rein / dialyse            🫁 poumons                 🧒 enfant
+ *   🧓 personne âgée (neutre)    🩹 soulagement, soins      🧩 psychisme
+ *   ✂️ acte opératoire           🏥 établissement, cas général
+ */
 export const DISCIPLINES: readonly DefinitionDiscipline[] = [
   {
     id: 'ENDOCRINOLOGIE',
@@ -48,7 +63,7 @@ export const DISCIPLINES: readonly DefinitionDiscipline[] = [
   {
     id: 'CARDIOLOGIE',
     libelle: 'Cardiologie et maladies vasculaires',
-    icone: '❤️',
+    icone: '🫀',
     perimetre: 'Explorations fonctionnelles, insuffisance cardiaque',
   },
   {
@@ -72,7 +87,7 @@ export const DISCIPLINES: readonly DefinitionDiscipline[] = [
   {
     id: 'GASTRO',
     libelle: 'Gastro-entérologie et hépatologie',
-    icone: '🫀',
+    icone: '🔬',
     perimetre: 'Endoscopies, MICI, bilan hépatique',
   },
   {
@@ -96,7 +111,7 @@ export const DISCIPLINES: readonly DefinitionDiscipline[] = [
   {
     id: 'GERIATRIE',
     libelle: 'Gériatrie et troubles cognitifs',
-    icone: '👵',
+    icone: '🧓',
     perimetre: 'Évaluation gériatrique, mémoire, fragilité',
   },
   {
@@ -114,7 +129,7 @@ export const DISCIPLINES: readonly DefinitionDiscipline[] = [
   {
     id: 'CHIRURGIE',
     libelle: 'Chirurgie et actes interventionnels',
-    icone: '🔬',
+    icone: '✂️',
     perimetre: 'Chirurgie ambulatoire, endoscopie interventionnelle',
   },
   {
