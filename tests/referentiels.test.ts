@@ -12,7 +12,12 @@
 
 import { describe, expect, it } from 'vitest';
 
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import * as ref from '../scripts/lib/referentiels.mjs';
+import { empreinteSources } from '../scripts/lib/sources.mjs';
 
 /** Ligne de `CIS_bdpm.txt` (11 colonnes, tabulée). */
 const ligneBdpm = (
@@ -313,5 +318,34 @@ describe('export CSV de secours', () => {
       ['cis', 'denomination', 'dci'],
     );
     expect(csv).toBe('cis,denomination,dci\n1,"A, ""B""",');
+  });
+});
+
+describe('mise à jour périodique : empreinte des sources', () => {
+  const ecrire = (nom: string, contenu: string): string => {
+    const chemin = join(
+      mkdtempSync(join(tmpdir(), 'hdjverif-sources-')),
+      nom,
+    );
+    writeFileSync(chemin, contenu, 'utf8');
+    return chemin;
+  };
+
+  it('donne la même empreinte pour les mêmes sources', () => {
+    const a = empreinteSources({ bdpm: ecrire('a.txt', 'CIS\tDENOMINATION\n') });
+    const b = empreinteSources({ bdpm: ecrire('b.txt', 'CIS\tDENOMINATION\n') });
+    expect(a).toBe(b);
+  });
+
+  it('change d’empreinte dès qu’une source est modifiée', () => {
+    const avant = empreinteSources({ bdpm: ecrire('c.txt', 'CIS\tA\n') });
+    const apres = empreinteSources({ bdpm: ecrire('d.txt', 'CIS\tB\n') });
+    expect(avant).not.toBe(apres);
+  });
+
+  it('distingue les sources par leur clé', () => {
+    const contenu = ecrire('e.txt', 'CIS\tA\n');
+    const autre = ecrire('f.txt', 'CIS\tA\n');
+    expect(empreinteSources({ bdpm: contenu })).not.toBe(empreinteSources({ compo: autre }));
   });
 });

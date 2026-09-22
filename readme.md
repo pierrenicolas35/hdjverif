@@ -139,8 +139,10 @@ src/
 supabase/                         SQL du projet Supabase (durcissement, RPC de recherche)
 scripts/
   import-referentiels.mjs         Import des référentiels officiels vers Supabase
+  maj-referentiels.mjs            Mise à jour mensuelle légère (empreinte des sources)
   verifier-referentiel.mjs        Porte de contrôle du référentiel publié (lecture seule)
   lib/referentiels.mjs            Lecture des sources officielles (BDPM, CCAM) — pur, testé
+  lib/sources.mjs                 Sources officielles : URL, téléchargement, empreinte
 data/                             Listes de travail (réserve hospitalière, surcharges CCAM)
 tests/                            Moteur (5 cas obligatoires), portes, assistant, référentiels
 ```
@@ -314,6 +316,34 @@ documents livrés.
 Sans clé `service_role`, `npm run import:referentiels:controle -- --export` produit les deux CSV
 prêts à charger (`referentiel_medicaments.csv`, `referentiel_ccam.csv`) pour un import par le
 tableau de bord Supabase.
+
+### Mise à jour mensuelle automatique (légère)
+
+```bash
+npm run maj:referentiels            # met à jour si les sources ont changé, sinon ne fait rien
+npm run maj:referentiels -- --force # force le réimport
+npm run maj:referentiels:controle   # contrôle seul de la base publiée (aucune écriture)
+```
+
+`scripts/maj-referentiels.mjs` retélécharge les sources officielles puis **compare leur empreinte
+SHA-256** à celle du dernier import réussi :
+
+1. **sources inchangées** → aucune écriture, aucune requête d'écriture sur Supabase : c'est le
+   mode « léger » (quelques secondes, ~8 Mo téléchargés) ;
+2. **sources modifiées** → import complet puis `verifier-referentiel.mjs` ; l'empreinte n'est
+   enregistrée **qu'après un contrôle vert**, si bien qu'un échec est automatiquement retenté à
+   l'exécution suivante ;
+3. la nomenclature CCAM étant une ressource **datée** sur data.gouv.fr, la dernière version
+   publiée est résolue via l'API (repli sur la version épinglée si l'API est injoignable).
+
+L'écriture s'appuie sur la clé `service_role` (récupérée au besoin par le jeton Management API,
+jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
+
+**Cron installé sur le serveur** (1ᵉʳ du mois, 05:17 UTC, soit 07:17 à Paris) :
+
+```cron
+17 5 1 * * cd /home/ubuntu/hdjverif && node scripts/maj-referentiels.mjs >> .cache/maj-cron.log 2>&1
+```
 
 > **Où trouver la clé d’écriture.** Le jeton **Management API** du projet
 > (`SUPABASE_ACCESS_TOKEN`, préfixe `sbp_`) suffit : il permet de récupérer la clé

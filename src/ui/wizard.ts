@@ -895,10 +895,10 @@ class Assistant {
 
       <div class="actions">
         <button type="button" class="btn-action principal" data-action="fiche-imprimer">
-          🖨️ Fiche de traçabilité T2A
+          🖨️ Fiche T2A (PDF)
         </button>
         <button type="button" class="btn-action secondaire" data-action="fiche-telecharger">
-          💾 Télécharger (.txt)
+          💾 Télécharger la fiche
         </button>
         <button type="button" class="btn-action secondaire" data-action="fiche-copier">
           📋 Copier la synthèse

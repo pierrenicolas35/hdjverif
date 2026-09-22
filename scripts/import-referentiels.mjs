@@ -2,9 +2,13 @@
 /**
  * Import des référentiels officiels vers Supabase.
  *
- *   node scripts/import-referentiels.mjs                 # import réel (clé service_role requise)
- *   node scripts/import-referentiels.mjs --dry-run       # prépare, contrôle et n'écrit rien
+ *   node scripts/import-referentiels.mjs                      # import réel (clé service_role requise)
+ *   node scripts/import-referentiels.mjs --dry-run            # prépare, contrôle et n'écrit rien
  *   node scripts/import-referentiels.mjs --dry-run --export   # + export CSV de secours
+ *   node scripts/import-referentiels.mjs --rafraichir         # retélécharge les sources officielles
+ *
+ * La mise à jour périodique (mensuelle) est assurée par `scripts/maj-referentiels.mjs`, qui
+ * n'appelle cet import que si les sources ont changé.
  *
  * Variables d'environnement :
  *   SUPABASE_URL               URL du projet (ex. https://xxxx.supabase.co)
@@ -32,7 +36,7 @@
  * (clé `anon`).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import {
@@ -43,22 +47,11 @@ import {
   statistiquesReserve,
   versCsv,
 } from './lib/referentiels.mjs';
+import { lireSource, telechargerSource } from './lib/sources.mjs';
 
 const CACHE_DIR = process.env.CACHE_DIR ?? '.cache/referentiels';
 const DATA_DIR = 'data';
 const TAILLE_LOT = 500;
-
-const BASE_BDPM = 'https://base-donnees-publique.medicaments.gouv.fr/download/file';
-const SOURCES = {
-  bdpm: { url: `${BASE_BDPM}/CIS_bdpm.txt`, fichier: 'CIS_bdpm.txt', encodage: 'latin1' },
-  compo: { url: `${BASE_BDPM}/CIS_COMPO_bdpm.txt`, fichier: 'CIS_COMPO_bdpm.txt', encodage: 'latin1' },
-  cpd: { url: `${BASE_BDPM}/CIS_CPD_bdpm.txt`, fichier: 'CIS_CPD_bdpm.txt', encodage: 'latin1' },
-  ccam: {
-    url: 'https://static.data.gouv.fr/resources/ccam-ameli/20250209-213212/interhop-actes-ameli.csv',
-    fichier: 'ccam-ameli.csv',
-    encodage: 'utf8',
-  },
-};
 
 /** Cas de référence : ce que le référentiel doit impérativement affirmer après import. */
 const CAS_DE_REFERENCE = [
@@ -77,27 +70,17 @@ const CAS_DE_REFERENCE = [
 const log = (...args) => console.log('[import]', ...args);
 
 /* ------------------------------------------------------------------ *
- * Téléchargement (avec cache local)
+ * Téléchargement (cache local, partagé avec la mise à jour périodique)
  * ------------------------------------------------------------------ */
 
-async function recuperer(cle) {
-  const source = SOURCES[cle];
-  const chemin = join(CACHE_DIR, source.fichier);
-  if (!existsSync(chemin)) {
-    log(`téléch. : ${source.url}`);
-    const reponse = await fetch(source.url, {
-      headers: { 'User-Agent': 'hdjverif-import/1.0' },
-    });
-    if (!reponse.ok) throw new Error(`HTTP ${reponse.status} sur ${source.url}`);
-    const buffer = Buffer.from(await reponse.arrayBuffer());
-    if (buffer.length < 1024) throw new Error(`Source tronquée : ${source.fichier}`);
-    mkdirSync(CACHE_DIR, { recursive: true });
-    writeFileSync(chemin, buffer);
-    log(`         ${source.fichier} (${(buffer.length / 1024).toFixed(0)} Ko)`);
-  } else {
-    log(`cache   : ${source.fichier}`);
-  }
-  return readFileSync(chemin, source.encodage);
+/** Télécharge (ou réutilise) une source officielle ; `--rafraichir` force le retéléchargement. */
+async function recuperer(cle, rafraichir) {
+  const chemin = await telechargerSource(cle, {
+    repertoire: CACHE_DIR,
+    rafraichir,
+    journaliser: log,
+  });
+  return lireSource(cle, chemin);
 }
 
 /* ------------------------------------------------------------------ *
@@ -230,12 +213,13 @@ function exporter(lignes, colonnes, fichier) {
 async function principal() {
   mkdirSync(CACHE_DIR, { recursive: true });
   const dryRun = process.argv.includes('--dry-run');
+  const rafraichir = process.argv.includes('--rafraichir');
 
   // --- Médicaments --------------------------------------------------
   const [contenuBdpm, contenuCompo, contenuCpd] = await Promise.all([
-    recuperer('bdpm'),
-    recuperer('compo'),
-    recuperer('cpd'),
+    recuperer('bdpm', rafraichir),
+    recuperer('compo', rafraichir),
+    recuperer('cpd', rafraichir),
   ]);
   const motifs = lireMotifsReserve(
     readFileSync(join(DATA_DIR, 'reserve-hospitaliere.dci.txt'), 'utf8'),
@@ -253,7 +237,7 @@ async function principal() {
   if (erreurs > 0) throw new Error(`${erreurs} contrôle(s) en échec : la base n’a pas été modifiée.`);
 
   // --- CCAM ---------------------------------------------------------
-  const contenuCcam = await recuperer('ccam');
+  const contenuCcam = await recuperer('ccam', rafraichir);
   const surcharges = lireSurchargesCcam(readFileSync(join(DATA_DIR, 'ccam-overlay.csv'), 'utf8'));
   const actes = construireActes({ contenuCcam, surcharges });
   log(
