@@ -1308,6 +1308,13 @@ ul.liste li {
     align-items: stretch;
   }
 
+  /* En colonne, la base flex de 240px du libellé (prévue comme LARGEUR en ligne)
+     s'applique à la HAUTEUR : elle creusait un grand carré gris vide entre la
+     question et les boutons Oui/Non. On rend le libellé auto-dimensionné. */
+  .ligne-question .ligne-libelle {
+    flex: 0 1 auto;
+  }
+
   .ligne-question .choix-binaire {
     min-width: 0;
   }
