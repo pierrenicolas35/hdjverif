@@ -40,7 +40,9 @@ export function contenuFiche(dossier: DossierHDJ, resultat: ResultatAudit): stri
   ].join('\n');
 
   const pieces = [
-    'PIÈCES JUSTIFICATIVES À MAINTENIR AU DOSSIER',
+    'PIÈCES À RÉUNIR AU DOSSIER',
+    "  (évaluation prospective : les quatre premiers éléments sont acquis par la",
+    "   programmation elle-même et sont rappelés ici comme engagements à tenir)",
     `  [${dossier.est_programme ? 'x' : ' '}] Convocation programmée / objectif médical formalisé`,
     `  [${dossier.lettre_adressage_presente ? 'x' : ' '}] Demande médicale préalable (lettre d’adressage)`,
     `  [${dossier.synthese_medicale_tracee ? 'x' : ' '}] Compte-rendu d’hospitalisation ou lettre de sortie signé`,

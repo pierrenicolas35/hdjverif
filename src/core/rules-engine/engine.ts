@@ -30,22 +30,28 @@ import type {
   StatutPorte,
 } from './types.js';
 
-/** Définition ordonnée des portes (pour la pyramide décisionnelle). */
+/**
+ * Définition ordonnée des portes (pour la liste des vérifications).
+ *
+ * Les libellés sont ceux affichés au praticien : ils restent en français courant
+ * et évitent le vocabulaire de l'instruction (« filtre de champ d'application »,
+ * « densité en ressources »), réservé au volet « Règle applicable ».
+ */
 export const PORTES: readonly { readonly id: PorteId; readonly libelle: string }[] = [
-  { id: 'PORTE_0_CHAMP', libelle: 'Porte 0 — Filtre de champ d’application' },
+  { id: 'PORTE_0_CHAMP', libelle: 'Porte 0 — Type de prise en charge' },
   {
     id: 'PORTE_1_PREREQUIS',
-    libelle: 'Porte 1 — Prérequis médico-administratifs et traçabilité',
+    libelle: 'Porte 1 — Dossier et traçabilité',
   },
   {
     id: 'PORTE_2_ACTE_ISOLE',
-    libelle: 'Porte 2 — Exclusion des actes isolés réalisables en externe',
+    libelle: 'Porte 2 — Acte isolé réalisable en externe',
   },
   {
     id: 'PORTE_3_DENSITE',
-    libelle: 'Porte 3 — Densité en ressources mobilisées',
+    libelle: 'Porte 3 — Moyens mobilisés',
   },
-  { id: 'PORTE_4_DECISION', libelle: 'Porte 4 — Décision finale et alertes qualité' },
+  { id: 'PORTE_4_DECISION', libelle: 'Porte 4 — Décision et points de vigilance' },
 ];
 
 /** Sévérité UI associée à un statut. */

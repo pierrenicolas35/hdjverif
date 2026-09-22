@@ -27,29 +27,57 @@ Site : <https://pierrenicolas35.github.io/hdjverif/>
 
 **Principe** : ne demander que ce qui sert au calcul de la facturation d’HDJ.
 
+### Une évaluation prospective
+
+L’outil sert à vérifier, **avant de programmer**, que les soins envisagés relèvent bien d’une
+hospitalisation de jour. Les questions dont la réponse est « oui » **par construction** ne sont
+donc pas posées :
+
+| Question écartée | Pourquoi |
+|---|---|
+| La venue est-elle programmée ? | Elle est programmée puisqu’on la prépare. |
+| La demande médicale préalable est-elle au dossier ? | Elle fait partie de la programmation. |
+| La synthèse médicale est-elle signée le jour même ? | Elle sera signée le jour de la venue. |
+| La lettre de liaison a-t-elle été remise au patient ? | Elle le sera au décours de la séance. |
+
+Ces quatre éléments restent des **engagements de la prise en charge programmée** : ils sont
+rappelés à cocher sur la fiche de traçabilité, et le moteur les considère comme réunis.
+
+Les questions portent donc uniquement sur ce qui **détermine la facturation** : type de prise en
+charge, actes prévus, médicaments prévus, professionnels qui interviendront, surveillance prévue
+et durée de présence.
+
+### Écrans et interactions
+
 - **Aucune donnée administrative** : ni numéro de séjour, ni date. Rien de ce qui identifie le
   patient n’est saisi ni affiché (y compris dans la fiche de traçabilité et la synthèse).
-- **Une question par écran**, par forcément : les questions homogènes sont **regroupées** pour
-  limiter les clics. Sept écrans suffisent (discipline, champ, prérequis, actes, médicaments,
-  intervenants, surveillance + durée), plus la décision.
+- **Six écrans** + la décision : discipline, type de prise en charge, actes, médicaments, équipe,
+  surveillance et durée. Les questions homogènes sont **regroupées** pour limiter les clics.
+- **Un langage de soignant, au futur** : « Quels actes techniques sont prévus pendant la venue ? »,
+  « Quels professionnels interviendront auprès du patient ? », « Une surveillance rapprochée du
+  patient est-elle prévue ? ». Le vocabulaire juridique (*champ de l’instruction*, *densité*,
+  *MCO*) reste confiné au volet « Règle applicable », qui cite la référence normative.
+- **Le clic sur une discipline ouvre directement l’écran suivant** : la liste est longue, il n’y a
+  rien à aller chercher plus bas. Le choix reste facultatif : « Suivant » passe l’étape.
 - **Gros boutons Oui / Non** : **Oui en vert**, **Non en rouge** (Material Design), maintenus
   enfoncés une fois sélectionnés.
-- **Intervenants par boutons à bascule** : un bouton par profession (médecin, infirmier(ère),
+- **Équipe par boutons à bascule** : un bouton par profession (médecin, infirmier(ère),
   kinésithérapeute, diététicien(ne), psychologue, assistant(e) social(e), autre paramédical).
   Cliquer **maintient le bouton enfoncé** et sélectionne un intervenant ; re-cliquer le
-  désélectionne. Seule question complémentaire, par intervenant : **une note d’évolution a-t-elle
-  été rédigée ?** (Oui / Non).
+  désélectionne. Seule question complémentaire, par intervenant : **une note d’évolution
+  sera-t-elle rédigée ?** (Oui / Non).
 - **Référentiels faisant foi** : les caractéristiques d’un acte CCAM (plateau technique lourd,
   acte marqueur HDJ, réalisation en externe) et le classement d’un médicament (réserve
   hospitalière, surveillance renforcée) sont **repris du référentiel** et affichés. Ils ne sont
   **jamais redemandés** à l’utilisateur.
-- **Décision en direct** dans l’en-tête, formulée en langage courant.
+- **Décision en direct** dans l’en-tête, formulée en langage courant, dès qu’un élément de la
+  prise en charge est saisi ou qu’un raccourci la tranche.
 - **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable citée,
   et cas typiques de la discipline choisie (*Relève du GHS* / *Relève de l’externe* /
   *Piège fréquent* / *Hors champ*). 14 disciplines sont proposées ; le choix est facultatif et ne
   modifie aucun critère de décision.
-- **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou un champ SMR/psychiatrie
-  conduit directement au résultat, sans dérouler l’assistant.
+- **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou une prise en charge
+  SMR/psychiatrie conduit directement au résultat, sans dérouler l’assistant.
 - **Fiche de traçabilité T2A** imprimable (PDF) ou exportable en `.txt`, avec zones de visa et
   rappel du dispositif de rescrit tarifaire.
 
@@ -101,10 +129,15 @@ produisent toujours le même résultat.
 | Porte | Objet | Issue bloquante |
 |---|---|---|
 | **0** | Filtre de champ d’application | `REJET_VERS_FORFAIT_SEANCE` (dialyse, chimiothérapie)<br>`REJET_HORS_MCO` (SMR, psychiatrie) |
-| **1** | Prérequis médico-administratifs et traçabilité | `REJET_NON_PROGRAMME` · `SUSPENDU_POUR_REGULARISATION` · `REJET_VERS_ACE` |
-| **2** | Exclusion des actes isolés réalisables en externe | `REJET_VERS_ACE` |
+| **1** | Prérequis médico-administratifs et traçabilité | `REJET_NON_PROGRAMME` · `SUSPENDU_POUR_REGULARISATION` · `REJET_VERS_ACE` || **2** | Exclusion des actes isolés réalisables en externe | `REJET_VERS_ACE` |
 | **3** | Densité en ressources mobilisées (≥ 1 pilier) | — (alimente la porte 4) |
 | **4** | Décision finale et alertes qualité | `REJET_VERS_ACE` si aucun pilier validé |
+
+> **Portée dans l’interface.** L’assistant est prospectif : les faits de la **porte 1**
+> (programmation, demande médicale préalable, synthèse du jour, lettre de liaison) sont acquis
+> par construction et ne sont donc pas interrogés. Le moteur, lui, les évalue toujours — ses
+> tests couvrent ces issues, et la porte 1 reste franchissable par tout autre appelant de
+> `evaluerDossier()`.
 
 **Piliers de densité (porte 3)**
 
@@ -176,7 +209,7 @@ node scripts/import-referentiels.mjs
 
 ```bash
 npm install
-npm test              # 68 tests : moteur, portes, assistant (référentiel simulé)
+npm test              # 71 tests : moteur, portes, assistant (référentiel simulé)
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

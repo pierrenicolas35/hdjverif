@@ -109,7 +109,7 @@ export const DISCIPLINES: readonly DefinitionDiscipline[] = [
     id: 'PSYCHIATRIE',
     libelle: 'Psychiatrie et addictologie',
     icone: '🧩',
-    perimetre: 'Hors champ MCO — financements propres',
+    perimetre: 'Financement propre — hors médecine, chirurgie, obstétrique',
   },
   {
     id: 'CHIRURGIE',
@@ -167,7 +167,7 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('actes', 'GHS', 'Exploration fonctionnelle avec cathétérisme et mesure hémodynamique sur plateau technique lourd.'),
     cas('medicaments', 'GHS', 'Perfusion d’un inotrope (lévosimendan) sous surveillance continue des constantes.'),
     cas('actes', 'ACE', 'Épreuve d’effort isolée chez un patient stable : réalisable en cabinet.'),
-    cas('prerequis', 'PIEGE', 'Patient adressé par les urgences : séjour non programmé, la facturation en GHS est exclue en l’état.'),
+    cas('champ', 'PIEGE', 'Patient adressé par les urgences : la prise en charge n’est pas programmée, elle ne relève pas de l’hospitalisation de jour.'),
   ],
   ONCOLOGIE: [
     cas('champ', 'HORS_CHAMP', 'Cure de chimiothérapie : séance forfaitisée, elle n’a pas à démontrer la densité.'),
@@ -179,13 +179,13 @@ export const CAS_PAR_DISCIPLINE: Readonly<Record<Discipline, readonly CasDiscipl
     cas('actes', 'GHS', 'Bilan de sclérose en plaques coordonné : imagerie, consultation spécialisée et évaluation neuropsychologique.'),
     cas('intervenants', 'GHS', 'Bilan pluriprofessionnel : neurologue, kinésithérapeute et orthophoniste, notes tracées.'),
     cas('medicaments', 'GHS', 'Perfusion d’immunoglobulines ou de natalizumab (réserve hospitalière) sous surveillance.'),
-    cas('prerequis', 'PIEGE', 'Bilan neuromusculaire programmé mais sans synthèse du jour : suspension pour régularisation, pas rejet.'),
+    cas('intervenants', 'PIEGE', 'Un intervenant dont la note d’évolution n’est pas prévue n’est pas dénombrable : à anticiper au dossier.'),
   ],
   RHUMATOLOGIE: [
     cas('medicaments', 'GHS', 'Perfusion d’une biothérapie (infliximab, rituximab) avec surveillance de la tolérance immédiate.'),
     cas('intervenants', 'GHS', 'Bilan de polyarthrite associant rhumatologue, IDE et assistant(e) social(e).'),
     cas('actes', 'ACE', 'Infiltration rachidienne simple : geste réalisable en cabinet.'),
-    cas('prerequis', 'PIEGE', 'Sans compte-rendu signé le jour même, la densité constatée ne suffit pas : le séjour est suspendu.'),
+    cas('medicaments', 'PIEGE', 'Une perfusion de biothérapie sans surveillance prévue au dossier ne suffit pas à caractériser une hospitalisation de jour.'),
   ],
   GASTRO: [
     cas('actes', 'GHS', 'Endoscopie œso-gastro-duodénale sous anesthésie générale : plateau technique lourd.'),
@@ -291,16 +291,6 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
       'médecine, chirurgie, obstétrique et odontologie ou ayant une activité d’hospitalisation à ' +
       'domicile ».',
   },
-  prerequis: {
-    pourquoi:
-      'Une hospitalisation de jour suppose une organisation anticipée (convocation, objectif ' +
-      'médical formalisé, compte-rendu) et un dossier dont la traçabilité rend la facturation ' +
-      'opposable. Une pièce manquante n’entraîne pas toujours un rejet : le séjour peut être ' +
-      'régularisé avant validation DIM lorsque la densité est au rendez-vous.',
-    regle:
-      'Annexe 4, point 2.a (« prise en charge programmée sans nuitée ») et point 5 (traçabilité au ' +
-      'dossier) ; lettre de liaison : article R. 1112-1-2 du code de la santé publique.',
-  },
   actes: {
     pourquoi:
       'Un acte technique isolé, réalisable en cabinet, ne justifie pas une hospitalisation. ' +
@@ -324,9 +314,9 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
   },
   intervenants: {
     pourquoi:
-      'Sélectionnez simplement les professionnels intervenus directement auprès du patient. Il ' +
-      'suffit d’indiquer, pour chacun, si une note d’évolution a été rédigée : un intervenant sans ' +
-      'note n’est pas dénombrable en contrôle.',
+      'Indiquez simplement les professionnels qui interviendront directement auprès du patient. ' +
+      'Il suffit de préciser, pour chacun, si une note d’évolution sera rédigée : un intervenant ' +
+      'sans note n’est pas dénombrable en contrôle.',
     regle:
       'Annexe 4, point 2.b.iii : interventions « réalisées directement auprès du patient » ; ' +
       'plusieurs médecins ne sont dénombrés que s’ils relèvent de deux spécialités distinctes.',
@@ -334,7 +324,7 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
   densite: {
     pourquoi:
       'La surveillance particulière justifie un GHS plein quel que soit le nombre d’interventions, ' +
-      'à condition d’être retracée au dossier. La durée de présence éclaire la densité réelle : une ' +
+      'à condition d’être tracée au dossier. La durée de présence éclaire la densité réelle : une ' +
       'venue très courte constitue un point d’attention en contrôle.',
     regle:
       'Annexe 4, point 2.b.iii (surveillance particulière) et point 2.a (utilisation des moyens de ' +

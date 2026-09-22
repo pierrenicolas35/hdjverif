@@ -58,41 +58,46 @@ interface Etape {
 const ETAPES: readonly Etape[] = [
   {
     id: 'discipline',
-    domaine: 'Bienvenue',
-    question: 'Sur quelle discipline souhaitez-vous des exemples ?',
+    domaine: 'Accueil',
+    question: 'Quelle est la discipline de la prise en charge à programmer ?',
   },
   {
     id: 'champ',
-    domaine: 'Champ d’application',
-    question: 'La prise en charge relève-t-elle du champ de l’instruction ?',
-  },
-  {
-    id: 'prerequis',
-    domaine: 'Prérequis du dossier',
-    question: 'Quelles pièces figurent au dossier du patient ?',
+    domaine: 'Type de prise en charge',
+    question: 'Quel type de prise en charge souhaitez-vous programmer ?',
   },
   {
     id: 'actes',
-    domaine: 'Densité — actes',
-    question: 'Quels actes techniques ont été réalisés ?',
+    domaine: 'Actes techniques',
+    question: 'Quels actes techniques sont prévus pendant la venue ?',
   },
   {
     id: 'medicaments',
-    domaine: 'Densité — médicaments',
-    question: 'Quels médicaments ont été administrés ?',
+    domaine: 'Médicaments',
+    question: 'Quels médicaments sont prévus pendant la venue ?',
   },
   {
     id: 'intervenants',
-    domaine: 'Densité — intervenants',
-    question: 'Qui est intervenu directement auprès du patient ?',
+    domaine: 'Équipe',
+    question: 'Quels professionnels interviendront auprès du patient ?',
   },
   {
     id: 'densite',
-    domaine: 'Densité — surveillance et durée',
-    question: 'Surveillance et durée de présence',
+    domaine: 'Surveillance et durée',
+    question: 'Une surveillance particulière est-elle prévue pendant la venue ?',
   },
   { id: 'resultat', domaine: 'Décision', question: 'Décision' },
 ];
+
+/**
+ * Étapes de saisie de densité, dans l'ordre du parcours.
+ *
+ * L'outil est **prospectif** : il évalue une HDJ que l'on veut programmer. Les
+ * questions dont la réponse est « oui » par construction (venue programmée,
+ * demande médicale préalable au dossier, synthèse du jour, lettre de liaison)
+ * ne sont donc pas posées : voir `versDossier()`.
+ */
+const ETAPES_DENSITE: readonly string[] = ['actes', 'medicaments', 'intervenants', 'densite'];
 
 const INDEX = new Map(ETAPES.map((etape, i) => [etape.id, i]));
 
@@ -239,19 +244,14 @@ class Assistant {
   }
 
   /**
-   * Parcours effectivement applicable compte tenu des raccourcis des portes 0
-   * et 1 (un séjour non programmé ou hors champ ne déroule pas la densité).
+   * Parcours effectivement applicable : un raccourci des portes 0 (séance
+   * forfaitisée ou prise en charge hors MCO) conduit directement à la décision.
    */
   private parcours(): readonly string[] {
     const e = this.etat;
     const etapes: string[] = ['discipline', 'champ'];
     const horsChamp = e.estSeance === true || e.estHorsMco === true;
-    if (!horsChamp) {
-      etapes.push('prerequis');
-      if (e.estProgramme !== false) {
-        etapes.push('actes', 'medicaments', 'intervenants', 'densite');
-      }
-    }
+    if (!horsChamp) etapes.push(...ETAPES_DENSITE);
     return etapes;
   }
 
@@ -277,13 +277,6 @@ class Assistant {
         return true;
       case 'champ':
         return e.estSeance !== null && e.estHorsMco !== null;
-      case 'prerequis':
-        return (
-          e.estProgramme !== null &&
-          e.lettreAdressage !== null &&
-          e.syntheseMedicale !== null &&
-          e.lettreLiaison !== null
-        );
       case 'densite':
         return e.surveillanceActive !== null;
       default:
@@ -347,19 +340,17 @@ class Assistant {
   private sousQuestion(): string {
     const textes: Record<string, string> = {
       discipline:
-        'Facultatif. La discipline choisie ne modifie aucune règle : elle sert uniquement à illustrer les étapes par des cas concrets de votre domaine.',
+        'Facultatif : cela ne change aucune règle, seulement les exemples montrés à chaque écran. Le choix ouvre directement l’écran suivant.',
       champ:
-        'Deux filtres rapides : une séance (dialyse, chimiothérapie) ou une prise en charge hors MCO n’appelle pas la gradation ambulatoire.',
-      prerequis:
-        'Il suffit d’indiquer si chaque pièce est au dossier. Une pièce manquante peut se régulariser ; un séjour non programmé, non.',
+        'Deux situations échappent à l’hospitalisation de jour : la séance de dialyse ou de chimiothérapie, et la prise en charge en psychiatrie ou en SMR/SSR.',
       actes:
-        'Recherchez dans la nomenclature CCAM : le code, le libellé et les caractéristiques de l’acte sont repris du référentiel.',
+        'Recherchez l’acte dans la nomenclature CCAM : sa fiche indique elle-même s’il mobilise un plateau technique ou s’il se réalise en externe.',
       medicaments:
-        'Recherchez le produit par son nom ou sa DCI : le référentiel indique lui-même s’il relève de la réserve hospitalière.',
+        'Recherchez le produit par son nom ou sa DCI : la fiche indique elle-même s’il s’agit d’un médicament de réserve hospitalière.',
       intervenants:
-        'Cliquez sur les professionnels intervenus : le bouton reste enfoncé. Précisez seulement si une note d’évolution a été rédigée.',
+        'Cliquez sur les professionnels qui interviendront auprès du patient : le bouton reste enfoncé. Précisez seulement si une note d’évolution sera rédigée.',
       densite:
-        'La surveillance active justifie à elle seule un GHS plein ; la durée de présence, elle, n’est qu’un point d’attention.',
+        'Une surveillance rapprochée prévue et tracée justifie à elle seule un GHS plein ; la durée de présence n’est qu’un point d’attention.',
     };
     return textes[this.etapeId] ?? '';
   }
@@ -370,8 +361,6 @@ class Assistant {
         return this.corpsDiscipline();
       case 'champ':
         return this.corpsChamp();
-      case 'prerequis':
-        return this.corpsPrerequis();
       case 'actes':
         return this.corpsActes();
       case 'medicaments':
@@ -403,8 +392,8 @@ class Assistant {
         ).join('')}
       </div>
       <p class="note-saisie">
-        Aucun choix n’est obligatoire : cliquez sur « Suivant » pour continuer sans exemples ciblés
-        (ou re-cliquez sur une discipline pour la désélectionner).
+        Cliquez sur une discipline : l’écran suivant s’ouvre aussitôt, avec des exemples ciblés.
+        Vous pouvez aussi passer cette étape sans rien choisir.
       </p>`;
   }
 
@@ -412,40 +401,17 @@ class Assistant {
     return lignesBinaires([
       {
         cle: 'estSeance',
-        titre: 'S’agit-il d’une séance de dialyse ou de chimiothérapie ?',
-        precision: 'Séance forfaitisée, sans critères de gradation.',
+        titre: 'Est-ce une séance de dialyse ou de chimiothérapie ?',
+        precision:
+          'Séance forfaitisée : elle se facture au forfait, sans avoir à démontrer la densité de la venue.',
         valeur: this.etat.estSeance,
       },
       {
         cle: 'estHorsMco',
-        titre: 'La prise en charge relève-t-elle du SMR/SSR ou de la psychiatrie ?',
-        precision: 'Hors champ MCO : financements propres.',
+        titre: 'Est-ce une prise en charge en psychiatrie ou en SMR/SSR ?',
+        precision:
+          'Ces prises en charge ont leur propre financement, distinct de l’hospitalisation de jour en médecine, chirurgie ou obstétrique.',
         valeur: this.etat.estHorsMco,
-      },
-    ]);
-  }
-
-  private corpsPrerequis(): string {
-    return lignesBinaires([
-      {
-        cle: 'estProgramme',
-        titre: 'La venue du patient était-elle programmée ?',
-        valeur: this.etat.estProgramme,
-      },
-      {
-        cle: 'lettreAdressage',
-        titre: 'La demande médicale préalable est-elle au dossier ?',
-        valeur: this.etat.lettreAdressage,
-      },
-      {
-        cle: 'syntheseMedicale',
-        titre: 'La synthèse médicale a-t-elle été signée le jour même ?',
-        valeur: this.etat.syntheseMedicale,
-      },
-      {
-        cle: 'lettreLiaison',
-        titre: 'La lettre de liaison a-t-elle été remise au patient ?',
-        valeur: this.etat.lettreLiaison,
       },
     ]);
   }
@@ -481,8 +447,8 @@ class Assistant {
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun acte sélectionné.<br />Vous pouvez passer cette étape si la
-         venue ne comporte aucun acte technique.</div>`;
+      : `<div class="vide">Aucun acte prévu.<br />Vous pouvez passer cette étape si la venue ne
+         comporte aucun acte technique.</div>`;
 
     return `
       <div class="recherche">
@@ -522,8 +488,8 @@ class Assistant {
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun médicament sélectionné.<br />Vous pouvez passer cette étape si
-         la venue ne comporte aucun traitement.</div>`;
+      : `<div class="vide">Aucun médicament prévu.<br />Vous pouvez passer cette étape si la
+         venue ne comporte aucun traitement.</div>`;
 
     return `
       <div class="recherche">
@@ -574,8 +540,8 @@ class Assistant {
                 <div class="element-meta">
                   ${
                     intervenant.note_evolution_tracee
-                      ? 'Note d’évolution tracée — intervention dénombrable'
-                      : 'Aucune note tracée — intervention NON dénombrable'
+                      ? 'Note d’évolution prévue — intervention comptée'
+                      : 'Aucune note prévue — intervention non comptée'
                   }
                 </div>
               </div>
@@ -587,7 +553,7 @@ class Assistant {
                 intervenant.profession === 'MEDECIN'
                   ? `<div class="mini-question" style="display:block">
                        <div style="margin-bottom:8px">
-                         Spécialité médicale — indispensable pour distinguer deux médecins
+                         Spécialité — nécessaire pour distinguer deux médecins
                        </div>
                        <input type="text" data-champ="specialite-${index}"
                               value="${esc(intervenant.specialite_medicale ?? '')}"
@@ -596,20 +562,20 @@ class Assistant {
                   : ''
               }
               <div class="mini-question">
-                <span>Note d’évolution rédigée dans le dossier ?</span>
+                <span>Une note d’évolution sera-t-elle rédigée dans le dossier ?</span>
                 ${boutonsOuiNon('note', intervenant.note_evolution_tracee, 'note', index)}
               </div>
             </div>
           </div>`,
           )
           .join('')
-      : `<div class="vide">Aucun intervenant sélectionné.<br />Cliquez sur les professionnels
-         intervenus auprès du patient.</div>`;
+      : `<div class="vide">Aucun professionnel pour l’instant.<br />Cliquez sur les professionnels
+         qui interviendront auprès du patient.</div>`;
 
     const medecinPresent = this.professionPresente('MEDECIN');
 
     return `
-      <p class="consigne">Intervenants auprès du patient</p>
+      <p class="consigne">Professionnels prévus auprès du patient</p>
       ${this.basculesProfessions()}
       ${
         medecinPresent
@@ -629,12 +595,13 @@ class Assistant {
       ${lignesBinaires([
         {
           cle: 'surveillanceActive',
-          titre: 'Une surveillance clinique rapprochée a-t-elle été documentée ?',
-          precision: 'Constantes, tolérance, surveillance rapprochée tracées au dossier.',
+          titre: 'Une surveillance rapprochée du patient est-elle prévue ?',
+          precision:
+            'Constantes, tolérance, surveillance rapprochée : à prévoir au dossier de soins.',
           valeur: this.etat.surveillanceActive,
         },
       ])}
-      <p class="consigne">Durée de présence du patient</p>
+      <p class="consigne">Durée de présence prévue</p>
       ${basculesExclusives(
         'duree',
         raccourcis.map((minutes) => ({
@@ -645,7 +612,7 @@ class Assistant {
       )}
       <div class="grille-champs">
         <div>
-          <label class="etiquette" for="champ-duree">Durée exacte de présence (minutes)</label>
+          <label class="etiquette" for="champ-duree">Durée prévue de présence (minutes)</label>
           <input type="number" id="champ-duree" data-champ="dureePresenceMinutes" min="0"
                  max="1440" step="5" value="${this.etat.dureePresenceMinutes}" />
         </div>
@@ -653,8 +620,8 @@ class Assistant {
       <p class="note-saisie" style="margin-top:12px">
         ${
           sousSeuil
-            ? '⚠️ Durée inférieure à 3 heures : une alerte qualité sera émise en contrôle.'
-            : 'Durée conforme au repère de 3 heures utilisé en contrôle.'
+            ? '⚠️ Durée prévue inférieure à 3 heures : elle devra être justifiée lors du contrôle.'
+            : 'Durée prévue conforme au repère de 3 heures utilisé en contrôle.'
         }
       </p>`;
   }
@@ -728,11 +695,20 @@ class Assistant {
   }
 
   private rendreVerdictProvisoire(): void {
-    const suffisant =
-      this.etat.estSeance !== null ||
-      this.etat.estHorsMco !== null ||
-      this.etat.estProgramme !== null;
-    if (!suffisant) {
+    const e = this.etat;
+    // Un raccourci (séance forfaitisée, hors MCO) tranche la question : la
+    // décision peut être annoncée dès qu'il est connu.
+    const raccourci = e.estSeance === true || e.estHorsMco === true;
+    // Sinon, la décision ne s'affiche qu'une fois un élément de la prise en
+    // charge saisi : sans cela, l'en-tête annoncerait « non validée » devant un
+    // dossier encore vide, ce qui n'a aucun sens pour le praticien.
+    const densiteAmorcee =
+      e.actes.length > 0 ||
+      e.medicaments.length > 0 ||
+      e.intervenants.length > 0 ||
+      e.surveillanceActive === true;
+
+    if (!raccourci && !densiteAmorcee) {
       this.voyantVerdict.className = 'voyant verdict';
       this.voyantVerdict.textContent = 'Décision : —';
       return;
@@ -752,13 +728,15 @@ class Assistant {
 
     const mentions: Record<ResultatAudit['statut'], string> = {
       VALIDE_GHS:
-        'Les critères de l’instruction sont réunis : la venue peut être facturée comme une hospitalisation de jour.',
+        'Tout est réuni : la venue pourra être facturée en hospitalisation de jour.',
       SUSPENDU_POUR_REGULARISATION:
-        'Une pièce obligatoire manque, mais la densité est suffisante : régularisez avant validation DIM.',
+        'Pièce obligatoire manquante : à compléter avant la validation DIM.',
       REJET_VERS_ACE:
-        'La prise en charge relève des actes et consultations externes (ACE / CSO).',
-      REJET_VERS_FORFAIT_SEANCE: 'Requalification en forfait de séance dédié.',
-      REJET_HORS_MCO: 'Prise en charge hors du champ MCO de l’instruction.',
+        'Ces soins relèvent des actes et consultations externes (ACE / CSO), pas de l’hospitalisation de jour.',
+      REJET_VERS_FORFAIT_SEANCE:
+        'Séance forfaitisée : facturation au forfait de séance, pas en GHS.',
+      REJET_HORS_MCO:
+        'Prise en charge en psychiatrie ou en SMR/SSR : financement propre, hors hospitalisation de jour.',
       REJET_NON_PROGRAMME:
         'Venue non programmée : la facturation en hospitalisation de jour est exclue.',
     };
@@ -783,7 +761,7 @@ class Assistant {
       </div>
 
       <div class="bloc-resultat">
-        <h3>Pyramide des 5 portes</h3>
+        <h3>Les 5 vérifications</h3>
         <ul class="pyramide">
           ${resultat.portes
             .map(
@@ -796,12 +774,12 @@ class Assistant {
       </div>
 
       <div class="bloc-resultat">
-        <h3>Densité en ressources (porte 3)</h3>
+        <h3>Moyens mobilisés</h3>
         ${piliers}
       </div>
 
       <div class="bloc-resultat">
-        <h3>Motifs opposables</h3>
+        <h3>Ce qui empêche la facturation en HDJ</h3>
         <ul class="liste">
           ${
             resultat.motifs_blocage.length
@@ -812,12 +790,12 @@ class Assistant {
       </div>
 
       <div class="bloc-resultat">
-        <h3>Alertes qualité / contrôle T2A</h3>
+        <h3>Points de vigilance en contrôle</h3>
         <ul class="liste">
           ${
             resultat.alertes_controle.length
               ? resultat.alertes_controle.map((a) => `<li>${esc(a)}</li>`).join('')
-              : '<li style="list-style:none" class="alerte-vide">Aucune alerte qualité.</li>'
+              : '<li style="list-style:none" class="alerte-vide">Aucun point de vigilance.</li>'
           }
         </ul>
       </div>
@@ -872,9 +850,12 @@ class Assistant {
         this.reculer();
         break;
       case 'discipline':
-        // Re-cliquer sur la discipline active la désélectionne.
+        // Le choix d'une discipline ouvre directement l'écran suivant : sur un
+        // grand écran, la liste des disciplines est longue et obligeait à
+        // défiler pour atteindre « Suivant ».
         this.etat.discipline = this.etat.discipline === valeur ? null : (valeur as Discipline);
-        this.rendre();
+        if (this.etat.discipline) this.avancer();
+        else this.rendre();
         break;
       case 'basculer-aide':
         this.aideOuverte = !this.aideOuverte;
@@ -984,18 +965,6 @@ class Assistant {
         break;
       case 'estHorsMco':
         this.etat.estHorsMco = valeur;
-        break;
-      case 'estProgramme':
-        this.etat.estProgramme = valeur;
-        break;
-      case 'lettreAdressage':
-        this.etat.lettreAdressage = valeur;
-        break;
-      case 'syntheseMedicale':
-        this.etat.syntheseMedicale = valeur;
-        break;
-      case 'lettreLiaison':
-        this.etat.lettreLiaison = valeur;
         break;
       case 'surveillanceActive':
         this.etat.surveillanceActive = valeur;

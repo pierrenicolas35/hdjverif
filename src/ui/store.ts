@@ -71,11 +71,14 @@ export interface EtatAssistant {
   estSeance: boolean | null;
   estHorsMco: boolean | null;
 
-  /** Porte 1. */
-  estProgramme: boolean | null;
-  lettreAdressage: boolean | null;
-  syntheseMedicale: boolean | null;
-  lettreLiaison: boolean | null;
+  /**
+   * Porte 1 : les faits du dossier (programmation, demande médicale préalable,
+   * synthèse du jour, lettre de liaison) ne sont pas portés par l'état.
+   *
+   * L'outil évalue une HDJ **en cours de programmation** : ces quatre éléments
+   * sont acquis par construction et ne sont donc jamais demandés — voir
+   * `versDossier()`. La valeur est fixée en un point unique.
+   */
 
   /** Porte 3. */
   actes: ActeChoisi[];
@@ -92,10 +95,6 @@ export function etatInitial(): EtatAssistant {
     discipline: null,
     estSeance: null,
     estHorsMco: null,
-    estProgramme: null,
-    lettreAdressage: null,
-    syntheseMedicale: null,
-    lettreLiaison: null,
     actes: [],
     medicaments: [],
     intervenants: [],
@@ -187,7 +186,14 @@ export function regimeDe(etat: EtatAssistant): RegimeChamp {
  * Construit le `DossierHDJ` soumis au moteur.
  *
  * Les valeurs non encore renseignées sont volontairement neutres : l'assistant
- * peut ainsi afficher un verdict provisoire à chaque étape.
+ * peut ainsi afficher une décision à mesure de la saisie.
+ *
+ * Les quatre faits de la porte 1 sont réputés acquis : l'outil sert à vérifier
+ * la facturabilité d'une HDJ **que l'on veut programmer**, donc d'une prise en
+ * charge programmée dont la demande médicale préalable est au dossier, la
+ * synthèse signée le jour même et la lettre de liaison remise au patient. Les
+ * demander reviendrait à poser des questions dont la réponse est « oui » par
+ * construction.
  */
 export function versDossier(etat: EtatAssistant): DossierHDJ {
   const intervenants: Intervenant[] = etat.intervenants.map((i) => ({
@@ -203,10 +209,11 @@ export function versDossier(etat: EtatAssistant): DossierHDJ {
   return {
     regime_champ: regimeDe(etat),
     duree_presence_minutes: etat.dureePresenceMinutes,
-    est_programme: etat.estProgramme ?? false,
-    lettre_adressage_presente: etat.lettreAdressage ?? false,
-    synthese_medicale_tracee: etat.syntheseMedicale ?? false,
-    lettre_liaison_remise: etat.lettreLiaison ?? false,
+    // Acquis par construction sur une HDJ en cours de programmation (porte 1).
+    est_programme: true,
+    lettre_adressage_presente: true,
+    synthese_medicale_tracee: true,
+    lettre_liaison_remise: true,
     surveillance_active_documentee: etat.surveillanceActive ?? false,
     actes_ccam: etat.actes.map((a) => a.acte),
     medicaments: etat.medicaments.map((m) => m.medicament),

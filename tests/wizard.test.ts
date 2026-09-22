@@ -135,16 +135,11 @@ async function choisirPremiereSuggestion(action: string): Promise<void> {
   await attendre(60);
 }
 
-/** Franchit les portes 0 et 1 sans raccourci, jusqu'à l'étape des actes. */
+/** Franchit l'écran « type de prise en charge » jusqu'à l'étape des actes. */
 function atteindreActes(): void {
-  suivant(); // champ d'application
+  if (!document.querySelector('.btn-oui-non[data-cle="estSeance"]')) suivant(); // accueil → champ
   repondre('estSeance', 'non');
   repondre('estHorsMco', 'non');
-  suivant(); // prérequis
-  repondre('estProgramme', 'oui');
-  repondre('lettreAdressage', 'oui');
-  repondre('syntheseMedicale', 'oui');
-  repondre('lettreLiaison', 'oui');
   suivant(); // actes
 }
 
@@ -154,11 +149,13 @@ function atteindreActes(): void {
 
 describe('Écran d’accueil — choix d’une discipline clinique', () => {
   it('demande une discipline et non un métier', () => {
+    retourAccueil();
     expect(questionCourante()).toContain('discipline');
     expect(questionCourante()).not.toContain('profil');
   });
 
   it('propose les disciplines cliniques, pas les professions', () => {
+    retourAccueil();
     const boutons = [...document.querySelectorAll('[data-action="discipline"]')];
     expect(boutons).toHaveLength(14);
 
@@ -170,19 +167,29 @@ describe('Écran d’accueil — choix d’une discipline clinique', () => {
   });
 
   it('n’impose pas le choix : la navigation reste possible sans discipline', () => {
+    retourAccueil();
     expect(suivantActif()).toBe(true);
   });
 
   it('affiche des exemples généraux tant qu’aucune discipline n’est choisie', () => {
+    retourAccueil();
     expect(texte('#aide')).toContain('Toutes disciplines');
   });
 
+  it('ouvre directement l’écran suivant au clic sur une discipline', () => {
+    retourAccueil();
+    choisirDiscipline('ENDOCRINOLOGIE');
+    expect(questionCourante()).toContain('type de prise en charge');
+  });
+
   it('adapte les cas affichés à la discipline sélectionnée', () => {
+    retourAccueil();
     choisirDiscipline('ENDOCRINOLOGIE');
     const aide = texte('#aide');
     expect(aide).toContain('Endocrinologie, diabétologie, nutrition');
     expect(aide).toContain('Relève du GHS');
 
+    cliquer('[data-action="reculer"]'); // retour à l'accueil pour changer de discipline
     choisirDiscipline('PSYCHIATRIE');
     const aidePsy = texte('#aide');
     expect(aidePsy).toContain('Psychiatrie et addictologie');
@@ -191,11 +198,18 @@ describe('Écran d’accueil — choix d’une discipline clinique', () => {
   });
 
   it('permet de désélectionner la discipline en re-cliquant', () => {
+    retourAccueil();
     choisirDiscipline('PSYCHIATRIE');
+    cliquer('[data-action="reculer"]');
+    expect(questionCourante()).toContain('discipline');
+
+    choisirDiscipline('PSYCHIATRIE'); // re-clic : désélection, on reste sur place
+    expect(questionCourante()).toContain('discipline');
     expect(texte('#aide')).not.toContain('Psychiatrie et addictologie');
   });
 
   it('fait progresser la barre de progression', () => {
+    retourAccueil();
     const avant = document.getElementById('jauge')?.style.width ?? '0';
     suivant();
     const apres = document.getElementById('jauge')?.style.width ?? '0';
@@ -217,31 +231,56 @@ describe('Assistant — aucune donnée administrative', () => {
     expect(texte('#carte')).not.toContain('Séjour');
   });
 
-  it('regroupe les filtres de champ et les prérequis sur peu d’écrans', () => {
+  it('regroupe les filtres de type de prise en charge sur un seul écran', () => {
     retourAccueil();
-    suivant(); // champ d'application
+    suivant(); // type de prise en charge
 
-    // Une seule étape pour les deux filtres de champ.
+    // Une seule étape pour les deux filtres.
     expect(document.querySelectorAll('.ligne-question')).toHaveLength(2);
     expect(document.querySelector('.btn-oui-non[data-cle="estSeance"]')).not.toBeNull();
     expect(document.querySelector('.btn-oui-non[data-cle="estHorsMco"]')).not.toBeNull();
 
+    expect(suivantActif()).toBe(false);
     repondre('estSeance', 'non');
     repondre('estHorsMco', 'non');
-    suivant(); // prérequis
-
-    // Une seule étape pour les quatre pièces du dossier.
-    expect(document.querySelectorAll('.ligne-question')).toHaveLength(4);
-    suivantActif(); // encore rien de répondu
-    expect(suivantActif()).toBe(false);
-    repondre('estProgramme', 'oui');
-    repondre('lettreAdressage', 'oui');
-    repondre('syntheseMedicale', 'oui');
-    repondre('lettreLiaison', 'oui');
     expect(suivantActif()).toBe(true);
+    suivant(); // actes : plus aucune question de dossier à franchir
+    expect(questionCourante()).toContain('actes techniques');
+  });
+
+  it('ne pose plus les questions dont la réponse est acquise en prospectif', () => {
+    retourAccueil();
+    suivant(); // type de prise en charge
+
+    // La venue est programmée par définition : ni cette question, ni celles de
+    // la demande médicale préalable, de la synthèse du jour ou de la lettre de
+    // liaison ne sont posées.
+    for (const cle of ['estProgramme', 'lettreAdressage', 'syntheseMedicale', 'lettreLiaison']) {
+      expect(document.querySelector(`.btn-oui-non[data-cle="${cle}"]`)).toBeNull();
+    }
+    const corps = texte('#carte');
+    expect(corps).not.toContain('programmée');
+    expect(corps).not.toContain('demande médicale préalable');
+    expect(corps).not.toContain('jour même');
+    expect(corps).not.toContain('lettre de liaison');
+
+    // Le moteur considère néanmoins ces éléments comme réunis : un dossier de
+    // trois interventions donne bien un GHS (porte 1 franchie, pas de suspension).
+    atteindreActes();
+    suivant(); // médicaments
+    suivant(); // équipe
+    choisirProfession('MEDECIN');
+    choisirProfession('IDE');
+    choisirProfession('DIETETICIEN');
+    suivant(); // surveillance
+    repondre('surveillanceActive', 'non');
+    suivant(); // décision
+    expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
   });
 
   it('les boutons Oui sont verts et les boutons Non rouges', () => {
+    retourAccueil();
+    suivant(); // type de prise en charge : seules les questions à boutons Oui/Non
     const oui = document.querySelector<HTMLElement>('.btn-oui-non[data-valeur="oui"]');
     const non = document.querySelector<HTMLElement>('.btn-oui-non[data-valeur="non"]');
     expect(oui).not.toBeNull();
@@ -313,7 +352,7 @@ describe('Intervenants — sélection par bascules de profession', () => {
 
   it('sélectionne puis désélectionne un intervenant au clic', () => {
     atteindreIntervenants();
-    expect(questionCourante()).toContain('intervenu directement');
+    expect(questionCourante()).toContain('interviendront');
 
     const boutonIde = (): HTMLElement | null =>
       document.querySelector<HTMLElement>('[data-action="profession-bascule"][data-valeur="IDE"]');
@@ -343,7 +382,7 @@ describe('Intervenants — sélection par bascules de profession', () => {
     ).toBe('true');
 
     repondreNote(0, 'non');
-    expect(texte('.selection')).toContain('NON dénombrable');
+    expect(texte('.selection')).toContain('non comptée');
     repondreNote(0, 'oui');
     expect(
       document
@@ -381,7 +420,7 @@ describe('Assistant — parcours complet', () => {
 
     expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
     expect(document.querySelector('.badge')?.className).toContain('VERT');
-    expect(texte('#carte')).toContain('Pyramide des 5 portes');
+    expect(texte('#carte')).toContain('Les 5 vérifications');
     expect(document.querySelectorAll('.pyramide li')).toHaveLength(5);
     expect(texte('#carte')).toContain('DGOS/R1/DSS/1A/2020/52');
     expect(document.querySelectorAll('.pyramide .marqueur')).toHaveLength(5);
@@ -410,9 +449,9 @@ describe('Assistant — parcours complet', () => {
 
   it('permet de revenir en arrière et de corriger une réponse', () => {
     cliquer('[data-action="reculer"]');
-    expect(questionCourante()).toContain('Surveillance et durée');
+    expect(questionCourante()).toContain('surveillance particulière');
     cliquer('[data-action="reculer"]');
-    expect(questionCourante()).toContain('intervenu directement');
+    expect(questionCourante()).toContain('professionnels interviendront');
   });
 });
 
@@ -423,8 +462,7 @@ describe('Assistant — parcours complet', () => {
 describe('Assistant — raccourcis décisionnels', () => {
   function preparer(discipline: string): void {
     retourAccueil();
-    choisirDiscipline(discipline);
-    suivant(); // champ d'application
+    choisirDiscipline(discipline); // ouvre directement l'écran « type de prise en charge »
   }
 
   it('une séance de chimiothérapie mène directement à la requalification', () => {
@@ -444,12 +482,18 @@ describe('Assistant — raccourcis décisionnels', () => {
     expect(texte('.statut')).toBe('Facturation en HDJ non validée — hors champ MCO');
   });
 
-  it('affiche la décision provisoire dans l’en-tête', () => {
+  it('affiche la décision provisoire dans l’en-tête dès qu’un raccourci est connu', () => {
     preparer('CARDIOLOGIE');
-    repondre('estSeance', 'non');
+    repondre('estSeance', 'oui');
     const voyant = document.getElementById('voyant-verdict');
     expect(voyant?.className).toContain('verdict');
-    expect(voyant?.textContent).toContain('non validée');
+    expect(voyant?.textContent).toContain('forfait de séance');
+  });
+
+  it('n’annonce aucune décision tant qu’aucun élément de la prise en charge n’est saisi', () => {
+    preparer('CARDIOLOGIE');
+    repondre('estSeance', 'non');
+    expect(document.getElementById('voyant-verdict')?.textContent).toBe('Décision : —');
   });
 });
 
