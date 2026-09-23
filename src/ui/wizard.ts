@@ -8,7 +8,10 @@
  *
  * Trois entrées, depuis l'écran d'accueil :
  *   • **Calculer l'éligibilité d'une HDJ** — le parcours pas-à-pas, précédé d'un
- *     rappel des motifs qui échappent à l'hospitalisation de jour ;
+ *     rappel des motifs qui échappent à l'hospitalisation de jour ; à l'étape
+ *     « actes », la nomenclature CCAM se parcourt aussi par arborescence
+ *     (thématique → sous-thème → actes) et chaque acte trouvé s'ajoute au dossier
+ *     d'un clic, avant de poursuivre le questionnaire ;
  *   • **Référentiel des actes techniques (CCAM)** — interroger la base pour
  *     savoir si un acte mobilise un soin lourd (recherche par mots-clés ou par
  *     arborescence : thématique → sous-thème → actes) ;
@@ -280,6 +283,15 @@ class Assistant {
   private sousChapitreActif: ThemeRef | null = null;
   private actesTheme: readonly ActeRef[] | null = null;
   private chargementArbre = false;
+  /**
+   * Arborescence CCAM dépliée dans l'étape « actes » du questionnaire.
+   *
+   * Le même arbre que celui de la consultation est proposé pendant la saisie :
+   * une fois l'acte trouvé, un bouton l'ajoute au dossier, puis le parcours
+   * reprend (étape suivante). Il est replié par défaut pour ne pas alourdir la
+   * saisie.
+   */
+  private arbreQuestionnaireOuvert = false;
 
   private readonly racine = el<HTMLElement>('carte');
   private readonly zoneAide = el<HTMLElement>('aide');
@@ -382,13 +394,12 @@ class Assistant {
     this.refsSuggerees.clear();
     this.messageRecherche = '';
     this.termeRecherche = '';
+    this.arbreQuestionnaireOuvert = false;
+    this.chapitreActif = null;
+    this.sousChapitreActif = null;
+    this.sousChapitres = null;
+    this.actesTheme = null;
     if (ecran === 'evaluation') this.etapeId = 'actes';
-    if (ecran === 'ccam') {
-      this.chapitreActif = null;
-      this.sousChapitreActif = null;
-      this.sousChapitres = null;
-      this.actesTheme = null;
-    }
     this.rendre();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -608,7 +619,7 @@ class Assistant {
   private sousQuestion(): string {
     const textes: Record<string, string> = {
       actes:
-        'Recherchez l’acte dans la nomenclature CCAM : sa fiche indique elle-même s’il mobilise un plateau technique ou s’il se réalise en externe.',
+        'Recherchez l’acte dans la nomenclature CCAM : sa fiche indique elle-même s’il mobilise un plateau technique ou s’il se réalise en externe. Vous pouvez aussi parcourir la nomenclature par thématique et ajouter l’acte d’un clic.',
       medicaments:
         'Recherchez le produit par son nom ou sa DCI : la fiche indique elle-même s’il s’agit d’un médicament de réserve hospitalière.',
       intervenants:
@@ -682,7 +693,34 @@ class Assistant {
         <span class="loupe" aria-hidden="true">🔍</span>
       </div>
       <div id="zone-suggestions">${this.rendreSuggestions()}</div>
-      <div class="selection">${elements}</div>`;
+      <div class="selection">${elements}</div>
+      ${this.arbreQuestionnaire()}`;
+  }
+
+  /**
+   * Arborescence CCAM proposée **dans l'étape « actes »** du questionnaire.
+   *
+   * Elle reprend l'arbre de la consultation (thématique → site anatomique → acte),
+   * mais chaque acte porte un bouton qui l'ajoute directement au dossier, sans
+   * quitter le parcours. Repliable pour ne pas alourdir la saisie.
+   */
+  private arbreQuestionnaire(): string {
+    const ouvert = this.arbreQuestionnaireOuvert;
+    return `
+      <div class="arbre-questionnaire">
+        <button type="button" class="bascule-arbre" data-action="basculer-arbre"
+                aria-expanded="${ouvert ? 'true' : 'false'}">
+          <span>Parcourir la nomenclature CCAM par thématique</span>
+          <span aria-hidden="true">${ouvert ? '▲' : '▼'}</span>
+        </button>
+        ${
+          ouvert
+            ? `<div class="arbre" id="arbre-ccam">${this.rendreArbreActes()}</div>`
+            : `<p class="note-saisie">Thématique → site anatomique → acte : ouvrez
+               l’arborescence pour retrouver un acte par appareil, puis ajoutez-le au dossier
+               d’un clic.</p>`
+        }
+      </div>`;
   }
 
   private corpsMedicaments(): string {
@@ -990,11 +1028,13 @@ class Assistant {
     const actes = this.actesTheme ?? [];
     return `
       ${fil}
-      <ul class="resultats-actes">${actes.map((acte) => this.ligneActe(acte)).join('')}</ul>`;
+      <ul class="resultats-actes">${actes
+        .map((acte) => this.ligneActe(acte, this.ecran === 'evaluation'))
+        .join('')}</ul>`;
   }
 
   /** Ligne d'un acte CCAM : code, libellé et lecture « soin lourd / non lourd ». */
-  private ligneActe(acte: ActeRef): string {
+  private ligneActe(acte: ActeRef, avecAjout = false): string {
     const lourd = acte.necessite_plateau_lourd === true || acte.acte_marqueur_hdj === true;
     const conclusion = acte.necessite_plateau_lourd === true
       ? 'Soin lourd : plateau technique mobilisé'
@@ -1003,6 +1043,15 @@ class Assistant {
         : acte.exclusif_externe === true
           ? 'Soin non lourd : acte réalisable en externe'
           : 'Soin non lourd en l’état';
+    const dejaChoisi = this.etat.actes.some((a) => a.acte.code === acte.code);
+    const action = avecAjout
+      ? `<div class="acte-action">
+          <button type="button" class="btn-ajouter-acte" data-action="suggestion-acte"
+                  data-valeur="${esc(acte.code)}"${dejaChoisi ? ' disabled' : ''}>
+            ${dejaChoisi ? '✓ Ajouté au dossier' : '＋ Ajouter au dossier'}
+          </button>
+        </div>`
+      : '';
     return `
       <li class="acte-ligne ${lourd ? 'lourd' : 'leger'}">
         <div class="acte-tete">
@@ -1027,6 +1076,7 @@ class Assistant {
           )}</span>
         </div>
         <div class="acte-verdict">${esc(conclusion)}</div>
+        ${action}
       </li>`;
   }
 
@@ -1437,6 +1487,13 @@ class Assistant {
         this.actesTheme = null;
         this.rendre();
         break;
+      case 'basculer-arbre':
+        this.arbreQuestionnaireOuvert = !this.arbreQuestionnaireOuvert;
+        this.rendre();
+        if (this.arbreQuestionnaireOuvert && this.chapitres === null) {
+          void this.chargerChapitres();
+        }
+        break;
       case 'avancer':
         this.avancer();
         break;
@@ -1690,12 +1747,21 @@ class Assistant {
       this.signaler(`L’acte ${code} est déjà sélectionné.`);
       return;
     }
-    const connue = this.refsSuggerees.get(code);
-    const reference = connue && 'libelle' in connue ? connue : await acteParCode(code);
+    const reference = this.acteConnu(code) ?? (await acteParCode(code));
     this.etat.actes.push(
       reference ? acteChoisiDepuisReferentiel(reference) : acteChoisiManuel(code, ''),
     );
     this.rendre();
+  }
+
+  /**
+   * Acte déjà en mémoire : suggestion de recherche ou acte de l'arborescence
+   * affiché à l'écran. Évite un aller-retour réseau quand l'acte vient de l'arbre.
+   */
+  private acteConnu(code: string): ActeRef | null {
+    const suggere = this.refsSuggerees.get(code);
+    if (suggere && 'libelle' in suggere) return suggere;
+    return this.actesTheme?.find((acte) => acte.code === code) ?? null;
   }
 
   private async ajouterMedicament(cis: string): Promise<void> {

@@ -119,6 +119,11 @@ pas le revoir une fois qu’il est connu.
   acte marqueur HDJ, réalisation en externe) et le classement d’un médicament (réserve
   hospitalière, surveillance renforcée) sont **repris du référentiel** et affichés. Ils ne sont
   **jamais redemandés** à l’utilisateur.
+- **Actes : recherche *et* arborescence sur l’écran de saisie** : à l’étape « actes », l’acte se
+  cherche par code ou mots-clés — ou se **parcourt par arborescence** (thématique → site
+  anatomique → acte), dépliée à la demande. Une fois l’acte trouvé, un bouton **« Ajouter au
+  dossier »** le retient (il est alors signalé « Ajouté au dossier »), et le questionnaire se
+  poursuit à l’étape suivante sans quitter le parcours.
 - **Décision en direct** dans l’en-tête, formulée en langage courant, dès qu’un élément de la
   prise en charge est saisi.
 - **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable citée,
@@ -268,6 +273,13 @@ qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la
    Ameli » lui-même (colonnes `chapterCode`/`chapterLabel`, `topographie`/`topographieLabel`,
    `action`, `modeAcces`, famille d’actes), et repris tels quels par trois fonctions RPC :
    `chapitres_ccam()`, `sous_chapitres_ccam(chapitre)` et `actes_par_theme(chapitre, sous-thème)`.
+
+   Cette arborescence est **la même dans les deux contextes** : la consultation autonome du
+   référentiel (lecture seule, où l’acte est qualifié « soin lourd / non lourd ») et **l’étape
+   « actes » du questionnaire**, où elle se déplie à la demande et où chaque acte trouvé porte un
+   bouton **« Ajouter au dossier »** : l’acte rejoint la saisie sans quitter le parcours, puis
+   l’étape suivante se poursuit. Une fois retenu, il est signalé « Ajouté au dossier » et son
+   bouton est désactivé.
 
 > **Exactitude des indicateurs.** Un défaut a été corrigé à cette occasion : la source écrit
 > « autre qu’**’**abord ouvert » avec une **apostrophe typographique**, là où les règles

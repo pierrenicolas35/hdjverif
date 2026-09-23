@@ -855,6 +855,81 @@ button {
 }
 
 /* =====================================================================
+   Arborescence CCAM intégrée à l'étape « actes » du questionnaire
+   ===================================================================== */
+
+.arbre-questionnaire {
+  margin-top: 14px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface-douce);
+  overflow: hidden;
+}
+
+.bascule-arbre {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--chu-bleu-fonce);
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 14px 15px;
+  cursor: pointer;
+  text-align: left;
+  min-height: 50px;
+}
+
+.bascule-arbre:hover,
+.bascule-arbre:focus-visible {
+  background: var(--surface-survol);
+}
+
+.arbre-questionnaire .note-saisie {
+  margin: 0;
+  padding: 0 15px 15px;
+}
+
+.arbre-questionnaire .arbre {
+  margin: 0;
+  padding: 12px 15px 15px;
+  border-top: 1px solid var(--bordure);
+  background: #fff;
+}
+
+.acte-action {
+  margin-top: 10px;
+}
+
+.btn-ajouter-acte {
+  border: 1px solid var(--chu-bleu);
+  background: var(--chu-bleu);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 15px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  min-height: 40px;
+}
+
+.btn-ajouter-acte:hover:not(:disabled),
+.btn-ajouter-acte:focus-visible:not(:disabled) {
+  background: var(--chu-bleu-fonce);
+  border-color: var(--chu-bleu-fonce);
+}
+
+.btn-ajouter-acte:disabled {
+  background: #fff;
+  border-color: var(--vert);
+  color: var(--vert);
+  cursor: default;
+}
+
+/* =====================================================================
    Champs (text fields Material)
    ===================================================================== */
 

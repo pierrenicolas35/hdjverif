@@ -639,6 +639,95 @@ describe('Référentiel CCAM — soin lourd et arborescence', () => {
 });
 
 /* ------------------------------------------------------------------ *
+ * Arborescence CCAM intégrée au questionnaire
+ * ------------------------------------------------------------------ */
+
+describe('Questionnaire — arborescence CCAM intégrée à l’étape des actes', () => {
+  /** Ouvre l'arborescence de l'étape « actes » et attend le chargement. */
+  async function ouvrirArbre(): Promise<void> {
+    cliquer('[data-action="basculer-arbre"]');
+    await attendre(60);
+  }
+
+  /** Navigue jusqu'à la liste des actes d'un sous-thème. */
+  async function atteindreActesDuTheme(): Promise<void> {
+    await ouvrirArbre();
+    cliquer('[data-action="chapitre-ccam"][data-valeur="07"]');
+    await attendre(60);
+    cliquer('[data-action="sous-chapitre-ccam"][data-valeur="AA"]');
+    await attendre(60);
+  }
+
+  it('reste repliée par défaut puis se déplie au clic', async () => {
+    atteindreActes();
+    expect(document.querySelector('#arbre-ccam')).toBeNull();
+
+    await ouvrirArbre();
+    expect(texte('#arbre-ccam')).toContain('Parcourir par thématique');
+    expect(
+      document.querySelectorAll('#arbre-ccam [data-action="chapitre-ccam"]'),
+    ).toHaveLength(2);
+
+    // Second clic : elle se replie.
+    cliquer('[data-action="basculer-arbre"]');
+    expect(document.querySelector('#arbre-ccam')).toBeNull();
+  });
+
+  it('ajoute un acte trouvé dans l’arbre, puis permet de poursuivre le questionnaire', async () => {
+    atteindreActes();
+    await atteindreActesDuTheme();
+
+    const bouton = document.querySelector<HTMLButtonElement>(
+      '#arbre-ccam [data-action="suggestion-acte"][data-valeur="HEQE001"]',
+    );
+    expect(bouton).not.toBeNull();
+    expect(bouton?.disabled).toBe(false);
+
+    bouton!.click();
+    await attendre(20);
+
+    // L'acte rejoint le dossier et ses caractéristiques restent issues du référentiel.
+    expect(texte('.selection')).toContain('HEQE001');
+    expect(texte('.element-meta')).toContain('repris du référentiel');
+    // Le bouton de l'arbre signale qu'il est déjà retenu.
+    const apres = document.querySelector<HTMLButtonElement>(
+      '#arbre-ccam [data-action="suggestion-acte"][data-valeur="HEQE001"]',
+    );
+    expect(apres?.disabled).toBe(true);
+    expect(apres?.textContent).toContain('Ajouté au dossier');
+
+    // Le parcours se poursuit sur l'étape suivante.
+    suivant();
+    expect(questionCourante()).toContain('médicaments');
+  });
+
+  it('conserve l’arborescence ouverte au retour sur l’étape des actes', async () => {
+    atteindreActes();
+    await atteindreActesDuTheme();
+
+    suivant(); // médicaments
+    expect(questionCourante()).toContain('médicaments');
+    cliquer('[data-action="reculer"]'); // retour aux actes
+    expect(questionCourante()).toContain('actes techniques');
+    expect(texte('#arbre-ccam')).toContain('HEQE001');
+  });
+
+  it('n’ajoute pas d’acte depuis la consultation (référentiel en lecture seule)', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-ccam"]');
+    await attendre(60);
+    cliquer('[data-action="chapitre-ccam"][data-valeur="07"]');
+    await attendre(60);
+    cliquer('[data-action="sous-chapitre-ccam"][data-valeur="AA"]');
+    await attendre(60);
+
+    expect(document.querySelector('#arbre-ccam .acte-ligne')?.textContent).toContain('HEQE001');
+    expect(document.querySelector('#arbre-ccam [data-action="suggestion-acte"]')).toBeNull();
+    expect(document.querySelector('.btn-ajouter-acte')).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ *
  * Consultation du référentiel des médicaments
  * ------------------------------------------------------------------ */
 
