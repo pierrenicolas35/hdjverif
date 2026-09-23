@@ -496,56 +496,362 @@ button {
   color: var(--chu-bleu-fonce);
 }
 
-/* Cartes de choix (disciplines) */
+/* =====================================================================
+   Écran d'accueil — trois entrées
+   ===================================================================== */
 
-.choix-cartes {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-}
-
-.btn-carte {
+.btn-accueil {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
   border: 1px solid var(--bordure);
   background: #fff;
-  border-radius: var(--rayon);
-  padding: 14px 15px;
-  text-align: left;
-  cursor: pointer;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
   color: var(--texte);
+  border-radius: var(--rayon);
+  padding: 15px 16px;
+  cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.btn-carte:hover {
+.btn-accueil:hover {
   background: var(--surface-douce);
   border-color: var(--bordure-forte);
-}
-
-.btn-carte[aria-pressed="true"] {
-  background: var(--chu-bleu-clair);
-  border-color: var(--chu-bleu);
   box-shadow: var(--ombre-1);
 }
 
-.btn-carte .icone {
-  font-size: 1.25rem;
-  line-height: 1.1;
+.btn-accueil.principal {
+  background: var(--chu-bleu);
+  border-color: var(--chu-bleu-fonce);
+  color: #fff;
+  padding: 22px 18px;
+  box-shadow: var(--ombre-2);
+  margin-bottom: 16px;
+}
+
+.btn-accueil.principal:hover {
+  background: var(--chu-bleu-fonce);
+  box-shadow: var(--ombre-3);
+}
+
+.btn-accueil.principal .btn-accueil-texte span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.btn-accueil-icone {
+  font-size: 1.6rem;
+  line-height: 1;
   flex: 0 0 auto;
 }
 
-.btn-carte strong {
+.btn-accueil.principal .btn-accueil-icone {
+  font-size: 2rem;
+}
+
+.btn-accueil-texte {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.btn-accueil-texte strong {
   display: block;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
 }
 
-.btn-carte span span {
+.btn-accueil.principal .btn-accueil-texte strong {
+  font-size: 1.18rem;
+}
+
+.btn-accueil-texte span {
   display: block;
+  font-size: 0.8rem;
+  color: var(--texte-doux);
+  margin-top: 3px;
+}
+
+.btn-accueil-fleche {
+  font-size: 1.4rem;
+  flex: 0 0 auto;
+}
+
+.accueil-secondaires {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+/* =====================================================================
+   Rappel préalable (modale) — motifs hors champ
+   ===================================================================== */
+
+.modale {
+  display: none;
+}
+
+.modale.ouvert {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.modale-voile {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 24, 40, 0.55);
+}
+
+.modale-carte {
+  position: relative;
+  max-width: 640px;
+  margin: 4vh auto;
+  max-height: 92vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+  border-radius: var(--rayon);
+  border-top: 4px solid var(--chu-bleu);
+  box-shadow: var(--ombre-3);
+  padding: 20px 18px;
+}
+
+.modale-carte .question {
+  font-size: 1.1rem;
+}
+
+.motifs-hors-champ {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.motifs-hors-champ li {
+  border-left: 4px solid var(--orange);
+  background: var(--orange-clair);
+  border-radius: 0 var(--rayon-petit) var(--rayon-petit) 0;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+}
+
+.motifs-hors-champ strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.motifs-hors-champ p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--texte);
+}
+
+.motifs-hors-champ .reference {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--texte-doux);
+}
+
+.modale-carte .pedagogie {
+  font-size: 0.83rem;
+  color: var(--texte);
+  margin: 0 0 14px;
+}
+
+.case-afficher {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 0.82rem;
+  color: var(--texte-doux);
+  margin-bottom: 16px;
+  cursor: pointer;
+}
+
+.case-afficher input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+}
+
+/* =====================================================================
+   Menu déroulant de discipline (volet d'aide)
+   ===================================================================== */
+
+.choix-discipline {
+  margin-bottom: 16px;
+}
+
+.choix-discipline select {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--bordure-forte);
+  border-radius: var(--rayon-petit);
+  background: #fff;
+  color: var(--texte);
+  font-size: 0.9rem;
+  min-height: 46px;
+}
+
+/* =====================================================================
+   Consultation du référentiel CCAM — arborescence et résultats
+   ===================================================================== */
+
+.arbre {
+  margin: 6px 0 12px;
+}
+
+.arbre-liste {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-petit);
+  overflow: hidden;
+}
+
+.arbre-liste li + li {
+  border-top: 1px solid var(--bordure);
+}
+
+.arbre-liste button {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  text-align: left;
+  border: 0;
+  background: #fff;
+  color: var(--texte);
+  padding: 11px 13px;
+  cursor: pointer;
+  font-size: 0.86rem;
+  min-height: 46px;
+}
+
+.arbre-liste button:hover,
+.arbre-liste button:focus-visible {
+  background: var(--surface-survol);
+}
+
+.arbre-code {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: var(--chu-bleu-fonce);
+  font-variant-numeric: tabular-nums;
+}
+
+.arbre-libelle {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.arbre-compte {
+  flex: 0 0 auto;
   font-size: 0.76rem;
   color: var(--texte-doux);
-  margin-top: 2px;
+  background: var(--surface-douce);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.arbre-liste .arbre-tous .arbre-libelle {
+  font-weight: 700;
+  color: var(--chu-bleu-fonce);
+}
+
+.fil {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--texte-doux);
+  margin-bottom: 10px;
+}
+
+.fil button {
+  border: 0;
+  background: transparent;
+  color: var(--chu-bleu-fonce);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 2px 0;
+  text-decoration: underline;
+}
+
+.fil-courant {
+  font-weight: 700;
+  color: var(--texte);
+}
+
+.resultats-actes {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+}
+
+.acte-ligne {
+  border: 1px solid var(--bordure);
+  border-left: 4px solid var(--bordure-forte);
+  border-radius: var(--rayon-petit);
+  padding: 11px 13px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.acte-ligne.lourd {
+  border-left-color: var(--orange);
+  background: var(--orange-clair);
+}
+
+.acte-tete {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.acte-tete code {
+  font-weight: 700;
+  color: var(--chu-bleu-fonce);
+}
+
+.acte-libelle {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.acte-drapeaux {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.drapeau {
+  font-size: 0.72rem;
+  color: var(--texte-doux);
+  background: var(--surface-douce);
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.acte-verdict {
+  margin-top: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.acte-ligne.lourd .acte-verdict {
+  color: var(--orange);
+}
+
+.acte-ligne.leger .acte-verdict {
+  color: var(--texte-doux);
 }
 
 /* =====================================================================
@@ -860,12 +1166,6 @@ input:focus {
   margin: 0;
   font-size: 0.83rem;
   color: var(--texte);
-}
-
-.aide .discipline-rappel {
-  font-size: 0.76rem;
-  color: var(--texte-doux);
-  margin-bottom: 12px;
 }
 
 .aide .note-aide {
@@ -1236,7 +1536,7 @@ ul.liste li {
     font-size: 1.4rem;
   }
 
-  .choix-cartes {
+  .accueil-secondaires {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

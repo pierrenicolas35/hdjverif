@@ -280,6 +280,21 @@ async function principal() {
       `${actes.filter((a) => a.exclusif_externe).length} externe)`,
   );
 
+  // Intégrité de l'arborescence : sans chapitres ni mots-clés, la navigation par
+  // thématique et la recherche élargie de l'application seraient privées de données.
+  const chapitres = new Set(actes.map((a) => a.chapitre_code).filter(Boolean));
+  const sansMotsCles = actes.filter((a) => !a.mots_cles).length;
+  log(
+    `  · arborescence : ${chapitres.size} chapitres · ` +
+      `${new Set(actes.map((a) => a.sous_chapitre_code).filter(Boolean)).size} sous-thèmes · ` +
+      `${actes.length - sansMotsCles} actes porteurs de mots-clés`,
+  );
+  if (chapitres.size < 15) {
+    throw new Error(
+      `arborescence CCAM incomplète : ${chapitres.size} chapitres (< 15) — import interrompu.`,
+    );
+  }
+
   if (process.argv.includes('--export')) {
     const colonnesMedicaments = [
       'cis',
@@ -293,7 +308,18 @@ async function principal() {
     exporter(medicaments, colonnesMedicaments, 'referentiel_medicaments.csv');
     exporter(
       actes,
-      ['code', 'libelle', 'acte_marqueur_hdj', 'exclusif_externe', 'necessite_plateau_lourd'],
+      [
+        'code',
+        'libelle',
+        'acte_marqueur_hdj',
+        'exclusif_externe',
+        'necessite_plateau_lourd',
+        'chapitre_code',
+        'chapitre_libelle',
+        'sous_chapitre_code',
+        'sous_chapitre_libelle',
+        'mots_cles',
+      ],
       'referentiel_ccam.csv',
     );
   }

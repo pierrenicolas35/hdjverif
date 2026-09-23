@@ -6,6 +6,14 @@
  * n'est demandée. Les caractéristiques des actes et des médicaments sont
  * reprises du référentiel : elles ne sont jamais redemandées à l'utilisateur.
  *
+ * Trois entrées, depuis l'écran d'accueil :
+ *   • **Calculer l'éligibilité d'une HDJ** — le parcours pas-à-pas, précédé d'un
+ *     rappel des motifs qui échappent à l'hospitalisation de jour ;
+ *   • **Référentiel des actes techniques (CCAM)** — interroger la base pour
+ *     savoir si un acte mobilise un soin lourd (recherche par mots-clés ou par
+ *     arborescence : thématique → sous-thème → actes) ;
+ *   • **Médicaments de la réserve hospitalière** — recherche par nom ou DCI.
+ *
  * L'UI ne décide rien : chaque réponse alimente `EtatAssistant`, converti en
  * `DossierHDJ` puis soumis à `evaluerDossier`.
  */
@@ -28,6 +36,8 @@ import {
   DISCIPLINES,
   LIBELLES_DISCIPLINE,
   LIBELLES_NATURE,
+  MOTIFS_HORS_CHAMP_HDJ,
+  PEDAGOGIE_HORS_CHAMP,
   casPourEtape,
   type AideEtape,
   type Discipline,
@@ -45,6 +55,8 @@ import {
 } from './store.js';
 import {
   acteParCode,
+  actesParTheme,
+  chapitresCcam,
   dernieresMaj,
   detailMaj,
   etatDuReferentiel,
@@ -52,10 +64,12 @@ import {
   libelleMaj,
   rechercherActesCcam,
   rechercherMedicaments,
+  sousChapitresCcam,
   verifierReferentiel,
   type ActeRef,
   type MajReferentiel,
   type MedicamentRef,
+  type ThemeRef,
 } from './referentiels.js';
 
 /* ================================================================== *
@@ -69,16 +83,6 @@ interface Etape {
 }
 
 const ETAPES: readonly Etape[] = [
-  {
-    id: 'discipline',
-    domaine: 'Accueil',
-    question: 'Quelle est la discipline de la prise en charge à programmer ?',
-  },
-  {
-    id: 'champ',
-    domaine: 'Type de prise en charge',
-    question: 'Quel type de prise en charge souhaitez-vous programmer ?',
-  },
   {
     id: 'actes',
     domaine: 'Actes techniques',
@@ -108,12 +112,13 @@ const ETAPES: readonly Etape[] = [
 ];
 
 /**
- * Étapes de saisie de densité, dans l'ordre du parcours.
+ * Étapes de saisie, dans l'ordre du parcours.
  *
- * L'outil est **prospectif** : il évalue une HDJ que l'on veut programmer. Les
- * questions dont la réponse est « oui » par construction (venue programmée,
- * demande médicale préalable au dossier, synthèse du jour, lettre de liaison)
- * ne sont donc pas posées : voir `versDossier()`.
+ * Le champ est **MCO général par construction** : les séances forfaitisées et les
+ * prises en charge hors MCO font l'objet du rappel affiché avant l'évaluation, et non
+ * d'une question. L'outil est **prospectif** : les questions dont la réponse est
+ * « oui » par construction (venue programmée, demande médicale préalable au dossier,
+ * synthèse du jour, lettre de liaison) ne sont pas posées : voir `versDossier()`.
  */
 const ETAPES_DENSITE: readonly string[] = [
   'actes',
@@ -122,6 +127,8 @@ const ETAPES_DENSITE: readonly string[] = [
   'densite',
   'contexte',
 ];
+
+const INDEX = new Map(ETAPES.map((etape, i) => [etape.id, i]));
 
 /**
  * Libellés courts des critères de contexte patient, pour les bascules de
@@ -141,7 +148,10 @@ const LIBELLES_COURTS_CONTEXTE: Readonly<Record<CritereContextePatient, string>>
   AUTRE_SITUATION: 'Autre situation documentée',
 };
 
-const INDEX = new Map(ETAPES.map((etape, i) => [etape.id, i]));
+/** Écrans de l'application : accueil, évaluation, consultation des référentiels. */
+type Ecran = 'accueil' | 'evaluation' | 'ccam' | 'medicaments';
+
+const CLE_AIDE_HORS_CHAMP = 'hdjverif.aide-hors-champ';
 
 /* ================================================================== *
  * Outils de rendu
@@ -247,7 +257,8 @@ function el<T extends HTMLElement>(id: string): T {
 
 class Assistant {
   private etat: EtatAssistant = etatInitial();
-  private etapeId = 'discipline';
+  private ecran: Ecran = 'accueil';
+  private etapeId = 'actes';
   private jetonRequete = 0;
   private minuteurRecherche: number | null = null;
   private termeRecherche = '';
@@ -258,14 +269,26 @@ class Assistant {
   private dernierDossier: DossierHDJ | null = null;
   private dernierResultat: ResultatAudit | null = null;
   /** Volet d'aide déplié (utile sur smartphone ; toujours ouvert sur PC). */
-  private aideOuverte = false;
+  private aideOuverte = true;
+  /** Rappel « motifs hors champ » de l'écran d'accueil. */
+  private modaleOuverte = false;
+
+  /* --- arborescence CCAM --- */
+  private chapitres: readonly ThemeRef[] | null = null;
+  private sousChapitres: readonly ThemeRef[] | null = null;
+  private chapitreActif: ThemeRef | null = null;
+  private sousChapitreActif: ThemeRef | null = null;
+  private actesTheme: readonly ActeRef[] | null = null;
+  private chargementArbre = false;
 
   private readonly racine = el<HTMLElement>('carte');
   private readonly zoneAide = el<HTMLElement>('aide');
+  private readonly modale = el<HTMLElement>('modale');
   private readonly jauge = el<HTMLElement>('jauge');
   private readonly texteProgression = el<HTMLElement>('progression-texte');
   private readonly voyantVerdict = el<HTMLElement>('voyant-verdict');
   private readonly voyantReferentiel = el<HTMLElement>('voyant-referentiel');
+  private readonly boutonEntete = el<HTMLButtonElement>('bouton-entete');
 
   /** Dates de mise à jour des deux tables de référentiel (affichées dans l'en-tête). */
   private majReferentiels: readonly MajReferentiel[] | null = null;
@@ -274,6 +297,7 @@ class Assistant {
 
   demarrer(): void {
     document.body.addEventListener('click', this.gererClic);
+    document.body.addEventListener('change', this.gererChangement);
     this.racine.addEventListener('input', this.gererSaisie);
     this.afficherEtatReferentiel();
     void verifierReferentiel().then(() => this.afficherEtatReferentiel());
@@ -301,42 +325,29 @@ class Assistant {
     return ETAPES[INDEX.get(this.etapeId) ?? 0] ?? ETAPES[0]!;
   }
 
-  /**
-   * Parcours effectivement applicable : un raccourci des portes 0 (séance
-   * forfaitisée ou prise en charge hors MCO) conduit directement à la décision.
-   */
+  /** Parcours de l'évaluation : les cinq questions puis la décision. */
   private parcours(): readonly string[] {
-    const e = this.etat;
-    const etapes: string[] = ['discipline', 'champ'];
-    const horsChamp = e.estSeance === true || e.estHorsMco === true;
-    if (!horsChamp) etapes.push(...ETAPES_DENSITE);
-    return etapes;
+    return ETAPES_DENSITE;
   }
 
   private suivante(): string | null {
-    const parcours = this.parcours();
     if (this.etapeId === 'resultat') return null;
-    const rang = parcours.indexOf(this.etapeId);
-    if (rang === -1) return parcours[0] ?? null;
-    return parcours[rang + 1] ?? 'resultat';
+    const rang = this.parcours().indexOf(this.etapeId);
+    if (rang === -1) return this.parcours()[0] ?? null;
+    return this.parcours()[rang + 1] ?? 'resultat';
   }
 
   private precedente(): string | null {
     const parcours = this.parcours();
-    const cible = this.etapeId === 'resultat' ? parcours.length - 1 : parcours.indexOf(this.etapeId) - 1;
+    const cible =
+      this.etapeId === 'resultat' ? parcours.length - 1 : parcours.indexOf(this.etapeId) - 1;
     return parcours[cible] ?? null;
   }
 
   private saisieComplete(): boolean {
-    const e = this.etat;
     switch (this.etapeId) {
-      // Le choix de la discipline est facultatif : il n'illustre que les exemples.
-      case 'discipline':
-        return true;
-      case 'champ':
-        return e.estSeance !== null && e.estHorsMco !== null;
       case 'densite':
-        return e.surveillanceActive !== null;
+        return this.etat.surveillanceActive !== null;
       default:
         return true;
     }
@@ -360,7 +371,24 @@ class Assistant {
     this.refsSuggerees.clear();
     this.messageRecherche = '';
     this.termeRecherche = '';
-    this.aideOuverte = id !== 'discipline';
+    this.aideOuverte = true;
+    this.rendre();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  private changerEcran(ecran: Ecran): void {
+    this.ecran = ecran;
+    this.suggestionsHtml = '';
+    this.refsSuggerees.clear();
+    this.messageRecherche = '';
+    this.termeRecherche = '';
+    if (ecran === 'evaluation') this.etapeId = 'actes';
+    if (ecran === 'ccam') {
+      this.chapitreActif = null;
+      this.sousChapitreActif = null;
+      this.sousChapitres = null;
+      this.actesTheme = null;
+    }
     this.rendre();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -368,12 +396,194 @@ class Assistant {
   /* -------------------------------------------------- rendu */
 
   private rendre(): void {
-    this.rendreProgression();
-    this.rendreVerdictProvisoire();
+    this.rendreEntete();
     this.rendreAide();
-    if (this.etapeId === 'resultat') this.rendreResultat();
-    else this.rendreQuestion();
+    this.rendreModale();
+    switch (this.ecran) {
+      case 'accueil':
+        this.rendreAccueil();
+        break;
+      case 'ccam':
+        this.rendreConsultationActes();
+        break;
+      case 'medicaments':
+        this.rendreConsultationMedicaments();
+        break;
+      default:
+        if (this.etapeId === 'resultat') this.rendreResultat();
+        else this.rendreQuestion();
+    }
   }
+
+  private rendreEntete(): void {
+    // Barre de progression : n'a de sens que pendant l'évaluation.
+    if (this.ecran === 'evaluation') {
+      const parcours = this.parcours();
+      const total = parcours.length;
+      const ratio =
+        this.etapeId === 'resultat'
+          ? 1
+          : Math.min(1, (parcours.indexOf(this.etapeId) + 1) / total);
+      this.jauge.style.width = `${Math.round(ratio * 100)}%`;
+      this.texteProgression.textContent =
+        this.etapeId === 'resultat'
+          ? 'Évaluation terminée'
+          : `${Math.round(ratio * 100)} % — ${this.etape.domaine}`;
+    } else {
+      this.jauge.style.width = '0%';
+      this.texteProgression.textContent =
+        this.ecran === 'accueil'
+          ? 'Accueil'
+          : this.ecran === 'ccam'
+            ? 'Référentiel CCAM — actes techniques'
+            : 'Référentiel — réserve hospitalière';
+    }
+
+    this.boutonEntete.textContent =
+      this.ecran === 'evaluation' ? '↺ Recommencer' : '⌂ Accueil';
+
+    this.rendreVerdict(this.ecran === 'evaluation');
+  }
+
+  /* -------------------------------------------------- progression / verdict */
+
+  private rendreVerdict(afficher: boolean): void {
+    if (!afficher) {
+      this.voyantVerdict.className = 'voyant verdict';
+      this.voyantVerdict.textContent = 'Décision : —';
+      return;
+    }
+    const e = this.etat;
+    // La décision ne s'affiche qu'une fois un élément de la prise en charge saisi :
+    // sans cela, l'en-tête annoncerait « non validée » devant un dossier encore vide.
+    const densiteAmorcee =
+      e.actes.length > 0 ||
+      e.medicaments.length > 0 ||
+      e.intervenants.length > 0 ||
+      e.surveillanceActive === true ||
+      e.contextePatient.length > 0;
+
+    if (!densiteAmorcee) {
+      this.voyantVerdict.className = 'voyant verdict';
+      this.voyantVerdict.textContent = 'Décision : —';
+      return;
+    }
+    const resultat = evaluerDossier(versDossier(this.etat));
+    this.voyantVerdict.className = `voyant verdict ${resultat.severite}`;
+    this.voyantVerdict.textContent = `${resultat.libelle_decision}`;
+  }
+
+  /* -------------------------------------------------- écran d'accueil */
+
+  private rendreAccueil(): void {
+    this.racine.innerHTML = `
+      <span class="etape-numero">Accueil</span>
+      <h2 class="question">Que voulez-vous faire ?</h2>
+      <p class="sous-question">
+        Vérifiez la gradation d’une hospitalisation de jour, ou consultez directement les
+        référentiels qui la fondent.
+      </p>
+
+      <button type="button" class="btn-accueil principal" data-action="demarrer-evaluation">
+        <span class="btn-accueil-icone" aria-hidden="true">🩺</span>
+        <span class="btn-accueil-texte">
+          <strong>Calculer l’éligibilité d’une HDJ</strong>
+          <span>Actes, médicaments, équipe, surveillance et contexte patient : la décision est
+            rendue en langage courant, avec sa justification réglementaire.</span>
+        </span>
+        <span class="btn-accueil-fleche" aria-hidden="true">→</span>
+      </button>
+
+      <div class="accueil-secondaires">
+        <button type="button" class="btn-accueil" data-action="ouvrir-ccam">
+          <span class="btn-accueil-icone" aria-hidden="true">🔎</span>
+          <span class="btn-accueil-texte">
+            <strong>Référentiel des actes techniques (CCAM)</strong>
+            <span>Un acte mobilise-t-il un soin lourd ? Recherche par mots-clés, par code ou par
+              thématique.</span>
+          </span>
+        </button>
+        <button type="button" class="btn-accueil" data-action="ouvrir-medicaments">
+          <span class="btn-accueil-icone" aria-hidden="true">💊</span>
+          <span class="btn-accueil-texte">
+            <strong>Médicaments de la réserve hospitalière</strong>
+            <span>Un produit relève-t-il de la réserve hospitalière ? Recherche par nom ou par
+              DCI.</span>
+          </span>
+        </button>
+      </div>
+
+      <p class="note-saisie">
+        Outil d’aide à la décision : il ne se substitue ni à l’appréciation du médecin DIM, ni aux
+        contrôles de l’Assurance Maladie.
+      </p>`;
+  }
+
+  /* -------------------------------------------------- rappel hors champ */
+
+  private rendreModale(): void {
+    if (!this.modaleOuverte) {
+      this.modale.className = 'modale';
+      this.modale.innerHTML = '';
+      return;
+    }
+    this.modale.className = 'modale ouvert';
+    this.modale.innerHTML = `
+      <div class="modale-voile" data-action="fermer-modale"></div>
+      <div class="modale-carte" role="dialog" aria-modal="true" aria-labelledby="modale-titre">
+        <span class="etape-numero">Avant de commencer</span>
+        <h2 id="modale-titre" class="question">
+          Trois motifs ne relèvent pas de l’hospitalisation de jour
+        </h2>
+        <p class="sous-question">
+          Ces situations, <strong>quelle que soit la situation du patient</strong>, ne se
+          facturent pas en GHS d’hospitalisation de jour MCO. Elles ne représentent qu’une part
+          marginale des demandes : autant le dire d’emblée, plutôt qu’au terme d’un parcours.
+        </p>
+        <ul class="motifs-hors-champ">
+          ${MOTIFS_HORS_CHAMP_HDJ.map(
+            (motif) => `
+            <li>
+              <strong>${esc(motif.titre)}</strong>
+              <p>${esc(motif.explication)}</p>
+              <p class="reference">${esc(motif.reference)}</p>
+            </li>`,
+          ).join('')}
+        </ul>
+        <p class="pedagogie">${esc(PEDAGOGIE_HORS_CHAMP)}</p>
+        <label class="case-afficher">
+          <input type="checkbox" id="ne-plus-afficher" />
+          <span>Ne plus afficher ce rappel</span>
+        </label>
+        <div class="actions">
+          <button type="button" class="btn-action secondaire" data-action="fermer-modale">
+            ← Retour à l’accueil
+          </button>
+          <button type="button" class="btn-action principal" data-action="demarrer-confirme">
+            J’ai compris — évaluer l’éligibilité
+          </button>
+        </div>
+      </div>`;
+  }
+
+  private lireAideHorsChamp(): boolean {
+    try {
+      return window.localStorage.getItem(CLE_AIDE_HORS_CHAMP) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  private ecrireAideHorsChamp(valeur: boolean): void {
+    try {
+      if (valeur) window.localStorage.setItem(CLE_AIDE_HORS_CHAMP, '1');
+      else window.localStorage.removeItem(CLE_AIDE_HORS_CHAMP);
+    } catch {
+      // Le stockage local indisponible ne doit pas empêcher l'évaluation.
+    }
+  }
+
+  /* -------------------------------------------------- question courante */
 
   private rendreQuestion(): void {
     const parcours = this.parcours();
@@ -397,10 +607,6 @@ class Assistant {
 
   private sousQuestion(): string {
     const textes: Record<string, string> = {
-      discipline:
-        'Facultatif : cela ne change aucune règle, seulement les exemples montrés à chaque écran. Le choix ouvre directement l’écran suivant.',
-      champ:
-        'Deux situations échappent à l’hospitalisation de jour : la séance de dialyse ou de chimiothérapie, et la prise en charge en psychiatrie ou en SMR/SSR.',
       actes:
         'Recherchez l’acte dans la nomenclature CCAM : sa fiche indique elle-même s’il mobilise un plateau technique ou s’il se réalise en externe.',
       medicaments:
@@ -417,10 +623,6 @@ class Assistant {
 
   private corps(): string {
     switch (this.etapeId) {
-      case 'discipline':
-        return this.corpsDiscipline();
-      case 'champ':
-        return this.corpsChamp();
       case 'actes':
         return this.corpsActes();
       case 'medicaments':
@@ -437,46 +639,6 @@ class Assistant {
   }
 
   /* -------------------------------------------------- corps par étape */
-
-  private corpsDiscipline(): string {
-    return `
-      <div class="choix-cartes">
-        ${DISCIPLINES.map(
-          (discipline) => `
-          <button type="button" class="btn-carte" data-action="discipline"
-                  data-valeur="${discipline.id}"${presse(this.etat.discipline === discipline.id)}>
-            <span class="icone" aria-hidden="true">${discipline.icone}</span>
-            <span>
-              <strong>${esc(discipline.libelle)}</strong>
-              <span>${esc(discipline.perimetre)}</span>
-            </span>
-          </button>`,
-        ).join('')}
-      </div>
-      <p class="note-saisie">
-        Cliquez sur une discipline : l’écran suivant s’ouvre aussitôt, avec des exemples ciblés.
-        Vous pouvez aussi passer cette étape sans rien choisir.
-      </p>`;
-  }
-
-  private corpsChamp(): string {
-    return lignesBinaires([
-      {
-        cle: 'estSeance',
-        titre: 'Est-ce une séance de dialyse ou de chimiothérapie ?',
-        precision:
-          'Séance forfaitisée : elle se facture au forfait, sans avoir à démontrer la densité de la venue.',
-        valeur: this.etat.estSeance,
-      },
-      {
-        cle: 'estHorsMco',
-        titre: 'Est-ce une prise en charge en psychiatrie ou en SMR/SSR ?',
-        precision:
-          'Ces prises en charge ont leur propre financement, distinct de l’hospitalisation de jour en médecine, chirurgie ou obstétrique.',
-        valeur: this.etat.estHorsMco,
-      },
-    ]);
-  }
 
   private corpsActes(): string {
     const elements = this.etat.actes.length
@@ -721,15 +883,236 @@ class Assistant {
       </p>`;
   }
 
-  /* -------------------------------------------------- aide pédagogique */
+  /* ================================================================ *
+   * Consultation du référentiel des actes techniques (CCAM)
+   * ================================================================ */
+
+  private rendreConsultationActes(): void {
+    this.racine.innerHTML = `
+      <span class="etape-numero">Référentiel CCAM</span>
+      <h2 class="question">Cet acte technique mobilise-t-il un soin lourd ?</h2>
+      <p class="sous-question">
+        Interrogez la nomenclature par mots-clés ou par code, ou parcourez-la par thématique.
+        Les caractéristiques affichées proviennent du référentiel, elles ne sont jamais saisies.
+      </p>
+      <div class="recherche">
+        <input type="text" id="champ-recherche" data-recherche="actes" autocomplete="off"
+               value="${esc(this.termeRecherche)}"
+               placeholder="Mots-clés ou code (scanner, fibro, IRM, perfusion, DEQP003…)" />
+        <span class="loupe" aria-hidden="true">🔍</span>
+      </div>
+      <div id="zone-suggestions">${this.rendreResultatsActes()}</div>
+      <div class="arbre" id="arbre-ccam">${this.rendreArbreActes()}</div>
+      <div class="navigation">
+        <button type="button" class="btn-nav retour" data-action="accueil">← Accueil</button>
+      </div>`;
+  }
+
+  private rendreResultatsActes(): string {
+    if (this.messageRecherche) {
+      return `<div class="etat-recherche">${esc(this.messageRecherche)}</div>`;
+    }
+    if (this.termeRecherche.trim().length >= 2 && !this.suggestionsHtml) {
+      return '<div class="etat-recherche">Recherche en cours…</div>';
+    }
+    if (!this.suggestionsHtml) return '';
+    return `<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
+  }
+
+  private rendreArbreActes(): string {
+    if (this.chargementArbre) {
+      return '<div class="etat-recherche">Chargement de l’arborescence…</div>';
+    }
+    if (!this.chapitreActif) {
+      const chapitres = this.chapitres ?? [];
+      return `
+        <p class="consigne">Parcourir par thématique</p>
+        ${
+          chapitres.length
+            ? `<ul class="arbre-liste">${chapitres
+                .map(
+                  (chapitre) => `
+                  <li>
+                    <button type="button" data-action="chapitre-ccam"
+                            data-valeur="${esc(chapitre.code)}">
+                      <span class="arbre-code">${esc(chapitre.code)}</span>
+                      <span class="arbre-libelle">${esc(chapitre.libelle)}</span>
+                      <span class="arbre-compte">${chapitre.actes}</span>
+                    </button>
+                  </li>`,
+                )
+                .join('')}</ul>`
+            : '<div class="etat-recherche">Arborescence indisponible pour l’instant.</div>'
+        }`;
+    }
+
+    const fil = `
+      <nav class="fil">
+        <button type="button" data-action="arbre-racine">Thématiques</button>
+        <span aria-hidden="true">›</span>
+        ${
+          this.sousChapitreActif
+            ? `<button type="button" data-action="arbre-chapitre">${esc(
+                this.chapitreActif.libelle,
+              )}</button><span aria-hidden="true">›</span>
+               <span class="fil-courant">${esc(this.sousChapitreActif.libelle)}</span>`
+            : `<span class="fil-courant">${esc(this.chapitreActif.libelle)}</span>`
+        }
+      </nav>`;
+
+    if (!this.sousChapitreActif) {
+      const sousChapitres = this.sousChapitres ?? [];
+      return `
+        ${fil}
+        <ul class="arbre-liste">
+          ${sousChapitres
+            .map(
+              (sousChapitre) => `
+              <li>
+                <button type="button" data-action="sous-chapitre-ccam"
+                        data-valeur="${esc(sousChapitre.code)}">
+                  <span class="arbre-libelle">${esc(sousChapitre.libelle)}</span>
+                  <span class="arbre-compte">${sousChapitre.actes}</span>
+                </button>
+              </li>`,
+            )
+            .join('')}
+          <li>
+            <button type="button" data-action="sous-chapitre-ccam" data-valeur=""
+                    class="arbre-tous">
+              <span class="arbre-libelle">Tous les actes de cette thématique</span>
+              <span class="arbre-compte">${this.chapitreActif.actes}</span>
+            </button>
+          </li>
+        </ul>`;
+    }
+
+    const actes = this.actesTheme ?? [];
+    return `
+      ${fil}
+      <ul class="resultats-actes">${actes.map((acte) => this.ligneActe(acte)).join('')}</ul>`;
+  }
+
+  /** Ligne d'un acte CCAM : code, libellé et lecture « soin lourd / non lourd ». */
+  private ligneActe(acte: ActeRef): string {
+    const lourd = acte.necessite_plateau_lourd === true || acte.acte_marqueur_hdj === true;
+    const conclusion = acte.necessite_plateau_lourd === true
+      ? 'Soin lourd : plateau technique mobilisé'
+      : acte.acte_marqueur_hdj === true
+        ? 'Soin lourd : acte marqueur d’hospitalisation de jour'
+        : acte.exclusif_externe === true
+          ? 'Soin non lourd : acte réalisable en externe'
+          : 'Soin non lourd en l’état';
+    return `
+      <li class="acte-ligne ${lourd ? 'lourd' : 'leger'}">
+        <div class="acte-tete">
+          <code>${esc(acte.code)}</code>
+          <span class="acte-libelle">${esc(acte.libelle)}</span>
+        </div>
+        <div class="acte-drapeaux">
+          <span class="drapeau">Plateau technique lourd : ${libelleBooleen(
+            acte.necessite_plateau_lourd,
+            'oui',
+            'non',
+          )}</span>
+          <span class="drapeau">Acte marqueur HDJ : ${libelleBooleen(
+            acte.acte_marqueur_hdj,
+            'oui',
+            'non',
+          )}</span>
+          <span class="drapeau">Réalisable en externe : ${libelleBooleen(
+            acte.exclusif_externe,
+            'oui',
+            'non',
+          )}</span>
+        </div>
+        <div class="acte-verdict">${esc(conclusion)}</div>
+      </li>`;
+  }
+
+  /* ================================================================ *
+   * Consultation du référentiel des médicaments
+   * ================================================================ */
+
+  private rendreConsultationMedicaments(): void {
+    this.racine.innerHTML = `
+      <span class="etape-numero">Réserve hospitalière</span>
+      <h2 class="question">Ce médicament relève-t-il de la réserve hospitalière ?</h2>
+      <p class="sous-question">
+        Recherchez une spécialité par son nom commercial ou par sa DCI : le classement affiché
+        provient du référentiel officiel (BDPM), il n’est jamais saisi.
+      </p>
+      <div class="recherche">
+        <input type="text" id="champ-recherche" data-recherche="medicaments" autocomplete="off"
+               value="${esc(this.termeRecherche)}"
+               placeholder="Nom commercial ou DCI (immunoglobuline, infliximab…)" />
+        <span class="loupe" aria-hidden="true">🔍</span>
+      </div>
+      <div id="zone-suggestions">${this.rendreResultatsMedicaments()}</div>
+      <div class="navigation">
+        <button type="button" class="btn-nav retour" data-action="accueil">← Accueil</button>
+      </div>`;
+  }
+
+  private rendreResultatsMedicaments(): string {
+    if (this.messageRecherche) {
+      return `<div class="etat-recherche">${esc(this.messageRecherche)}</div>`;
+    }
+    if (this.termeRecherche.trim().length >= 2 && !this.suggestionsHtml) {
+      return '<div class="etat-recherche">Recherche en cours…</div>';
+    }
+    if (!this.suggestionsHtml) {
+      return '<div class="etat-recherche">Saisissez au moins deux caractères.</div>';
+    }
+    return `<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
+  }
+
+  /** Ligne d'un médicament : dénomination, DCI et classement au référentiel. */
+  private ligneMedicament(medicament: MedicamentRef): string {
+    return `
+      <li class="acte-ligne ${medicament.est_reserve_hospitaliere === true ? 'lourd' : 'leger'}">
+        <div class="acte-tete">
+          <span class="acte-libelle">${esc(medicament.denomination)}</span>
+        </div>
+        <div class="acte-drapeaux">
+          <span class="drapeau">${
+            medicament.dci ? `DCI ${esc(medicament.dci)}` : 'DCI non renseignée'
+          }</span>
+          <span class="drapeau">Réserve hospitalière : ${etiquette(
+            medicament.est_reserve_hospitaliere,
+            'oui',
+            'non',
+          )}</span>
+          ${
+            medicament.surveillance_particuliere === true
+              ? '<span class="drapeau">surveillance particulière liée au produit</span>'
+              : ''
+          }
+          ${medicament.est_liste_en_sus === true ? '<span class="drapeau">liste en sus</span>' : ''}
+        </div>
+        <div class="acte-verdict">${
+          medicament.est_reserve_hospitaliere === true
+            ? 'Produit de la réserve hospitalière : motif suffisant pour une hospitalisation de jour'
+            : medicament.est_reserve_hospitaliere === false
+              ? 'Hors réserve hospitalière (source officielle)'
+              : 'Valeur absente du référentiel : à confirmer par la pharmacie à usage intérieur'
+        }</div>
+      </li>`;
+  }
+
+  /* ================================================================ *
+   * Volet d'aide
+   * ================================================================ */
 
   private rendreAide(): void {
-    const discipline = this.etat.discipline;
-    const aide: AideEtape = AIDE_ETAPES[this.etapeId] ?? AIDE_PAR_DEFAUT;
-    const casTypiques = casPourEtape(discipline, this.etapeId);
-    const libelleDiscipline = discipline
-      ? LIBELLES_DISCIPLINE[discipline]
-      : 'Toutes disciplines (cas généraux)';
+    const contenu =
+      this.ecran === 'evaluation'
+        ? this.aideEvaluation()
+        : this.ecran === 'ccam'
+          ? this.aideCcam()
+          : this.ecran === 'medicaments'
+            ? this.aideMedicaments()
+            : this.aideAccueil();
 
     this.zoneAide.className = `aide${this.aideOuverte ? ' ouvert' : ''}`;
     this.zoneAide.innerHTML = `
@@ -740,7 +1123,111 @@ class Assistant {
       </button>
       <div class="aide-contenu">
         <h2>Aide &amp; exemples</h2>
-        <div class="discipline-rappel">Cas illustrés : <strong>${esc(libelleDiscipline)}</strong></div>
+        ${contenu}
+      </div>`;
+  }
+
+  private aideAccueil(): string {
+    return `
+      <section>
+        <h3>Trois entrées</h3>
+        <p>
+          Le <strong>calcul d’éligibilité</strong> déroule les cinq vérifications de
+          l’instruction et rend une décision en langage courant. Les deux autres entrées
+          interrogent directement les référentiels qui fondent cette décision.
+        </p>
+      </section>
+      <section>
+        <h3>Règle applicable</h3>
+        <p class="regle">
+          Instruction N° DGOS/R1/DSS/1A/2020/52 du 10 septembre 2020 — gradation des prises en
+          charge ambulatoires : GHS d’hospitalisation de jour ou actes et consultations externes.
+        </p>
+      </section>`;
+  }
+
+  private aideCcam(): string {
+    return `
+      <section>
+        <h3>Pourquoi cette question ?</h3>
+        <p>
+          Un acte technique isolé, réalisable en cabinet, ne justifie pas une hospitalisation.
+          À l’inverse, un plateau technique lourd ou des actes coordonnés caractérisent la
+          densité de la prise en charge.
+        </p>
+      </section>
+      <section>
+        <h3>Règle applicable</h3>
+        <p class="regle">
+          Annexe 4, points 2.b.i et 2.b.iii : acte classant → GHS plein ; deux actes CCAM de
+          techniques différentes sont dénombrables ; l’ECG DEQP003 ne peut être dénombré.
+        </p>
+      </section>
+      <section>
+        <h3>Arborescence officielle</h3>
+        <p>
+          La nomenclature CCAM est organisée en <strong>19 chapitres par appareil</strong>, puis
+          par site anatomique, action et technique. La navigation proposée reprend ces niveaux
+          officiels.
+        </p>
+      </section>`;
+  }
+
+  private aideMedicaments(): string {
+    return `
+      <section>
+        <h3>Pourquoi cette question ?</h3>
+        <p>
+          Certains produits ne peuvent être administrés qu’à l’hôpital. Leur administration est
+          un motif suffisant de prise en charge en hôpital de jour, quel que soit le nombre
+          d’interventions.
+        </p>
+      </section>
+      <section>
+        <h3>Règle applicable</h3>
+        <p class="regle">
+          Annexe 4, point 2.b.iii : la prise en charge justifie un GHS plein « soit parce que la
+          prise en charge comporte l’administration de produits de la réserve hospitalière telle
+          que définie à l’article R. 5121-82 du code de la santé publique ».
+        </p>
+      </section>
+      <section>
+        <h3>Valeur absente</h3>
+        <p>
+          Quand la source officielle est muette, la valeur reste « non déterminée » : elle n’est
+          jamais interprétée comme « hors réserve hospitalière » et demande la confirmation de la
+          pharmacie à usage intérieur.
+        </p>
+      </section>`;
+  }
+
+  private aideEvaluation(): string {
+    const discipline = this.etat.discipline;
+    const aide: AideEtape = AIDE_ETAPES[this.etapeId] ?? AIDE_PAR_DEFAUT;
+    const casTypiques = casPourEtape(discipline, this.etapeId);
+    const libelleDiscipline = discipline
+      ? LIBELLES_DISCIPLINE[discipline]
+      : 'Toutes disciplines (cas généraux)';
+
+    return `
+        <div class="choix-discipline">
+          <label class="etiquette" for="select-discipline">Exemples illustrés pour</label>
+          <select id="select-discipline" data-champ="discipline-aide">
+            <option value=""${discipline ? '' : ' selected'}>
+              Toutes disciplines (cas généraux)
+            </option>
+            ${DISCIPLINES.map(
+              (d) =>
+                `<option value="${d.id}"${discipline === d.id ? ' selected' : ''}>${esc(
+                  d.libelle,
+                )}</option>`,
+            ).join('')}
+          </select>
+          <p class="note-aide">
+            Le choix de la discipline ne change aucune règle : il ne fait qu’illustrer la
+            question posée par des cas de votre domaine.
+          </p>
+        </div>
 
         <section>
           <h3>Pourquoi cette question ?</h3>
@@ -753,7 +1240,7 @@ class Assistant {
         </section>
 
         <section>
-          <h3>Cas typiques</h3>
+          <h3>Cas typiques — ${esc(libelleDiscipline)}</h3>
           <ul class="exemples">
             ${casTypiques
               .map(
@@ -763,55 +1250,7 @@ class Assistant {
               )
               .join('')}
           </ul>
-          ${
-            discipline
-              ? ''
-              : `<p class="note-aide">Choisissez une discipline à l’écran d’accueil pour des cas
-                 propres à votre domaine.</p>`
-          }
-        </section>
-      </div>`;
-  }
-
-  /* -------------------------------------------------- progression */
-
-  private rendreProgression(): void {
-    const parcours = this.parcours();
-    const total = parcours.length;
-    const ratio =
-      this.etapeId === 'resultat'
-        ? 1
-        : Math.min(1, (parcours.indexOf(this.etapeId) + 1) / total);
-    this.jauge.style.width = `${Math.round(ratio * 100)}%`;
-    this.texteProgression.textContent =
-      this.etapeId === 'resultat'
-        ? 'Évaluation terminée'
-        : `${Math.round(ratio * 100)} % — ${this.etape.domaine}`;
-  }
-
-  private rendreVerdictProvisoire(): void {
-    const e = this.etat;
-    // Un raccourci (séance forfaitisée, hors MCO) tranche la question : la
-    // décision peut être annoncée dès qu'il est connu.
-    const raccourci = e.estSeance === true || e.estHorsMco === true;
-    // Sinon, la décision ne s'affiche qu'une fois un élément de la prise en
-    // charge saisi : sans cela, l'en-tête annoncerait « non validée » devant un
-    // dossier encore vide, ce qui n'a aucun sens pour le praticien.
-    const densiteAmorcee =
-      e.actes.length > 0 ||
-      e.medicaments.length > 0 ||
-      e.intervenants.length > 0 ||
-      e.surveillanceActive === true ||
-      e.contextePatient.length > 0;
-
-    if (!raccourci && !densiteAmorcee) {
-      this.voyantVerdict.className = 'voyant verdict';
-      this.voyantVerdict.textContent = 'Décision : —';
-      return;
-    }
-    const resultat = evaluerDossier(versDossier(this.etat));
-    this.voyantVerdict.className = `voyant verdict ${resultat.severite}`;
-    this.voyantVerdict.textContent = `${resultat.libelle_decision}`;
+        </section>`;
   }
 
   /* -------------------------------------------------- résultat */
@@ -939,19 +1378,70 @@ class Assistant {
     const index = Number(cible.dataset.index ?? '-1');
 
     switch (action) {
+      case 'accueil':
+        this.changerEcran('accueil');
+        break;
+      case 'demarrer-evaluation':
+        if (this.lireAideHorsChamp()) this.changerEcran('evaluation');
+        else {
+          this.modaleOuverte = true;
+          this.rendreModale();
+        }
+        break;
+      case 'demarrer-confirme': {
+        const case_ = this.modale.querySelector<HTMLInputElement>('#ne-plus-afficher');
+        if (case_?.checked) this.ecrireAideHorsChamp(true);
+        this.modaleOuverte = false;
+        this.changerEcran('evaluation');
+        break;
+      }
+      case 'fermer-modale':
+        this.modaleOuverte = false;
+        this.rendreModale();
+        break;
+      case 'ouvrir-ccam':
+        this.changerEcran('ccam');
+        void this.chargerChapitres();
+        break;
+      case 'ouvrir-medicaments':
+        this.changerEcran('medicaments');
+        break;
+      case 'chapitre-ccam': {
+        const chapitre = (this.chapitres ?? []).find((c) => c.code === valeur);
+        if (!chapitre) break;
+        this.chapitreActif = chapitre;
+        this.sousChapitreActif = null;
+        this.actesTheme = null;
+        this.sousChapitres = null;
+        void this.chargerSousChapitres(valeur);
+        break;
+      }
+      case 'sous-chapitre-ccam': {
+        if (!this.chapitreActif) break;
+        const sousChapitre = valeur
+          ? (this.sousChapitres ?? []).find((s) => s.code === valeur) ?? null
+          : null;
+        this.sousChapitreActif = sousChapitre;
+        void this.chargerActesTheme(this.chapitreActif.code, sousChapitre?.code ?? null);
+        break;
+      }
+      case 'arbre-racine':
+        this.chapitreActif = null;
+        this.sousChapitreActif = null;
+        this.sousChapitres = null;
+        this.actesTheme = null;
+        this.rendre();
+        break;
+      case 'arbre-chapitre':
+        this.sousChapitreActif = null;
+        this.actesTheme = null;
+        this.rendre();
+        break;
       case 'avancer':
         this.avancer();
         break;
       case 'reculer':
         this.reculer();
-        break;
-      case 'discipline':
-        // Le choix d'une discipline ouvre directement l'écran suivant : sur un
-        // grand écran, la liste des disciplines est longue et obligeait à
-        // défiler pour atteindre « Suivant ».
-        this.etat.discipline = this.etat.discipline === valeur ? null : (valeur as Discipline);
-        if (this.etat.discipline) this.avancer();
-        else this.rendre();
         break;
       case 'basculer-aide':
         this.aideOuverte = !this.aideOuverte;
@@ -1014,10 +1504,19 @@ class Assistant {
         break;
       case 'recommencer':
         this.etat = etatInitial();
-        this.changerEtape('discipline');
+        this.changerEcran('accueil');
         break;
       default:
         break;
+    }
+  };
+
+  private gererChangement = (evenement: Event): void => {
+    const cible = evenement.target as HTMLElement;
+    if (cible?.dataset?.['champ'] === 'discipline-aide') {
+      const valeur = (cible as HTMLSelectElement).value;
+      this.etat.discipline = valeur ? (valeur as Discipline) : null;
+      this.rendreAide();
     }
   };
 
@@ -1036,8 +1535,10 @@ class Assistant {
   private gererSaisie = (evenement: Event): void => {
     const cible = evenement.target as HTMLElement;
 
-    if (cible.dataset?.['champ']) {
-      this.majChamp(cible.dataset['champ'], (cible as HTMLInputElement).value);
+    if (cible.dataset?.['champ'] === 'dureePresenceMinutes') {
+      const nombre = Number((cible as HTMLInputElement).value);
+      this.etat.dureePresenceMinutes = Number.isFinite(nombre) ? Math.max(0, nombre) : 0;
+      this.rendreVerdict(true);
       return;
     }
     if (cible.dataset?.['recherche']) {
@@ -1045,28 +1546,8 @@ class Assistant {
     }
   };
 
-  private majChamp(champ: string, valeur: string): void {
-    if (champ === 'dureePresenceMinutes') {
-      const nombre = Number(valeur);
-      this.etat.dureePresenceMinutes = Number.isFinite(nombre) ? Math.max(0, nombre) : 0;
-      this.rendreVerdictProvisoire();
-    }
-  }
-
   private repondre(cle: string, valeur: boolean): void {
-    switch (cle) {
-      case 'estSeance':
-        this.etat.estSeance = valeur;
-        break;
-      case 'estHorsMco':
-        this.etat.estHorsMco = valeur;
-        break;
-      case 'surveillanceActive':
-        this.etat.surveillanceActive = valeur;
-        break;
-      default:
-        break;
-    }
+    if (cle === 'surveillanceActive') this.etat.surveillanceActive = valeur;
     this.rendre();
   }
 
@@ -1093,15 +1574,18 @@ class Assistant {
 
   private async executerRecherche(type: string, terme: string): Promise<void> {
     const jeton = (this.jetonRequete += 1);
+    const consultation = this.ecran !== 'evaluation';
     try {
       if (type === 'actes') {
-        const resultats = await rechercherActesCcam(terme);
+        const resultats = await rechercherActesCcam(terme, consultation ? 30 : 12);
         if (jeton !== this.jetonRequete) return;
         this.refsSuggerees.clear();
         for (const acte of resultats) this.refsSuggerees.set(acte.code, acte);
-        this.suggestionsHtml = resultats
-          .map(
-            (a) => `<li><button type="button" data-action="suggestion-acte"
+        this.suggestionsHtml = consultation
+          ? resultats.map((a) => this.ligneActe(a)).join('')
+          : resultats
+              .map(
+                (a) => `<li><button type="button" data-action="suggestion-acte"
                 data-valeur="${esc(a.code)}">
                 <span class="titre-ligne">${esc(a.code)} — ${esc(a.libelle)}</span>
                 <span class="detail-ligne">plateau technique lourd :
@@ -1109,17 +1593,19 @@ class Assistant {
                   ${libelleBooleen(a.acte_marqueur_hdj, 'oui', 'non')} · réalisable en externe :
                   ${libelleBooleen(a.exclusif_externe, 'oui', 'non')}</span>
               </button></li>`,
-          )
-          .join('');
+              )
+              .join('');
         this.messageRecherche = resultats.length ? '' : 'Aucun acte trouvé pour cette recherche.';
       } else {
-        const resultats = await rechercherMedicaments(terme);
+        const resultats = await rechercherMedicaments(terme, consultation ? 30 : 12);
         if (jeton !== this.jetonRequete) return;
         this.refsSuggerees.clear();
         for (const medicament of resultats) this.refsSuggerees.set(medicament.cis, medicament);
-        this.suggestionsHtml = resultats
-          .map(
-            (m) => `<li><button type="button" data-action="suggestion-medicament"
+        this.suggestionsHtml = consultation
+          ? resultats.map((m) => this.ligneMedicament(m)).join('')
+          : resultats
+              .map(
+                (m) => `<li><button type="button" data-action="suggestion-medicament"
                 data-valeur="${esc(m.cis)}">
                 <span class="titre-ligne">${esc(m.denomination)}</span>
                 <span class="detail-ligne">${m.dci ? `DCI ${esc(m.dci)} · ` : ''}réserve
@@ -1134,8 +1620,8 @@ class Assistant {
                       : ''
                   }</span>
               </button></li>`,
-          )
-          .join('');
+              )
+              .join('');
         this.messageRecherche = resultats.length
           ? ''
           : 'Aucun médicament trouvé pour cette recherche.';
@@ -1152,7 +1638,51 @@ class Assistant {
   /** Met à jour la seule zone de suggestions : le champ de recherche garde le focus. */
   private rafraichirSuggestions(): void {
     const zone = this.racine.querySelector<HTMLElement>('#zone-suggestions');
-    if (zone) zone.innerHTML = this.rendreSuggestions();
+    if (!zone) return;
+    zone.innerHTML =
+      this.ecran === 'ccam'
+        ? this.rendreResultatsActes()
+        : this.ecran === 'medicaments'
+          ? this.rendreResultatsMedicaments()
+          : this.rendreSuggestions();
+  }
+
+  /* -------------------------------------------------- arborescence CCAM */
+
+  private async chargerChapitres(): Promise<void> {
+    this.chargementArbre = true;
+    this.rafraichirArbre();
+    this.chapitres = await chapitresCcam();
+    this.chargementArbre = false;
+    this.afficherEtatReferentiel();
+    this.rafraichirArbre();
+  }
+
+  private async chargerSousChapitres(chapitre: string): Promise<void> {
+    this.chargementArbre = true;
+    this.rafraichirArbre();
+    this.sousChapitres = await sousChapitresCcam(chapitre);
+    this.chargementArbre = false;
+    this.afficherEtatReferentiel();
+    this.rafraichirArbre();
+  }
+
+  private async chargerActesTheme(
+    chapitre: string,
+    sousChapitre: string | null,
+  ): Promise<void> {
+    this.chargementArbre = true;
+    this.rafraichirArbre();
+    this.actesTheme = await actesParTheme(chapitre, sousChapitre);
+    this.chargementArbre = false;
+    this.afficherEtatReferentiel();
+    this.rafraichirArbre();
+  }
+
+  /** Redessine l'arbre sans toucher au champ de recherche. */
+  private rafraichirArbre(): void {
+    const zone = this.racine.querySelector<HTMLElement>('#arbre-ccam');
+    if (zone) zone.innerHTML = this.rendreArbreActes();
   }
 
   private async ajouterActe(code: string): Promise<void> {

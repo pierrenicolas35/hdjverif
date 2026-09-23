@@ -65,15 +65,23 @@ export interface IntervenantSaisi {
  * ------------------------------------------------------------------ */
 
 export interface EtatAssistant {
-  /** Discipline déclarée à l'accueil (adapte les exemples pédagogiques). */
+  /**
+   * Discipline dont les exemples illustrent le volet « Aide & exemples ».
+   * Elle ne change aucune règle et n'est demandée qu'au moment de lire l'aide.
+   */
   discipline: Discipline | null;
 
-  /** Régime déterminé par les portes 0 (réponses aux questions de champ). */
-  estSeance: boolean | null;
-  estHorsMco: boolean | null;
-
   /**
-   * Porte 1 : les faits du dossier (programmation, demande médicale préalable,
+   * Porte 0 : le champ est **MCO général par construction**.
+   *
+   * Les motifs qui échappent à l'instruction — séance de dialyse ou de chimiothérapie,
+   * prise en charge en SMR/SSR ou en psychiatrie — sont portés par un message d'alerte
+   * affiché avant le début de l'évaluation, et non par une question de l'assistant :
+   * sur ces situations, il n'y a pas de densité à démontrer, seulement un régime de
+   * financement propre. Le moteur conserve ces issues pour tout autre appelant.
+   */
+
+  /** Porte 1 : les faits du dossier (programmation, demande médicale préalable,
    * synthèse du jour, lettre de liaison) ne sont pas portés par l'état.
    *
    * L'outil évalue une HDJ **en cours de programmation** : ces quatre éléments
@@ -100,8 +108,6 @@ export interface EtatAssistant {
 export function etatInitial(): EtatAssistant {
   return {
     discipline: null,
-    estSeance: null,
-    estHorsMco: null,
     actes: [],
     medicaments: [],
     intervenants: [],
@@ -191,15 +197,13 @@ export function intervenantPourProfession(profession: Profession): IntervenantSa
  * Conversion vers le moteur
  * ------------------------------------------------------------------ */
 
-/** Régime de champ déduit des réponses aux portes 0. */
-export function regimeDe(etat: EtatAssistant): RegimeChamp {
-  if (etat.estSeance) return 'CHIMIOTHERAPIE';
-  if (etat.estHorsMco) return 'SMR';
-  return 'MCO_GENERAL';
-}
-
 /**
  * Construit le `DossierHDJ` soumis au moteur.
+ *
+ * Le régime est **MCO général par construction** : les séances forfaitisées et les
+ * prises en charge hors MCO (SMR/SSR, psychiatrie) sont écartées en amont par le
+ * message d'alerte affiché avant l'évaluation — elles n'ont pas de densité à
+ * démontrer, mais relèvent d'un autre financement.
  *
  * Les valeurs non encore renseignées sont volontairement neutres : l'assistant
  * peut ainsi afficher une décision à mesure de la saisie.
@@ -223,7 +227,7 @@ export function versDossier(etat: EtatAssistant): DossierHDJ {
   }));
 
   return {
-    regime_champ: regimeDe(etat),
+    regime_champ: 'MCO_GENERAL',
     duree_presence_minutes: etat.dureePresenceMinutes,
     // Acquis par construction sur une HDJ en cours de programmation (porte 1).
     est_programme: true,

@@ -289,26 +289,61 @@ export function construireMedicaments({ contenuBdpm, contenuCompo, contenuCpd, m
  * Nomenclature CCAM
  * ------------------------------------------------------------------ */
 
+/**
+ * Normalisation d'un libellé de mode d'accès.
+ *
+ * La nomenclature emploie l'apostrophe typographique (« d’abord »), là où les listes
+ * ci-dessous sont écrites avec l'apostrophe droite : sans cette normalisation, des
+ * modes d'accès entiers — « acte par rayons x, avec accès autre qu’abord ouvert » —
+ * ne seraient jamais reconnus.
+ */
+export function normaliserModeAcces(texte) {
+  return String(texte)
+    .replace(/[’‘`´]/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 /** Modes d'accès nécessitant une salle interventionnelle (plateau technique lourd). */
-export const MODES_PLATEAU_LOURD = new Set([
-  'abord ouvert',
-  'accès transpariétal',
-  'accès endoscopique transpariétal',
-  'accès intraluminal transpariétal',
-  'accès transorificiel',
-  'accès endoscopique transorificiel',
-  "acte par rayons x, avec accès autre qu'abord ouvert",
-  "acte par ultrasons ou remnographie avec accès autre qu'abord ouvert",
-]);
+export const MODES_PLATEAU_LOURD = new Set(
+  [
+    'abord ouvert',
+    'accès transpariétal',
+    'accès endoscopique transpariétal',
+    'accès intraluminal transpariétal',
+    'accès transorificiel',
+    'accès endoscopique transorificiel',
+    "acte par rayons x, avec accès autre qu'abord ouvert",
+    "acte par ultrasons ou remnographie avec accès autre qu'abord ouvert",
+  ].map(normaliserModeAcces),
+);
 
 /** Modes d'accès d'imagerie réalisable hors plateau interventionnel. */
-export const MODES_EXTERNE = new Set([
-  'acte par ultrasons, sans accès',
-  'acte par rayons x, sans accès',
-  'acte par remnographie sans accès',
-]);
+export const MODES_EXTERNE = new Set(
+  [
+    'acte par ultrasons, sans accès',
+    'acte par rayons x, sans accès',
+    'acte par remnographie sans accès',
+  ].map(normaliserModeAcces),
+);
 
-/** Actes CCAM exploitables { code, libelle, modeAcces } (doublons de la source écartés). */
+/**
+ * Actes CCAM exploitables (doublons de la source écartés).
+ *
+ * Chaque acte porte sa **position dans l'arborescence officielle** de la nomenclature :
+ *   • `chapitreCode` / `chapitreLabel` — les 19 chapitres par appareil (1ᵉʳ niveau) ;
+ *   • `topographie` / `topographieLabel` — le site anatomique (2ᵉ niveau, axe « Appareils »
+ *     de l'arborescence CCAM) ;
+ *   • `action` / `actionLabel` et `modeAcces` / `modeAccesLabel` — les deux autres axes
+ *     officiels (« Actions » et « Techniques ») ;
+ *   • `famille` / `familleLabel` — la famille d'actes publiée par la source.
+ *
+ * @returns {{code: string, libelle: string, chapitreCode: string, chapitreLabel: string,
+ *            topographie: string, topographieLabel: string, action: string, actionLabel: string,
+ *            modeAcces: string, modeAccesLabel: string,
+ *            famille: string, familleLabel: string}[]}
+ */
 export function lireCcam(contenu) {
   const lignes = contenu.split(/\r?\n/);
   const entetes = decouperCsv(lignes[0] ?? '', ',');
@@ -324,16 +359,142 @@ export function lireCcam(contenu) {
     if (code.length !== 7 || !libelle || !chapitre) continue;
     if (codesVus.has(code)) continue;
     codesVus.add(code);
-    actes.push({ code, libelle, modeAcces: (ligneObj['modeAccesLabel'] ?? '').trim() });
+    actes.push({
+      code,
+      libelle,
+      chapitreCode: chapitre,
+      chapitreLabel: (ligneObj['chapterLabel'] ?? '').trim(),
+      topographie: (ligneObj['topographie'] ?? '').trim(),
+      topographieLabel: (ligneObj['topographieLabel'] ?? '').trim(),
+      action: (ligneObj['action'] ?? '').trim(),
+      actionLabel: (ligneObj['actionLabel'] ?? '').trim(),
+      modeAcces: (ligneObj['modeAccesLabel'] ?? '').trim(),
+      modeAccesLabel: (ligneObj['modeAccesLabel'] ?? '').trim(),
+      famille: (ligneObj['Famille d’acte'] ?? ligneObj['famille'] ?? '').trim(),
+      familleLabel: (ligneObj['familleLabel'] ?? '').trim(),
+    });
   }
   return actes;
+}
+
+/* ------------------------------------------------------------------ *
+ * Mots-clés « grand public » des actes CCAM
+ * ------------------------------------------------------------------ */
+
+/**
+ * Correspondances de vocabulaire.
+ *
+ * OBJET : élargir la recherche à la façon dont un soignant (ou un secrétariat) désigne
+ *          spontanément un acte, plutôt qu'au seul libellé de la nomenclature.
+ *          Le référentiel officiel parle par exemple de « remnographie », là où tout le
+ *          monde cherche « IRM » ; de « scanographie », là où l'on cherche « scanner ».
+ *
+ * Chaque entrée : une expression à reconnaître dans le libellé (ou les libellés
+ * d'arborescence) → les mots-clés supplémentaires à indexer. Le vocabulaire est **ajouté**
+ * au libellé, jamais substitué : « remnographie » continue de trouver l'acte.
+ */
+const SYNONYMES = [
+  ['remnographie', 'irm resonance magnetique'],
+  ['scanographie', 'scanner tdm tomodensitometrie'],
+  ['radiographie', 'radio rx radiologie'],
+  ['echographie', 'echo ultrason ultrasonore'],
+  ['electrocardiograph', 'ecg electrocardiogramme'],
+  ['electromyograph', 'emg electromyogramme'],
+  ['electroencephalo', 'eeg electroencephalogramme'],
+  ['endoscopie', 'endoscopie fibroscopie'],
+  ['endoscopique', 'endoscopie fibroscopie'],
+  ['exerese', 'ablation retrait excision'],
+  ['ablation', 'ablation retrait'],
+  ['biopsie', 'biopsie prelevement ponction'],
+  ['ponction', 'ponction prelevement'],
+  ['perfusion', 'perfusion intraveineuse injectable'],
+  ['injection', 'injection injectable'],
+  ['dilatation', 'dilatation elargissement'],
+  ['prothese', 'prothese implant'],
+  ['implant', 'implant prothese'],
+  ['craniotomie', 'ouverture du crane neurochirurgie'],
+  ['cataracte', 'cristallin oeil'],
+  ['coronar', 'coronaire coeur'],
+  ['valvul', 'valve cardiaque'],
+  ['pacemaker', 'stimulateur cardiaque'],
+  ['defibrillateur', 'defibrillateur choc electrique'],
+  ['angioplastie', 'angioplastie ballon',
+  ],
+  ['stent', 'endoprothese stent'],
+  ['endoprothese', 'stent endoprothese'],
+  ['anevrisme', 'anevrisme aorta artere'],
+  ['diplegie', 'accident vasculaire cerebral'],
+  ['thyroide', 'thyroide'],
+  ['greffe', 'transplantation greffe'],
+  ['amygdale', 'amygdalectomie'],
+  ['adenoide', 'vegetations adenoides'],
+  ['appendice', 'appendicectomie appendicite'],
+  ['cholecyst', 'vesicule biliaire'],
+  ['coloscopie', 'colon coloscopie'],
+  ['gastroscopie', 'estomac gastroscopie fibroscopie'],
+  ['oesophage', 'oesophage'],
+  ['hemorroide', 'hemorroide anus'],
+  ['fissure', 'fissure anale'],
+  ['hemodialyse', 'dialyse epuration renale'],
+  ['dialyse', 'dialyse reins epuration renale'],
+  ['hysterectomie', 'uterus hysterectomie'],
+  ['cesarienne', 'cesarienne accouchement'],
+  ['prostate', 'prostate'],
+  ['nephrectomie', 'rein nephrectomie'],
+  ['litotritie', 'calculs urinaires lithiase'],
+  ['fracture', 'fracture os traumatologie'],
+  ['arthroscopie', 'arthroscopie articulation genou epaule'],
+  ['osteosynthese', 'osteosynthese plaque vis'],
+  ['prothese de hanche', 'prothese hanche'],
+  ['prothese de genou', 'prothese genou'],
+  ['hallux', 'hallux valgus oignon pied'],
+  ['kyste', 'kyste'],
+  ['tumeur', 'tumeur neoplasme cancer'],
+  ['polype', 'polype'],
+  ['absces', 'abces collection suppuration'],
+  ['suture', 'suture points plaie'],
+  ['greffon', 'greffe transplant'],
+  ['drainage', 'drainage evacuation'],
+  ['catheter', 'catheter voie veineuse'],
+  ['oxygene', 'oxygene oxygene hyperbare caisson'],
+  ['obesite', 'obesite surpoids by-pass sleeve'],
+  ['radiotherapie', 'radiotherapie'],
+  ['chimiotherapie', 'chimiotherapie'],
+  ['transfusion', 'transfusion culot globulaire'],
+];
+
+/**
+ * Mots-clés supplémentaires d'un acte.
+ *
+ * Réunit : le libellé officiel, les libellés d'arborescence (chapitre, site anatomique,
+ * action, technique, famille) et les correspondances de vocabulaire reconnues. Le résultat
+ * alimente la colonne `mots_cles`, indexée en trigrammes et interrogée par `rechercher_ccam`.
+ */
+export function motsClesActe(acte) {
+  const sources = [
+    acte.libelle,
+    acte.chapitreLabel,
+    acte.topographieLabel,
+    acte.actionLabel,
+    acte.modeAccesLabel,
+    acte.familleLabel,
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const cible = normaliser(sources);
+  const mots = new Set();
+  for (const [declencheur, ajout] of SYNONYMES) {
+    if (cible.includes(declencheur)) for (const m of ajout.split(' ')) mots.add(m);
+  }
+  return [...mots].join(' ').trim();
 }
 
 /** Lignes de `referentiel_ccam` : croisement nomenclature × surcharges éditoriales locales. */
 export function construireActes({ contenuCcam, surcharges }) {
   return lireCcam(contenuCcam).map((a) => {
-    const lourd = MODES_PLATEAU_LOURD.has(a.modeAcces);
-    const externe = MODES_EXTERNE.has(a.modeAcces);
+    const mode = normaliserModeAcces(a.modeAcces);
+    const lourd = MODES_PLATEAU_LOURD.has(mode);
+    const externe = MODES_EXTERNE.has(mode);
     const surcharge = surcharges.get(a.code);
     return {
       code: a.code,
@@ -341,6 +502,13 @@ export function construireActes({ contenuCcam, surcharges }) {
       acte_marqueur_hdj: surcharge?.acte_marqueur_hdj ?? lourd,
       exclusif_externe: surcharge?.exclusif_externe ?? externe,
       necessite_plateau_lourd: surcharge?.necessite_plateau_lourd ?? lourd,
+      chapitre_code: a.chapitreCode || null,
+      chapitre_libelle: a.chapitreLabel || null,
+      // Sous-thématique = site anatomique (axe « Appareils » de l'arborescence CCAM).
+      // Repli sur le chapitre : chaque acte reste atteignable par l'arbre.
+      sous_chapitre_code: a.topographie || a.chapitreCode || null,
+      sous_chapitre_libelle: a.topographieLabel || a.chapitreLabel || null,
+      mots_cles: motsClesActe(a) || null,
     };
   });
 }

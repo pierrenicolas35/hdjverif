@@ -95,6 +95,17 @@ async function rechercher(terme) {
   return reponse.json();
 }
 
+/** Appelle une fonction RPC du référentiel CCAM. */
+async function rpcCcam(fonction, corps) {
+  const reponse = await fetch(`${URL_SUPABASE}/rest/v1/rpc/${fonction}`, {
+    method: 'POST',
+    headers: { ...entetes, 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps),
+  });
+  if (!reponse.ok) throw new Error(`HTTP ${reponse.status} : ${await reponse.text()}`);
+  return reponse.json();
+}
+
 /** Cas de référence : dénomination, état attendu de la réserve, motif. */
 const CAS = [
   ['REMICADE', true, 'produit de HDJ (réserve hospitalière)'],
@@ -206,6 +217,42 @@ async function principal() {
         (trouve ? ` dont ${dciAttendue}` : ` — ${dciAttendue} NON trouvé`),
     );
   }
+
+  console.log('\n— Recherche CCAM élargie et arborescence —');
+  // Vocabulaire courant : le référentiel parle de « scanographie » et de
+  // « remnographie » là où l'utilisateur cherche « scanner » et « IRM ».
+  const scan = await rpcCcam('rechercher_ccam', { p_terme: 'scanner', p_limite: 5 });
+  ligne(
+    scan.some((a) => a.libelle.toLowerCase().includes('scanographie')),
+    `« scanner » → ${scan.length} résultat(s) — correspondance par vocabulaire courant`,
+  );
+  const irm = await rpcCcam('rechercher_ccam', { p_terme: 'irm', p_limite: 5 });
+  ligne(
+    irm.some((a) => /remnographie|irm/i.test(a.libelle)),
+    `« irm » → ${irm.length} résultat(s) — correspondance par vocabulaire courant`,
+  );
+
+  const chapitres = await rpcCcam('chapitres_ccam', {});
+  const totalChapitres = chapitres.reduce((somme, c) => somme + c.actes, 0);
+  ligne(
+    chapitres.length >= 15 && totalChapitres > 1500,
+    `arborescence : ${chapitres.length} chapitres, ${totalChapitres} actes classés`,
+  );
+  const chapitre07 = chapitres.find((c) => c.code === '07');
+  const sousChapitres = await rpcCcam('sous_chapitres_ccam', { p_chapitre: '07' });
+  ligne(
+    Boolean(chapitre07) && sousChapitres.length > 1,
+    `chapitre « ${chapitre07?.libelle ?? '07'} » → ${sousChapitres.length} sous-thèmes`,
+  );
+  const actesThemes = await rpcCcam('actes_par_theme', {
+    p_chapitre: '07',
+    p_sous_chapitre: sousChapitres[0]?.code ?? null,
+    p_limite: 5,
+  });
+  ligne(
+    actesThemes.length > 0,
+    `sous-thème « ${sousChapitres[0]?.libelle ?? '—'} » → ${actesThemes.length} acte(s) listé(s)`,
+  );
 
   console.log('');
   if (erreurs.length > 0) {

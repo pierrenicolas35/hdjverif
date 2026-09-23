@@ -57,17 +57,46 @@ donc pas posées :
 Ces quatre éléments restent des **engagements de la prise en charge programmée** : ils sont
 rappelés à cocher sur la fiche de traçabilité, et le moteur les considère comme réunis.
 
-Les questions portent donc uniquement sur ce qui **détermine la facturation** : type de prise en
-charge, actes prévus, médicaments prévus, professionnels qui interviendront, surveillance prévue,
-durée de présence et **contexte patient**.
+Les questions portent donc uniquement sur ce qui **détermine la facturation** : actes prévus,
+médicaments prévus, professionnels qui interviendront, surveillance prévue, durée de présence et
+**contexte patient**.
+
+### Écran d’accueil : trois entrées
+
+L’accueil ne demande rien : il propose trois entrées, la principale en tête et en plus grand.
+
+1. **Calculer l’éligibilité d’une HDJ** — le parcours pas-à-pas (bouton principal, au-dessus des
+   autres).
+2. **Référentiel des actes techniques (CCAM)** — interroger la base pour savoir si un acte
+   mobilise un **soin lourd** : recherche par mots-clés ou par code, et navigation par
+   **arborescence** (thématique → sous-thème → actes).
+3. **Médicaments de la réserve hospitalière** — rechercher une spécialité par nom commercial ou
+   par DCI, et lire le classement issu du référentiel officiel.
+
+### Rappel avant toute évaluation : les motifs hors champ
+
+Les situations qui échappent à l’instruction ne représentent qu’une **part marginale** des
+demandes : en faire la première question du parcours aurait alourdi l’outil pour tout le monde.
+Elles font donc l’objet d’un **message d’alerte affiché avant de pouvoir débuter** (popup), qui
+recense les trois motifs concernés et cite leur base réglementaire :
+
+| Motif | Pourquoi il échappe à l’HDJ |
+|---|---|
+| **Séance de dialyse ou de chimiothérapie** | Séance forfaitisée (GHS de séance), « sans que la prise en charge n’ait à répondre aux critères » (annexe 4, point 1). |
+| **SMR / SSR** | Financement propre au SMR, hors du champ MCO que vise l’instruction (art. L. 162-22-6 CSS). |
+| **Psychiatrie** | Financement propre à la psychiatrie, hors champ MCO (art. L. 162-22-6 CSS). |
+
+Le rappel est **catégorique** : aucun contexte patient, même très lourd, ne rend ces situations
+facturables en GHS d’hospitalisation de jour MCO — la question n’est pas celle de la densité des
+soins, mais celle du régime de financement. Une case « ne plus afficher ce rappel » permet de ne
+pas le revoir une fois qu’il est connu.
 
 ### Écrans et interactions
 
 - **Aucune donnée administrative** : ni numéro de séjour, ni date. Rien de ce qui identifie le
   patient n’est saisi ni affiché (y compris dans la fiche de traçabilité et la synthèse).
-- **Sept écrans** + la décision : discipline, type de prise en charge, actes, médicaments, équipe,
-  surveillance et durée, **contexte patient**. Les questions homogènes sont **regroupées** pour
-  limiter les clics.
+- **Cinq questions** + la décision : actes, médicaments, équipe, surveillance et durée,
+  **contexte patient**. Les questions homogènes sont **regroupées** pour limiter les clics.
 - **Contexte patient (vulnérabilité)** : l’écran reprend l’énumération de l’instruction — âge,
   handicap, pathologie psychiatrique, état grabataire, antécédents (échec ou impossibilité de la
   prise en charge en externe), précarité sociale, difficultés de coopération ou d’expression,
@@ -78,8 +107,6 @@ durée de présence et **contexte patient**.
   « Quels professionnels interviendront auprès du patient ? », « Une surveillance rapprochée du
   patient est-elle prévue ? ». Le vocabulaire juridique (*champ de l’instruction*, *densité*,
   *MCO*) reste confiné au volet « Règle applicable », qui cite la référence normative.
-- **Le clic sur une discipline ouvre directement l’écran suivant** : la liste est longue, il n’y a
-  rien à aller chercher plus bas. Le choix reste facultatif : « Suivant » passe l’étape.
 - **Gros boutons Oui / Non** : **Oui en vert**, **Non en rouge** (Material Design), maintenus
   enfoncés une fois sélectionnés.
 - **Équipe par boutons à bascule** : un bouton par profession (médecin, infirmier(ère),
@@ -93,14 +120,14 @@ durée de présence et **contexte patient**.
   hospitalière, surveillance renforcée) sont **repris du référentiel** et affichés. Ils ne sont
   **jamais redemandés** à l’utilisateur.
 - **Décision en direct** dans l’en-tête, formulée en langage courant, dès qu’un élément de la
-  prise en charge est saisi ou qu’un raccourci la tranche.
+  prise en charge est saisi.
 - **Volet pédagogique** sur chaque écran : « pourquoi cette question ? », règle applicable citée,
-  et cas typiques **ancrés sur la question posée** : la grille couvre les six étapes pour chacune
-  des 14 disciplines, de sorte que l’aide ne parle jamais d’une autre question
-  (*Relève du GHS* / *Relève de l’externe* / *Piège fréquent* / *Hors champ*). Le choix de la
-  discipline est facultatif et ne modifie aucun critère de décision.
-- **Raccourcis décisionnels** : une séance de dialyse/chimiothérapie ou une prise en charge
-  SMR/psychiatrie conduit directement au résultat, sans dérouler l’assistant.
+  et cas typiques **ancrés sur la question posée**. La discipline qui illustre ces cas se choisit
+  **dans un menu déroulant, à l’endroit où l’on lit l’aide** (et non en préambule) : les
+  14 disciplines y sont rangées **par ordre alphabétique**. La grille couvre les cinq questions
+  pour chacune d’elles, de sorte que l’aide ne parle jamais d’une autre question
+  (*Relève du GHS* / *Relève de l’externe* / *Piège fréquent* / *Hors champ*). Ce choix ne
+  modifie aucun critère de décision.
 - **Fiche de traçabilité T2A** imprimable (PDF) ou exportable en `.txt`, avec zones de visa et
   rappel du dispositif de rescrit tarifaire.
 
@@ -130,14 +157,19 @@ src/
     ports/                        porte0-champ · porte1-prerequis · porte2-acte-isole
                                   porte3-densite · porte4-decision
   ui/
-    wizard.ts                     Assistant pas-à-pas (état, navigation, rendu, recherche)
+    wizard.ts                     Écrans (accueil, évaluation, consultation des référentiels),
+                                  navigation, recherche, arborescence CCAM
     store.ts                      État de l'assistant → DossierHDJ
     referentiels.ts               Client Supabase (médicaments, CCAM) + repli local
     pedagogie.ts                  Disciplines cliniques, cas typiques, aide par étape
     fiche.ts                      Fiche de traçabilité T2A
     styles.css                    Charte CHU Grenoble Alpes (en-tête bleu, fond blanc)
-supabase/                         SQL du projet Supabase (durcissement, RPC de recherche,
-                                  suivi des dates de mise à jour)
+supabase/
+  hardening.sql                   Row Level Security, privilèges, index, vues
+  rpc-recherche.sql               RPC de recherche (médicaments, CCAM, acte par code)
+  referentiel-maj.sql             Suivi des dates de mise à jour
+  ccam-arbres.sql                 Arborescence CCAM + mots-clés « grand public » et
+                                  fonctions de navigation (chapitres, sous-thèmes, actes)
 scripts/
   import-referentiels.mjs         Import des référentiels officiels vers Supabase
   maj-referentiels.mjs            Mise à jour mensuelle légère (empreinte des sources)
@@ -203,7 +235,7 @@ Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 | Table | Contenu | Source |
 |---|---|---|
 | `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, **surveillance particulière**, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
-| `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
+| `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd, **chapitre**, **sous-thème = site anatomique**, **mots-clés**) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
 
 Dans l’assistant :
 
@@ -214,6 +246,35 @@ Dans l’assistant :
 - la recherche est **insensible à la casse et aux accents** (fonctions RPC `unaccent`) ;
 - si le référentiel est **injoignable**, un repli local embarqué prend le relais et l’état est
   signalé dans l’en-tête.
+
+### Recherche des actes : mots-clés « grand public » et arborescence
+
+La recherche d’un acte technique ne pouvait pas se limiter au libellé officiel : le référentiel
+parle de « **remnographie** » là où tout le monde cherche « **IRM** », de « **scanographie** » là
+où l’on cherche « **scanner** », et un secrétariat cherchera « fibro » plutôt
+qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la recherche par code :
+
+1. **Des mots-clés de vocabulaire courant**, construits à l’import pour chaque acte à partir de son
+   libellé, de ses libellés d’arborescence et d’une table de correspondances
+   (`scripts/lib/referentiels.mjs`, colonne `mots_cles` indexée en trigrammes). Ils viennent
+   **s’ajouter** au libellé officiel, jamais le remplacer : 1 437 des 1 969 actes en portent.
+2. **Une arborescence officielle à deux niveaux**, navigable à l’écran :
+   - **thématique** = les **chapitres par appareil** de la nomenclature (18 chapitres présents
+     dans le jeu de données, 19 au référentiel complet) ;
+   - **sous-thème** = le **site anatomique** de l’acte (axe « Appareils » de l’arborescence CCAM
+     publiée par l’Assurance Maladie), replié sur le chapitre lorsqu’il est absent.
+
+   Aucune classification n’est inventée : ces niveaux sont livrés par le jeu de données « CCAM
+   Ameli » lui-même (colonnes `chapterCode`/`chapterLabel`, `topographie`/`topographieLabel`,
+   `action`, `modeAcces`, famille d’actes), et repris tels quels par trois fonctions RPC :
+   `chapitres_ccam()`, `sous_chapitres_ccam(chapitre)` et `actes_par_theme(chapitre, sous-thème)`.
+
+> **Exactitude des indicateurs.** Un défaut a été corrigé à cette occasion : la source écrit
+> « autre qu’**’**abord ouvert » avec une **apostrophe typographique**, là où les règles
+> utilisaient l’apostrophe droite. Sans normalisation (`normaliserModeAcces`), deux modes
+> d’accès entiers n’étaient jamais reconnus et **157 actes** (angiographies, échographies
+> endocavitaires…) étaient classés « non lourds » à tort. Le référentiel en compte désormais
+> **1 501 sur plateau technique lourd** (contre 1 344 auparavant).
 
 ### Comment la réserve hospitalière est déterminée
 
@@ -306,8 +367,11 @@ npm run import:referentiels
 # 3. Porte de contrôle après import (lecture seule, clé anon de l'application)
 npm run verifier:referentiel                    # code retour 0 = conforme
 
-# 4. Le cas échéant : appliquer supabase/hardening.sql, supabase/rpc-recherche.sql
-#    et, une seule fois, supabase/referentiel-maj.sql (suivi des dates de mise à jour)
+# 4. Le cas échéant : appliquer supabase/hardening.sql, supabase/rpc-recherche.sql,
+#    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM) et, une seule fois,
+#    supabase/referentiel-maj.sql (suivi des dates de mise à jour).
+#    ccam-arbres.sql redéfinit la fonction rechercher_ccam : il doit être appliqué après
+#    rpc-recherche.sql.
 ```
 
 `supabase/referentiel-maj.sql` crée la table de suivi `referentiel_maj` (une ligne par table :
@@ -371,7 +435,7 @@ jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
 
 ```bash
 npm install
-npm test              # 108 tests : moteur, portes, assistant (référentiel simulé),
+npm test              # 124 tests : moteur, portes, assistant (référentiel simulé),
                       #             lecture des référentiels officiels
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict

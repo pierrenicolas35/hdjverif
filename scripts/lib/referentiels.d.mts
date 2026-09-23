@@ -40,6 +40,28 @@ export interface ActeCcam {
   readonly acte_marqueur_hdj: boolean | null;
   readonly exclusif_externe: boolean | null;
   readonly necessite_plateau_lourd: boolean | null;
+  readonly chapitre_code: string | null;
+  readonly chapitre_libelle: string | null;
+  readonly sous_chapitre_code: string | null;
+  readonly sous_chapitre_libelle: string | null;
+  /** Synonymes et vocabulaire courant (recherche élargie). */
+  readonly mots_cles: string | null;
+}
+
+/** Position d'un acte dans l'arborescence officielle CCAM (issue de `lireCcam`). */
+export interface ActeCcamSource {
+  readonly code: string;
+  readonly libelle: string;
+  readonly chapitreCode: string;
+  readonly chapitreLabel: string;
+  readonly topographie: string;
+  readonly topographieLabel: string;
+  readonly action: string;
+  readonly actionLabel: string;
+  readonly modeAcces: string;
+  readonly modeAccesLabel: string;
+  readonly famille: string;
+  readonly familleLabel: string;
 }
 
 export interface SurchargeCcam {
@@ -64,6 +86,7 @@ export const MODES_PLATEAU_LOURD: Set<string>;
 export const MODES_EXTERNE: Set<string>;
 
 export function normaliser(texte: string): string;
+export function normaliserModeAcces(texte: string): string;
 export function decouperCsv(ligne: string, separateur?: string): string[];
 export function lireSpecialitesCommercialisees(contenu: string): SpecialiteBdpm[];
 export function lireComposition(contenu: string): Map<string, string[]>;
@@ -87,7 +110,15 @@ export function construireMedicaments(entree: {
   contenuCpd: string;
   motifs: MotifsReserve;
 }): { lignes: LigneMedicament[]; origineReserve: OrigineReserve };
-export function lireCcam(contenu: string): { code: string; libelle: string; modeAcces: string }[];
+export function lireCcam(contenu: string): ActeCcamSource[];
+export function motsClesActe(acte: {
+  libelle: string;
+  chapitreLabel?: string;
+  topographieLabel?: string;
+  actionLabel?: string;
+  modeAccesLabel?: string;
+  familleLabel?: string;
+}): string;
 export function construireActes(entree: {
   contenuCcam: string;
   surcharges: Map<string, SurchargeCcam>;

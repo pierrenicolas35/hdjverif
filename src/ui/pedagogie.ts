@@ -2,12 +2,17 @@
  * Contenu pédagogique de l'assistant.
  *
  * Philosophie : l'assistant n'interroge pas l'identité professionnelle de
- * l'utilisateur. Il propose de choisir une **discipline clinique** dans le seul
- * but d'illustrer les règles par des cas concrets de cette discipline.
+ * l'utilisateur. Une **discipline clinique** peut être choisie, dans le seul but
+ * d'illustrer les règles par des cas concrets de cette discipline : le menu se
+ * trouve dans le volet « Aide & exemples » de chaque question, jamais en préambule.
  *
  * Pour chaque étape : le « pourquoi » de la question et la règle applicable
  * (génériques), complétés par des **cas typiques rattachés à la discipline**
  * choisie et filtrés selon l'étape en cours.
+ *
+ * Le module porte aussi le **message d'alerte** affiché avant toute évaluation :
+ * les motifs qui échappent à l'hospitalisation de jour (séance forfaitisée,
+ * SMR/SSR, psychiatrie) et leurs justifications réglementaires.
  */
 
 /* ================================================================== *
@@ -33,111 +38,30 @@ export type Discipline =
 export interface DefinitionDiscipline {
   readonly id: Discipline;
   readonly libelle: string;
-  readonly icone: string;
-  /** Intitulé court résumant le périmètre. */
-  readonly perimetre: string;
 }
 
 /**
- * Icônes des disciplines.
+ * Disciplines cliniques, **triées par ordre alphabétique** pour le menu déroulant
+ * du volet « Aide & exemples ».
  *
- * Chaque icône doit **décrire l'organe ou l'acte emblématique** de la discipline, et rester
- * distincte des autres tuiles (aucun doublon). Deux disciplines n'ont pas de pictogramme
- * dédié dans le jeu d'emojis : la gastro-entérologie (aucun emoji d'organe digestif n'existe)
- * et la chirurgie (aucun emoji de scalpel), d'où l'usage du symbole le plus proche —
- * explorations/biopsies pour l'une, instrument tranchant pour l'autre.
- *
- *   🩸 glycémie (diabète)        🫀 cœur anatomique        🎗️ ruban (cancer)
- *   🧠 cerveau                   🦴 os                      🔬 explorations, biopsies
- *   💧 rein / dialyse            🫁 poumons                 🧒 enfant
- *   🧓 personne âgée (neutre)    🩹 soulagement, soins      🧩 psychisme
- *   ✂️ acte opératoire           🏥 établissement, cas général
+ * Le choix d'une discipline n'intervient qu'à ce moment : il ne change aucune règle
+ * et n'illustre que les cas typiques montrés à côté de chaque question.
  */
 export const DISCIPLINES: readonly DefinitionDiscipline[] = [
-  {
-    id: 'ENDOCRINOLOGIE',
-    libelle: 'Endocrinologie, diabétologie, nutrition',
-    icone: '🩸',
-    perimetre: 'Diabète, obésité, thyroïde, ETP structurée',
-  },
-  {
-    id: 'CARDIOLOGIE',
-    libelle: 'Cardiologie et maladies vasculaires',
-    icone: '🫀',
-    perimetre: 'Explorations fonctionnelles, insuffisance cardiaque',
-  },
-  {
-    id: 'ONCOLOGIE',
-    libelle: 'Oncologie et hématologie',
-    icone: '🎗️',
-    perimetre: 'Traitements, bilans d’extension, biothérapies',
-  },
-  {
-    id: 'NEUROLOGIE',
-    libelle: 'Neurologie et maladies neuromusculaires',
-    icone: '🧠',
-    perimetre: 'SEP, SLA, bilans neuropsychologiques',
-  },
-  {
-    id: 'RHUMATOLOGIE',
-    libelle: 'Rhumatologie et maladies auto-immunes',
-    icone: '🦴',
-    perimetre: 'Biothérapies, polyarthrite, lupus',
-  },
-  {
-    id: 'GASTRO',
-    libelle: 'Gastro-entérologie et hépatologie',
-    icone: '🔬',
-    perimetre: 'Endoscopies, MICI, bilan hépatique',
-  },
-  {
-    id: 'NEPHROLOGIE',
-    libelle: 'Néphrologie et urologie',
-    icone: '💧',
-    perimetre: 'Dialyse, bilan pré-transplantation',
-  },
-  {
-    id: 'PNEUMOLOGIE',
-    libelle: 'Pneumologie et allergologie',
-    icone: '🫁',
-    perimetre: 'EFR, tests de provocation, asthme sévère',
-  },
-  {
-    id: 'PEDIATRIE',
-    libelle: 'Pédiatrie et neurodéveloppement',
-    icone: '🧒',
-    perimetre: 'Bilans TND, grands prématurés, handicaps',
-  },
-  {
-    id: 'GERIATRIE',
-    libelle: 'Gériatrie et troubles cognitifs',
-    icone: '🧓',
-    perimetre: 'Évaluation gériatrique, mémoire, fragilité',
-  },
-  {
-    id: 'DOULEUR',
-    libelle: 'Douleur chronique et soins palliatifs',
-    icone: '🩹',
-    perimetre: 'Bilans douleur, analgésie, soins palliatifs',
-  },
-  {
-    id: 'PSYCHIATRIE',
-    libelle: 'Psychiatrie et addictologie',
-    icone: '🧩',
-    perimetre: 'Financement propre — hors médecine, chirurgie, obstétrique',
-  },
-  {
-    id: 'CHIRURGIE',
-    libelle: 'Chirurgie et actes interventionnels',
-    icone: '✂️',
-    perimetre: 'Chirurgie ambulatoire, endoscopie interventionnelle',
-  },
-  {
-    id: 'AUTRE',
-    libelle: 'Autre discipline / cas général',
-    icone: '🏥',
-    perimetre: 'Exemples transversaux, toutes disciplines',
-  },
+  { id: 'AUTRE', libelle: 'Autre discipline / cas général' },
+  { id: 'CARDIOLOGIE', libelle: 'Cardiologie et maladies vasculaires' },
+  { id: 'CHIRURGIE', libelle: 'Chirurgie et actes interventionnels' },
+  { id: 'DOULEUR', libelle: 'Douleur chronique et soins palliatifs' },
+  { id: 'ENDOCRINOLOGIE', libelle: 'Endocrinologie, diabétologie, nutrition' },
+  { id: 'GASTRO', libelle: 'Gastro-entérologie et hépatologie' },
+  { id: 'GERIATRIE', libelle: 'Gériatrie et troubles cognitifs' },
+  { id: 'NEPHROLOGIE', libelle: 'Néphrologie et urologie' },
+  { id: 'NEUROLOGIE', libelle: 'Neurologie et maladies neuromusculaires' },
+  { id: 'ONCOLOGIE', libelle: 'Oncologie et hématologie' },
+  { id: 'PEDIATRIE', libelle: 'Pédiatrie et neurodéveloppement' },
+  { id: 'PNEUMOLOGIE', libelle: 'Pneumologie et allergologie' },
+  { id: 'PSYCHIATRIE', libelle: 'Psychiatrie et addictologie' },
+  { id: 'RHUMATOLOGIE', libelle: 'Rhumatologie et maladies auto-immunes' },
 ];
 
 export const LIBELLES_DISCIPLINE: Readonly<Record<Discipline, string>> = Object.fromEntries(
@@ -322,26 +246,6 @@ export const AIDE_PAR_DEFAUT: AideEtape = {
 };
 
 export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
-  discipline: {
-    pourquoi:
-      'Le choix de la discipline ne change aucune règle : il sert uniquement à illustrer les ' +
-      'étapes suivantes par des cas concrets de votre domaine d’exercice.',
-    regle:
-      'Les critères de facturation sont identiques quelle que soit la spécialité (instruction ' +
-      'DGOS/R1/DSS/1A/2020/52).',
-  },
-  champ: {
-    pourquoi:
-      'L’instruction ne concerne que les prises en charge de médecine, chirurgie, obstétrique et ' +
-      'odontologie (MCO). Les séances (dialyse, chimiothérapie) sont financées par un forfait, et ' +
-      'le SMR comme la psychiatrie relèvent d’autres modalités de financement.',
-    regle:
-      'Annexe 4, point 1 : les prises en charge correspondant à des « séances » sont financées à ' +
-      'travers un GHS « sans que la prise en charge n’ait à répondre aux critères de la présente ' +
-      'instruction ». L’instruction porte sur les établissements « ayant des activités de ' +
-      'médecine, chirurgie, obstétrique et odontologie ou ayant une activité d’hospitalisation à ' +
-      'domicile ».',
-  },
   actes: {
     pourquoi:
       'Un acte technique isolé, réalisable en cabinet, ne justifie pas une hospitalisation. ' +
@@ -412,3 +316,60 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
       'surveillance particulière ou d’un contexte patient particulier. »',
   },
 };
+
+/* ================================================================== *
+ * Alerte préalable : motifs hors champ de l'hospitalisation de jour
+ * ================================================================== */
+
+export interface MotifHorsChamp {
+  readonly titre: string;
+  readonly explication: string;
+  readonly reference: string;
+}
+
+/**
+ * Motifs qui échappent à l'hospitalisation de jour, **quel que soit le contexte patient**.
+ *
+ * Ils ne représentent qu'une faible part des demandes : plutôt que d'en faire la première
+ * question de l'assistant, ils font l'objet d'un rappel affiché **avant** toute évaluation.
+ * Sur ces situations, il n'y a pas de densité à démontrer mais un autre régime de
+ * financement à mobiliser.
+ */
+export const MOTIFS_HORS_CHAMP_HDJ: readonly MotifHorsChamp[] = [
+  {
+    titre: 'Séance de dialyse ou de chimiothérapie',
+    explication:
+      'Ces venues sont des « séances » : elles se facturent au forfait de séance (GHS de séance), ' +
+      'sans avoir à démontrer la densité de la prise en charge.',
+    reference:
+      'Annexe 4, point 1 de l’instruction : les prises en charge correspondant à des séances sont ' +
+      'financées à travers un GHS « sans que la prise en charge n’ait à répondre aux critères de ' +
+      'la présente instruction ».',
+  },
+  {
+    titre: 'Prise en charge en SMR / SSR (soins de suite et de réadaptation)',
+    explication:
+      'Le SMR dispose de son propre mode de financement, distinct de la facturation MCO : la ' +
+      'gradation ambulatoire ne s’y applique pas.',
+    reference:
+      'L’instruction ne vise que les établissements « ayant des activités de médecine, chirurgie, ' +
+      'obstétrique et odontologie » : le SMR est hors de ce périmètre (champ de l’art. L. 162-22-6 ' +
+      'du code de la sécurité sociale).',
+  },
+  {
+    titre: 'Prise en charge en psychiatrie',
+    explication:
+      'L’hospitalisation de jour psychiatrique relève d’un financement propre à la psychiatrie, ' +
+      'également distinct de la facturation MCO.',
+    reference:
+      'Champ de l’instruction limité au MCO ; le financement de la psychiatrie obéit à des ' +
+      'modalités spécifiques (art. L. 162-22-6 CSS).',
+  },
+];
+
+/** Message pédagogique accompagnant le rappel. */
+export const PEDAGOGIE_HORS_CHAMP =
+  'Pour ces trois situations, la question n’est pas celle de la densité des soins — que cet ' +
+  'outil mesure — mais celle du régime de financement, décidé ailleurs. Aucun contexte patient, ' +
+  'même très lourd, ne rend une séance ou une prise en charge SMR/psychiatrique facturable en ' +
+  'GHS d’hospitalisation de jour MCO.';

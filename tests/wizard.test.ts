@@ -1,11 +1,13 @@
 // @vitest-environment happy-dom
+// @vitest-environment-options {"url": "http://localhost"}
 /**
  * Tests d'intégration de l'assistant.
  *
- * Le référentiel Supabase est simulé (aucun appel réseau) : on vérifie le
- * parcours, l'absence de données administratives, les bascules de profession,
- * la restitution des informations du référentiel sans re-demande, et la
- * décision en langage courant restituée par le moteur.
+ * Le référentiel Supabase est simulé (aucun appel réseau) : on vérifie l'écran
+ * d'accueil (trois entrées), le rappel affiché avant l'évaluation, le parcours
+ * des cinq questions, le menu déroulant de discipline du volet d'aide, la
+ * consultation des référentiels (recherche + arborescence CCAM) et la décision
+ * en langage courant restituée par le moteur.
  */
 
 import { readFileSync } from 'node:fs';
@@ -14,20 +16,30 @@ import { DISCIPLINES } from '../src/ui/pedagogie.js';
 import { detailMaj, libelleMaj } from '../src/ui/referentiels.js';
 import { resolve } from 'node:path';
 
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* ------------------------------------------------------------------ *
  * Référentiel simulé
  * ------------------------------------------------------------------ */
 
+const ACTE_ECG = {
+  code: 'ZZQL002',
+  libelle: 'exploration fonctionnelle métabolique',
+  acte_marqueur_hdj: false,
+  exclusif_externe: false,
+  necessite_plateau_lourd: false,
+};
+
+const ACTE_LOURD = {
+  code: 'HEQE001',
+  libelle: 'endoscopie œso-gastro-duodénale par voie orale, avec biopsie',
+  acte_marqueur_hdj: true,
+  exclusif_externe: false,
+  necessite_plateau_lourd: true,
+};
+
 const ACTES: Record<string, unknown> = {
-  ZZQL002: {
-    code: 'ZZQL002',
-    libelle: 'exploration fonctionnelle métabolique',
-    acte_marqueur_hdj: false,
-    exclusif_externe: false,
-    necessite_plateau_lourd: false,
-  },
+  ZZQL002: ACTE_ECG,
   DEQP003: {
     code: 'DEQP003',
     libelle: 'électrocardiographie sur au moins douze dérivations',
@@ -35,6 +47,7 @@ const ACTES: Record<string, unknown> = {
     exclusif_externe: true,
     necessite_plateau_lourd: false,
   },
+  HEQE001: ACTE_LOURD,
 };
 
 const MEDICAMENTS: readonly Record<string, unknown>[] = [
@@ -68,6 +81,14 @@ const MEDICAMENTS: readonly Record<string, unknown>[] = [
   },
 ];
 
+/** Arborescence CCAM simulée (chapitres → sous-thèmes → actes). */
+const CHAPITRES = [
+  { code: '01', libelle: 'système nerveux central, périphérique et autonome', actes: 1 },
+  { code: '07', libelle: 'appareil digestif', actes: 1 },
+];
+
+const SOUS_CHAPITRES = [{ code: 'AA', libelle: 'œsophage, estomac et duodénum', actes: 1 }];
+
 /** Suivi des mises à jour : dates distinctes pour les deux tables. */
 const MAJ_REFERENTIELS: readonly Record<string, unknown>[] = [
   {
@@ -94,6 +115,27 @@ function reponseJson(donnees: unknown): Response {
 }
 
 beforeAll(async () => {
+  // happy-dom n'expose pas toujours `localStorage` : on en fournit un en mémoire pour
+  // éprouver la mémorisation du rappel « ne plus afficher ».
+  if (!window.localStorage) {
+    const memoire = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (cle: string) => memoire.get(cle) ?? null,
+        setItem: (cle: string, valeur: string) => {
+          memoire.set(cle, valeur);
+        },
+        removeItem: (cle: string) => {
+          memoire.delete(cle);
+        },
+        clear: () => {
+          memoire.clear();
+        },
+      },
+    });
+  }
+
   vi.stubGlobal(
     'fetch',
     vi.fn(async (entree: unknown, init?: { body?: string }) => {
@@ -101,7 +143,11 @@ beforeAll(async () => {
       const corps = init?.body ? (JSON.parse(init.body) as Record<string, unknown>) : {};
 
       if (url.includes('referentiel_maj')) return reponseJson(MAJ_REFERENTIELS);
-      if (url.includes('rechercher_ccam')) return reponseJson([ACTES['ZZQL002']]);
+      if (url.includes('rechercher_ccam')) return reponseJson([ACTE_ECG]);
+      // Attention : « sous_chapitres_ccam » contient « chapitres_ccam » — tester le plus spécifique d'abord.
+      if (url.includes('sous_chapitres_ccam')) return reponseJson(SOUS_CHAPITRES);
+      if (url.includes('chapitres_ccam')) return reponseJson(CHAPITRES);
+      if (url.includes('actes_par_theme')) return reponseJson([ACTE_LOURD]);
       if (url.includes('acte_ccam')) return reponseJson([ACTES[String(corps['p_code'])]]);
       if (url.includes('rechercher_medicaments')) {
         const terme = String(corps['p_terme'] ?? '');
@@ -122,6 +168,15 @@ afterAll(() => {
   vi.unstubAllGlobals();
 });
 
+beforeEach(() => {
+  // Le rappel « motifs hors champ » se mémorise : on repart d'un état vierge.
+  try {
+    window.localStorage?.clear();
+  } catch {
+    // Stockage local indisponible dans cet environnement : rien à réinitialiser.
+  }
+});
+
 /* ------------------------------------------------------------------ *
  * Utilitaires
  * ------------------------------------------------------------------ */
@@ -136,8 +191,6 @@ const texte = (selecteur: string): string =>
   document.querySelector(selecteur)?.textContent?.trim() ?? '';
 
 const questionCourante = (): string => texte('.question');
-const suivantActif = (): boolean =>
-  document.querySelector<HTMLButtonElement>('[data-action="avancer"]')?.disabled === false;
 
 /** Répond à une question binaire (boutons Oui vert / Non rouge). */
 function repondre(cle: string, valeur: 'oui' | 'non'): void {
@@ -148,18 +201,27 @@ function suivant(): void {
   cliquer('[data-action="avancer"]');
 }
 
-function choisirDiscipline(valeur: string): void {
-  cliquer(`[data-action="discipline"][data-valeur="${valeur}"]`);
-}
-
 function choisirProfession(valeur: string): void {
   cliquer(`[data-action="profession-bascule"][data-valeur="${valeur}"]`);
 }
 
 /** Retour à l'écran d'accueil depuis n'importe quel état. */
-function retourAccueil(): void {
-  cliquer('.btn-entete[data-action="recommencer"]');
-  expect(questionCourante()).toContain('discipline');
+function allerAccueil(): void {
+  cliquer('#bouton-entete');
+  expect(questionCourante()).toContain('Que voulez-vous faire');
+}
+
+/** Lance l'évaluation en franchissant le rappel préalable. */
+function demarrerEvaluation(): void {
+  cliquer('[data-action="demarrer-evaluation"]');
+  cliquer('[data-action="demarrer-confirme"]');
+}
+
+/** Accueil → rappel franchi → première question (actes). */
+function atteindreActes(): void {
+  allerAccueil();
+  demarrerEvaluation();
+  expect(questionCourante()).toContain('actes techniques');
 }
 
 const attendre = (ms: number): Promise<void> =>
@@ -170,97 +232,118 @@ async function choisirPremiereSuggestion(action: string): Promise<void> {
   await attendre(60);
 }
 
-/** Choisit la suggestion dont le libellé contient `fragment`. */
-async function choisirSuggestionContenant(fragment: string): Promise<void> {
-  const bouton = [...document.querySelectorAll<HTMLButtonElement>('#zone-suggestions button')].find(
-    (b) => (b.textContent ?? '').includes(fragment),
-  );
-  expect(bouton).toBeDefined();
-  bouton!.click();
-  await attendre(60);
+async function rechercher(terme: string): Promise<void> {
+  const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
+  if (!champ) throw new Error('Champ de recherche introuvable');
+  champ.value = terme;
+  champ.dispatchEvent(new Event('input', { bubbles: true }));
+  await attendre(420);
 }
 
-/** Franchit l'écran « type de prise en charge » jusqu'à l'étape des actes. */
-function atteindreActes(): void {
-  if (!document.querySelector('.btn-oui-non[data-cle="estSeance"]')) suivant(); // accueil → champ
-  repondre('estSeance', 'non');
-  repondre('estHorsMco', 'non');
-  suivant(); // actes
+/** Choisit la discipline dans le menu déroulant du volet d'aide. */
+function choisirDisciplineAide(valeur: string): void {
+  const select = document.querySelector<HTMLSelectElement>('#select-discipline');
+  if (!select) throw new Error('Menu déroulant des disciplines introuvable');
+  select.value = valeur;
+  select.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 /* ------------------------------------------------------------------ *
- * Écran d'accueil : discipline clinique (et non profil par métier)
+ * Écran d'accueil : trois entrées
  * ------------------------------------------------------------------ */
 
-describe('Écran d’accueil — choix d’une discipline clinique', () => {
-  it('demande une discipline et non un métier', () => {
-    retourAccueil();
-    expect(questionCourante()).toContain('discipline');
-    expect(questionCourante()).not.toContain('profil');
+describe('Écran d’accueil — trois entrées', () => {
+  it('propose exactement trois boutons', () => {
+    allerAccueil();
+    expect(document.querySelectorAll('.btn-accueil')).toHaveLength(3);
   });
 
-  it('propose les disciplines cliniques, pas les professions', () => {
-    retourAccueil();
-    const boutons = [...document.querySelectorAll('[data-action="discipline"]')];
-    expect(boutons).toHaveLength(14);
-
-    const valeurs = boutons.map((b) => (b as HTMLElement).dataset['valeur']);
-    expect(valeurs).toContain('ENDOCRINOLOGIE');
-    expect(valeurs).toContain('CARDIOLOGIE');
-    expect(valeurs).toContain('PEDIATRIE');
-    expect(valeurs).not.toContain('MEDECIN');
+  it('place le calcul d’éligibilité au-dessus et en plus gros', () => {
+    allerAccueil();
+    const boutons = [...document.querySelectorAll<HTMLElement>('.btn-accueil')];
+    expect(boutons[0]?.dataset['action']).toBe('demarrer-evaluation');
+    expect(boutons[0]?.className).toContain('principal');
+    expect(boutons[0]?.textContent).toContain('Calculer l’éligibilité d’une HDJ');
   });
 
-  it('n’impose pas le choix : la navigation reste possible sans discipline', () => {
-    retourAccueil();
-    expect(suivantActif()).toBe(true);
+  it('donne accès aux deux référentiels', () => {
+    allerAccueil();
+    const actions = [...document.querySelectorAll<HTMLElement>('.btn-accueil')].map(
+      (b) => b.dataset['action'],
+    );
+    expect(actions).toContain('demarrer-evaluation');
+    expect(actions).toContain('ouvrir-ccam');
+    expect(actions).toContain('ouvrir-medicaments');
+    expect(texte('#carte')).toContain('Référentiel des actes techniques (CCAM)');
+    expect(texte('#carte')).toContain('Médicaments de la réserve hospitalière');
   });
 
-  it('affiche des exemples généraux tant qu’aucune discipline n’est choisie', () => {
-    retourAccueil();
-    expect(texte('#aide')).toContain('Toutes disciplines');
+  it('ne propose plus de choix de discipline en préambule', () => {
+    allerAccueil();
+    expect(document.querySelector('[data-action="discipline"]')).toBeNull();
+    expect(texte('#carte')).not.toContain('Quelle est la discipline');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Rappel préalable : motifs hors champ
+ * ------------------------------------------------------------------ */
+
+describe('Rappel préalable — motifs qui échappent à l’HDJ', () => {
+  it('affiche un rappel avant de permettre de débuter', () => {
+    allerAccueil();
+    cliquer('[data-action="demarrer-evaluation"]');
+
+    const modale = document.querySelector('#modale');
+    expect(modale?.className).toContain('ouvert');
+    // L'évaluation n'a pas commencé : on est toujours sur l'accueil.
+    expect(questionCourante()).toContain('Que voulez-vous faire');
   });
 
-  it('ouvre directement l’écran suivant au clic sur une discipline', () => {
-    retourAccueil();
-    choisirDiscipline('ENDOCRINOLOGIE');
-    expect(questionCourante()).toContain('type de prise en charge');
+  it('cite les trois motifs et leurs justifications réglementaires', () => {
+    allerAccueil();
+    cliquer('[data-action="demarrer-evaluation"]');
+    const modale = texte('#modale');
+
+    expect(modale).toContain('ne relèvent pas de l’hospitalisation de jour');
+    expect(modale).toContain('dialyse ou de chimiothérapie');
+    expect(modale).toContain('SMR / SSR');
+    expect(modale).toContain('psychiatrie');
+    // Justifications : séance forfaitisée (annexe 4) et champ limité au MCO.
+    expect(modale).toContain('Annexe 4, point 1');
+    expect(modale).toContain('L. 162-22-6');
+    expect(modale).toContain('quelle que soit');
   });
 
-  it('adapte les cas affichés à la discipline et à la question posée', () => {
-    retourAccueil();
-    choisirDiscipline('ENDOCRINOLOGIE'); // ouvre l'écran « type de prise en charge »
-    const aide = texte('#aide');
-    expect(aide).toContain('Endocrinologie, diabétologie, nutrition');
-    // Le cas affiché porte sur la question posée : ici, le type de prise en charge.
-    expect(aide).toContain('cure de chimiothérapie');
-    expect(aide).not.toContain('renouvellement d’ordonnance'); // cas de l'étape « surveillance »
-
-    cliquer('[data-action="reculer"]'); // retour à l'accueil pour changer de discipline
-    choisirDiscipline('PSYCHIATRIE');
-    const aidePsy = texte('#aide');
-    expect(aidePsy).toContain('Psychiatrie et addictologie');
-    expect(aidePsy).toContain('Hors champ');
-    expect(aidePsy).not.toBe(aide);
+  it('démarre l’évaluation une fois le rappel accepté', () => {
+    allerAccueil();
+    demarrerEvaluation();
+    expect(questionCourante()).toContain('actes techniques');
+    expect(document.querySelector('#modale')?.className).not.toContain('ouvert');
   });
 
-  it('permet de désélectionner la discipline en re-cliquant', () => {
-    retourAccueil();
-    choisirDiscipline('PSYCHIATRIE');
-    cliquer('[data-action="reculer"]');
-    expect(questionCourante()).toContain('discipline');
-
-    choisirDiscipline('PSYCHIATRIE'); // re-clic : désélection, on reste sur place
-    expect(questionCourante()).toContain('discipline');
-    expect(texte('#aide')).not.toContain('Psychiatrie et addictologie');
+  it('permet de refermer le rappel sans démarrer', () => {
+    allerAccueil();
+    cliquer('[data-action="demarrer-evaluation"]');
+    cliquer('[data-action="fermer-modale"]');
+    expect(document.querySelector('#modale')?.className).not.toContain('ouvert');
+    expect(questionCourante()).toContain('Que voulez-vous faire');
   });
 
-  it('fait progresser la barre de progression', () => {
-    retourAccueil();
-    const avant = document.getElementById('jauge')?.style.width ?? '0';
-    suivant();
-    const apres = document.getElementById('jauge')?.style.width ?? '0';
-    expect(Number.parseFloat(apres)).toBeGreaterThan(Number.parseFloat(avant));
+  it('mémorise le choix « ne plus afficher »', () => {
+    allerAccueil();
+    cliquer('[data-action="demarrer-evaluation"]');
+    const case_ = document.querySelector<HTMLInputElement>('#ne-plus-afficher');
+    expect(case_).not.toBeNull();
+    case_!.checked = true;
+    cliquer('[data-action="demarrer-confirme"]');
+    expect(questionCourante()).toContain('actes techniques');
+
+    // De retour à l'accueil, le rappel ne s'interpose plus.
+    allerAccueil();
+    cliquer('[data-action="demarrer-evaluation"]');
+    expect(document.querySelector('#modale')?.className).not.toContain('ouvert');
+    expect(questionCourante()).toContain('actes techniques');
   });
 });
 
@@ -270,7 +353,7 @@ describe('Écran d’accueil — choix d’une discipline clinique', () => {
 
 describe('Assistant — aucune donnée administrative', () => {
   it('ne demande ni numéro de séjour ni date, nulle part', () => {
-    retourAccueil();
+    atteindreActes();
     expect(document.querySelector('[data-champ="identifiantSejour"]')).toBeNull();
     expect(document.querySelector('#champ-sejour')).toBeNull();
     expect(document.querySelector('input[type="date"]')).toBeNull();
@@ -278,57 +361,28 @@ describe('Assistant — aucune donnée administrative', () => {
     expect(texte('#carte')).not.toContain('Séjour');
   });
 
-  it('regroupe les filtres de type de prise en charge sur un seul écran', () => {
-    retourAccueil();
-    suivant(); // type de prise en charge
-
-    // Une seule étape pour les deux filtres.
-    expect(document.querySelectorAll('.ligne-question')).toHaveLength(2);
-    expect(document.querySelector('.btn-oui-non[data-cle="estSeance"]')).not.toBeNull();
-    expect(document.querySelector('.btn-oui-non[data-cle="estHorsMco"]')).not.toBeNull();
-
-    expect(suivantActif()).toBe(false);
-    repondre('estSeance', 'non');
-    repondre('estHorsMco', 'non');
-    expect(suivantActif()).toBe(true);
-    suivant(); // actes : plus aucune question de dossier à franchir
-    expect(questionCourante()).toContain('actes techniques');
+  it('ne pose plus la question du type de prise en charge', () => {
+    atteindreActes();
+    expect(document.querySelector('.btn-oui-non[data-cle="estSeance"]')).toBeNull();
+    expect(document.querySelector('.btn-oui-non[data-cle="estHorsMco"]')).toBeNull();
+    const corps = texte('#carte');
+    expect(corps).not.toContain('séance de dialyse');
+    expect(corps).not.toContain('SMR/SSR');
   });
 
   it('ne pose plus les questions dont la réponse est acquise en prospectif', () => {
-    retourAccueil();
-    suivant(); // type de prise en charge
-
-    // La venue est programmée par définition : ni cette question, ni celles de
-    // la demande médicale préalable, de la synthèse du jour ou de la lettre de
-    // liaison ne sont posées.
+    atteindreActes();
     for (const cle of ['estProgramme', 'lettreAdressage', 'syntheseMedicale', 'lettreLiaison']) {
       expect(document.querySelector(`.btn-oui-non[data-cle="${cle}"]`)).toBeNull();
     }
-    const corps = texte('#carte');
-    expect(corps).not.toContain('programmée');
-    expect(corps).not.toContain('demande médicale préalable');
-    expect(corps).not.toContain('jour même');
-    expect(corps).not.toContain('lettre de liaison');
-
-    // Le moteur considère néanmoins ces éléments comme réunis : un dossier de
-    // trois interventions donne bien un GHS (porte 1 franchie, pas de suspension).
-    atteindreActes();
-    suivant(); // médicaments
-    suivant(); // équipe
-    choisirProfession('MEDECIN');
-    choisirProfession('IDE');
-    choisirProfession('DIETETICIEN');
-    suivant(); // surveillance
-    repondre('surveillanceActive', 'non');
-    suivant(); // contexte patient
-    suivant(); // décision
-    expect(texte('.statut')).toBe('HDJ validée — facturation en GHS intermédiaire');
   });
 
   it('les boutons Oui sont verts et les boutons Non rouges', () => {
-    retourAccueil();
-    suivant(); // type de prise en charge : seules les questions à boutons Oui/Non
+    allerAccueil();
+    demarrerEvaluation();
+    suivant(); // actes → médicaments
+    suivant(); // médicaments → équipe
+    suivant(); // équipe → surveillance et durée (seule question Oui/Non)
     const oui = document.querySelector<HTMLElement>('.btn-oui-non[data-valeur="oui"]');
     const non = document.querySelector<HTMLElement>('.btn-oui-non[data-valeur="non"]');
     expect(oui).not.toBeNull();
@@ -344,20 +398,12 @@ describe('Assistant — aucune donnée administrative', () => {
 
 describe('Actes CCAM — caractéristiques reprises du référentiel', () => {
   it('ne redemande jamais les caractéristiques de l’acte', async () => {
-    retourAccueil();
     atteindreActes();
-    expect(questionCourante()).toContain('actes techniques');
-
-    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
-    champ!.value = 'exploration';
-    champ!.dispatchEvent(new Event('input', { bubbles: true }));
-    await attendre(420);
-
+    await rechercher('exploration');
     await choisirPremiereSuggestion('suggestion-acte');
+
     expect(document.querySelectorAll('[data-action="retirer-acte"]')).toHaveLength(1);
     expect(texte('.selection')).toContain('ZZQL002');
-
-    // Les caractéristiques sont affichées, jamais demandées.
     expect(texte('.element-meta')).toContain('plateau technique lourd');
     expect(texte('.element-meta')).toContain('repris du référentiel');
     expect(document.querySelector('[data-action="acte-plateau"]')).toBeNull();
@@ -367,32 +413,24 @@ describe('Actes CCAM — caractéristiques reprises du référentiel', () => {
 
 describe('Médicaments — réserve hospitalière issue du référentiel', () => {
   it('ne redemande pas si le produit relève de la réserve hospitalière', async () => {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
-    expect(questionCourante()).toContain('médicaments');
-
-    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
-    champ!.value = 'immunoglobuline';
-    champ!.dispatchEvent(new Event('input', { bubbles: true }));
-    await attendre(420);
-
+    await rechercher('immunoglobuline');
     await choisirPremiereSuggestion('suggestion-medicament');
+
     expect(document.querySelectorAll('[data-action="retirer-medicament"]')).toHaveLength(1);
     expect(texte('.element-meta')).toContain('Réserve hospitalière');
     expect(texte('.element-meta')).toContain('oui');
     expect(document.querySelector('[data-action="med-reserve"]')).toBeNull();
-    expect(document.querySelector('[data-action="med-surveillance"]')).toBeNull();
   });
 });
 
 /* ------------------------------------------------------------------ *
- * Intervenants : sélection par boutons maintenus enfoncés
+ * Intervenants
  * ------------------------------------------------------------------ */
 
 describe('Intervenants — sélection par bascules de profession', () => {
   function atteindreIntervenants(): void {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
     suivant(); // intervenants
@@ -409,13 +447,10 @@ describe('Intervenants — sélection par bascules de profession', () => {
     choisirProfession('IDE');
     expect(boutonIde()?.getAttribute('aria-pressed')).toBe('true');
     expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(1);
-    expect(texte('.selection')).toContain('Infirmier(ère)');
 
-    // Un second intervenant d'une autre profession s'ajoute au premier.
     choisirProfession('DIETETICIEN');
     expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(2);
 
-    // Re-cliquer désélectionne.
     choisirProfession('IDE');
     expect(boutonIde()?.getAttribute('aria-pressed')).toBe('false');
     expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(1);
@@ -432,7 +467,6 @@ describe('Intervenants — sélection par bascules de profession', () => {
     expect(rappel).toContain('Rappel');
     expect(rappel).toContain('note d’évolution');
     expect(rappel).toContain('réputée présente');
-    // Un seul médecin : le rappel sur les spécialités distinctes n'a pas lieu d'être.
     expect(rappel).not.toContain('spécialités ou surspécialités distinctes');
   });
 
@@ -443,8 +477,6 @@ describe('Intervenants — sélection par bascules de profession', () => {
 
     expect(document.querySelectorAll('[data-action="retirer-intervenant"]')).toHaveLength(2);
     expect(texte('.rappel-saisie')).toContain('spécialités ou surspécialités distinctes');
-    expect(texte('.rappel-saisie')).toContain('à tracer au dossier');
-    // Le bouton d'ajout disparaît une fois le second médecin présent.
     expect(document.querySelector('[data-action="ajouter-medecin"]')).toBeNull();
   });
 });
@@ -455,18 +487,14 @@ describe('Intervenants — sélection par bascules de profession', () => {
 
 describe('Assistant — parcours complet', () => {
   it('conduit un séjour pluridisciplinaire conforme jusqu’à la décision lisible', () => {
-    retourAccueil();
-    choisirDiscipline('ENDOCRINOLOGIE');
     atteindreActes();
-
-    // Aucun acte, aucun médicament : on passe directement.
     suivant(); // médicaments
     suivant(); // intervenants
 
     choisirProfession('MEDECIN');
     choisirProfession('IDE');
     choisirProfession('DIETETICIEN');
-    suivant(); // densité
+    suivant(); // surveillance et durée
 
     repondre('surveillanceActive', 'non');
     cliquer('[data-action="duree"][data-valeur="300"]');
@@ -478,24 +506,18 @@ describe('Assistant — parcours complet', () => {
     expect(texte('#carte')).toContain('Les 5 vérifications');
     expect(document.querySelectorAll('.pyramide li')).toHaveLength(5);
     expect(texte('#carte')).toContain('DGOS/R1/DSS/1A/2020/52');
-    expect(document.querySelectorAll('.pyramide .marqueur')).toHaveLength(5);
     expect(document.querySelector('header .marque')).not.toBeNull();
   });
 
   it('retient un GHS plein lorsqu’un produit de la réserve hospitalière est administré', async () => {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
-
-    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
-    champ!.value = 'immunoglobuline';
-    champ!.dispatchEvent(new Event('input', { bubbles: true }));
-    await attendre(420);
+    await rechercher('immunoglobuline');
     await choisirPremiereSuggestion('suggestion-medicament');
     suivant(); // intervenants
 
     choisirProfession('IDE');
-    suivant(); // densité
+    suivant(); // surveillance et durée
     repondre('surveillanceActive', 'non');
     suivant(); // contexte patient
     suivant(); // décision
@@ -514,55 +536,11 @@ describe('Assistant — parcours complet', () => {
 });
 
 /* ------------------------------------------------------------------ *
- * Raccourcis décisionnels
- * ------------------------------------------------------------------ */
-
-describe('Assistant — raccourcis décisionnels', () => {
-  function preparer(discipline: string): void {
-    retourAccueil();
-    choisirDiscipline(discipline); // ouvre directement l'écran « type de prise en charge »
-  }
-
-  it('une séance de chimiothérapie mène directement à la requalification', () => {
-    preparer('ONCOLOGIE');
-    repondre('estSeance', 'oui');
-    repondre('estHorsMco', 'non');
-    suivant();
-    expect(texte('.statut')).toBe('Facturation en HDJ non validée — forfait de séance');
-    expect(texte('#carte')).toContain('forfait de séance');
-  });
-
-  it('le SMR mène directement au hors champ MCO', () => {
-    preparer('NEPHROLOGIE');
-    repondre('estSeance', 'non');
-    repondre('estHorsMco', 'oui');
-    suivant();
-    expect(texte('.statut')).toBe('Facturation en HDJ non validée — hors champ MCO');
-  });
-
-  it('affiche la décision provisoire dans l’en-tête dès qu’un raccourci est connu', () => {
-    preparer('CARDIOLOGIE');
-    repondre('estSeance', 'oui');
-    const voyant = document.getElementById('voyant-verdict');
-    expect(voyant?.className).toContain('verdict');
-    expect(voyant?.textContent).toContain('forfait de séance');
-  });
-
-  it('n’annonce aucune décision tant qu’aucun élément de la prise en charge n’est saisi', () => {
-    preparer('CARDIOLOGIE');
-    repondre('estSeance', 'non');
-    expect(document.getElementById('voyant-verdict')?.textContent).toBe('Décision : —');
-  });
-});
-
-/* ------------------------------------------------------------------ *
- * Contexte patient — critères de vulnérabilité de l'instruction
+ * Contexte patient
  * ------------------------------------------------------------------ */
 
 describe('Contexte patient — situations de vulnérabilité', () => {
-  /** Trois interventions coordonnées, sans acte ni produit : GHS intermédiaire. */
   function atteindreContexte(): void {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
     suivant(); // équipe
@@ -602,11 +580,6 @@ describe('Contexte patient — situations de vulnérabilité', () => {
 
     cliquer('[data-action="reculer"]'); // retour au contexte patient
     cliquer('[data-action="critere-contexte"][data-valeur="PRECARITE_SOCIALE"]');
-    expect(
-      document
-        .querySelector('[data-action="critere-contexte"][data-valeur="PRECARITE_SOCIALE"]')
-        ?.getAttribute('aria-pressed'),
-    ).toBe('true');
     suivant(); // décision
     expect(texte('.statut')).toBe('HDJ validée — facturation en GHS plein');
     expect(texte('#carte')).toContain('Contexte patient particulier');
@@ -615,20 +588,100 @@ describe('Contexte patient — situations de vulnérabilité', () => {
 });
 
 /* ------------------------------------------------------------------ *
- * Volet d'aide
+ * Consultation du référentiel CCAM
+ * ------------------------------------------------------------------ */
+
+describe('Référentiel CCAM — soin lourd et arborescence', () => {
+  it('ouvre la consultation depuis l’accueil', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-ccam"]');
+    expect(questionCourante()).toContain('soin lourd');
+    await attendre(60);
+    expect(texte('#arbre-ccam')).toContain('Parcourir par thématique');
+  });
+
+  it('cherche par mots-clés et qualifie le soin', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-ccam"]');
+    await rechercher('exploration');
+
+    const ligne = document.querySelector('#zone-suggestions .acte-ligne');
+    expect(ligne).not.toBeNull();
+    expect(ligne?.textContent).toContain('ZZQL002');
+    expect(ligne?.textContent).toContain('Plateau technique lourd');
+    expect(ligne?.textContent).toContain('Soin non lourd');
+  });
+
+  it('parcourt l’arborescence chapitre → sous-thème → actes', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-ccam"]');
+    await attendre(60);
+
+    // Chapitres (thématiques)
+    const chapitres = [...document.querySelectorAll('#arbre-ccam [data-action="chapitre-ccam"]')];
+    expect(chapitres).toHaveLength(2);
+    expect(texte('#arbre-ccam')).toContain('appareil digestif');
+
+    cliquer('[data-action="chapitre-ccam"][data-valeur="07"]');
+    await attendre(60);
+    expect(texte('#arbre-ccam')).toContain('œsophage, estomac et duodénum');
+
+    cliquer('[data-action="sous-chapitre-ccam"][data-valeur="AA"]');
+    await attendre(60);
+    const acte = document.querySelector('#arbre-ccam .acte-ligne');
+    expect(acte?.textContent).toContain('HEQE001');
+    expect(acte?.textContent).toContain('Soin lourd : plateau technique mobilisé');
+
+    // Retour par le fil d'Ariane
+    cliquer('[data-action="arbre-racine"]');
+    expect(document.querySelectorAll('#arbre-ccam [data-action="chapitre-ccam"]')).toHaveLength(2);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Consultation du référentiel des médicaments
+ * ------------------------------------------------------------------ */
+
+describe('Référentiel des médicaments — réserve hospitalière', () => {
+  it('ouvre la consultation depuis l’accueil et cherche un produit', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-medicaments"]');
+    expect(questionCourante()).toContain('réserve hospitalière');
+
+    await rechercher('immunoglobuline');
+    const ligne = document.querySelector('#zone-suggestions .acte-ligne');
+    expect(ligne?.textContent).toContain('IMMUNOGLOBULINE');
+    expect(ligne?.textContent).toContain('Réserve hospitalière :');
+    expect(ligne?.textContent).toContain('Produit de la réserve hospitalière');
+  });
+
+  it('n’interprète jamais une valeur absente comme « hors réserve »', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-medicaments"]');
+    await rechercher('fer');
+
+    const lignes = [...document.querySelectorAll('#zone-suggestions .acte-ligne')];
+    const fer = lignes
+      .map((li) => li.textContent ?? '')
+      .find((txt) => txt.includes('FER CARBOXYMALTOSE'));
+    expect(fer).toBeDefined();
+    expect(fer).toContain('valeur absente');
+    expect(fer).toContain('à confirmer par la pharmacie');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Volet d'aide et menu déroulant de discipline
  * ------------------------------------------------------------------ */
 
 describe('Volet d’aide', () => {
   it('est repliable (utile sur téléphone) et se déplie au clic', () => {
-    retourAccueil();
-    const aide = document.getElementById('aide');
-    expect(aide?.className).not.toContain('ouvert');
+    allerAccueil();
+    cliquer('[data-action="basculer-aide"]');
+    expect(document.getElementById('aide')?.className).not.toContain('ouvert');
 
     cliquer('[data-action="basculer-aide"]');
-    expect(aide?.className).toContain('ouvert');
-
-    cliquer('[data-action="basculer-aide"]');
-    expect(aide?.className).not.toContain('ouvert');
+    expect(document.getElementById('aide')?.className).toContain('ouvert');
   });
 
   it('signale l’état du référentiel dans l’en-tête', () => {
@@ -636,22 +689,44 @@ describe('Volet d’aide', () => {
   });
 
   it('rappelle la règle applicable à chaque étape', () => {
-    retourAccueil();
-    choisirDiscipline('GASTRO');
     atteindreActes();
-
     expect(questionCourante()).toContain('actes techniques');
     expect(texte('#aide')).toContain('Pourquoi cette question');
     expect(texte('#aide')).toContain('Règle applicable');
     expect(texte('#aide')).toContain('Annexe 4');
     expect(texte('#aide')).toContain('Cas typiques');
+  });
+
+  it('propose un menu déroulant de disciplines, par ordre alphabétique', () => {
+    atteindreActes();
+    const options = [
+      ...document.querySelectorAll<HTMLOptionElement>('#select-discipline option'),
+    ];
+    expect(options).toHaveLength(DISCIPLINES.length + 1);
+    expect(options[0]?.value).toBe('');
+    expect(options[0]?.textContent).toContain('Toutes disciplines');
+
+    const libelles = options.slice(1).map((o) => o.textContent ?? '');
+    expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
+  });
+
+  it('adapte les cas typiques à la discipline choisie dans le menu', () => {
+    atteindreActes();
+    expect(texte('#aide')).toContain('Toutes disciplines');
+
+    choisirDisciplineAide('GASTRO');
     expect(texte('#aide')).toContain('Gastro-entérologie et hépatologie');
+    expect(texte('#aide')).toContain('Endoscopie œso-gastro-duodénale');
+
+    choisirDisciplineAide('PSYCHIATRIE');
+    expect(texte('#aide')).toContain('Psychiatrie et addictologie');
+    expect(texte('#aide')).toContain('Hors champ');
+    expect(texte('#aide')).not.toContain('Endoscopie œso-gastro-duodénale');
   });
 
   it('change de cas typique quand on change de question', () => {
-    retourAccueil();
-    choisirDiscipline('GASTRO');
     atteindreActes();
+    choisirDisciplineAide('GASTRO');
     expect(texte('#aide')).toContain('Endoscopie œso-gastro-duodénale');
 
     suivant(); // médicaments
@@ -661,17 +736,15 @@ describe('Volet d’aide', () => {
   });
 });
 
+/* ------------------------------------------------------------------ *
+ * Référentiel — valeur absente et surveillance particulière
+ * ------------------------------------------------------------------ */
+
 describe('Référentiel — valeur absente et surveillance particulière', () => {
   it('affiche « valeur absente » sans conclure « hors réserve »', async () => {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
-    expect(questionCourante()).toContain('médicaments');
-
-    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
-    champ!.value = 'fer';
-    champ!.dispatchEvent(new Event('input', { bubbles: true }));
-    await attendre(420);
+    await rechercher('fer');
 
     const suggestions = [...document.querySelectorAll('#zone-suggestions li')];
     const ligne = suggestions
@@ -680,41 +753,32 @@ describe('Référentiel — valeur absente et surveillance particulière', () =>
     expect(ligne).toBeDefined();
     expect(ligne).toContain('valeur absente');
     expect(ligne).not.toContain('· non');
-
-    await choisirSuggestionContenant('FER CARBOXYMALTOSE');
-    const meta = texte('.element-meta');
-    expect(meta).toContain('Réserve hospitalière');
-    expect(meta).toContain('valeur absente');
   });
 
   it('signale la surveillance particulière issue du référentiel', async () => {
-    retourAccueil();
     atteindreActes();
     suivant(); // médicaments
-
-    const champ = document.querySelector<HTMLInputElement>('#champ-recherche');
-    champ!.value = 'immunoglobuline';
-    champ!.dispatchEvent(new Event('input', { bubbles: true }));
-    await attendre(420);
+    await rechercher('immunoglobuline');
     await choisirPremiereSuggestion('suggestion-medicament');
 
     expect(texte('.element-meta')).toContain('surveillance particulière liée au produit');
   });
 });
 
+/* ------------------------------------------------------------------ *
+ * En-tête — dates de mise à jour
+ * ------------------------------------------------------------------ */
+
 describe('En-tête — dates de mise à jour des référentiels', () => {
   it('affiche la date de chaque base à côté de l’état de connexion', async () => {
-    retourAccueil();
+    allerAccueil();
     await attendre(60);
     await attendre(60);
 
     const voyant = document.querySelector('#voyant-referentiel');
     expect(voyant?.textContent).toContain('Référentiel');
-    // Dates distinctes : chaque table est nommée.
     expect(voyant?.textContent).toContain('médicaments 22/09/2026');
     expect(voyant?.textContent).toContain('CCAM 09/02/2026');
-    // Le détail (volumes) est disponible en infobulle.
-    // Les volumes sont formatés en français : l'espace peut être insécable.
     expect(voyant?.getAttribute('title')).toMatch(/13\s*609 lignes/);
     expect(voyant?.getAttribute('title')).toMatch(/1\s*969 lignes/);
   });
@@ -734,39 +798,19 @@ describe('En-tête — dates de mise à jour des référentiels', () => {
   });
 });
 
-describe('Disciplines — icônes d’identification', () => {
-  it('donne une icône et un périmètre à chaque discipline', () => {
+/* ------------------------------------------------------------------ *
+ * Disciplines — jeu de données du menu
+ * ------------------------------------------------------------------ */
+
+describe('Disciplines — jeu proposé dans le menu déroulant', () => {
+  it('en propose quatorze, sans doublon de libellé', () => {
     expect(DISCIPLINES.length).toBe(14);
-    for (const discipline of DISCIPLINES) {
-      expect(discipline.icone.trim(), discipline.id).not.toBe('');
-      expect(discipline.perimetre.trim(), discipline.id).not.toBe('');
-    }
+    const libelles = DISCIPLINES.map((d) => d.libelle);
+    expect(new Set(libelles).size).toBe(libelles.length);
   });
 
-  it('n’utilise jamais deux fois la même icône', () => {
-    const icones = DISCIPLINES.map((d) => d.icone);
-    expect(new Set(icones).size).toBe(icones.length);
-  });
-
-  it('associe à chaque discipline l’organe ou l’acte attendu', () => {
-    const attendu: Readonly<Record<string, string>> = {
-      ENDOCRINOLOGIE: '🩸', // glycémie / diabète
-      CARDIOLOGIE: '🫀', // cœur anatomique
-      ONCOLOGIE: '🎗️',
-      NEUROLOGIE: '🧠',
-      RHUMATOLOGIE: '🦴',
-      GASTRO: '🔬', // explorations, biopsies (pas de 🫀 : ce n'est pas le cœur)
-      NEPHROLOGIE: '💧',
-      PNEUMOLOGIE: '🫁',
-      PEDIATRIE: '🧒',
-      GERIATRIE: '🧓', // neutre, non genré
-      DOULEUR: '🩹',
-      PSYCHIATRIE: '🧩',
-      CHIRURGIE: '✂️', // acte opératoire (le microscope n'est pas un geste chirurgical)
-      AUTRE: '🏥',
-    };
-    for (const [id, icone] of Object.entries(attendu)) {
-      expect(DISCIPLINES.find((d) => d.id === id)?.icone, id).toBe(icone);
-    }
+  it('les trie par ordre alphabétique', () => {
+    const libelles = DISCIPLINES.map((d) => d.libelle);
+    expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
   });
 });

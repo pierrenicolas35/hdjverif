@@ -72,6 +72,11 @@ $$;
 
 -- ---------------------------------------------------------------------
 -- Recherche d'actes CCAM (par code ou par libellé)
+--
+-- NB : `supabase/ccam-arbres.sql` REDÉFINIT cette fonction pour y ajouter la
+--      recherche par mots-clés (§ « grand public ») et l'arborescence. Le
+--      présent fichier reste la version de base ; en cas d'installation neuve,
+--      appliquer `ccam-arbres.sql` APRÈS celui-ci.
 -- ---------------------------------------------------------------------
 create or replace function public.rechercher_ccam(
   p_terme  text,

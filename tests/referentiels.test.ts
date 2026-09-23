@@ -271,11 +271,11 @@ describe('assemblage du référentiel des médicaments', () => {
 
 describe('nomenclature CCAM', () => {
   const CCAM = [
-    'ccam,label,chapterCode,modeAccesLabel',
-    '"AAFA002","exérèse de tumeur, par craniotomie","01","abord ouvert"',
-    '"DEQP003","électrocardiogramme","18","acte par ultrasons, sans accès"',
-    '"ZZZ999","code invalide","01","abord ouvert"',
-    '"AAFA002","doublon de la source","01","abord ouvert"',
+    'ccam,label,chapterCode,chapterLabel,topographie,topographieLabel,actionLabel,modeAccesLabel,familleLabel',
+    '"AAFA002","exérèse de tumeur intraparenchymateuse du cerveau, par craniotomie","01","système nerveux central","AA","encéphale","exciser","abord ouvert","chirurgie du cerveau"',
+    '"DEQP003","électrocardiographie sur au moins douze dérivations","04","appareil circulatoire","","","enregistrer","acte par ultrasons, sans accès","électrocardiographie"',
+    '"ZZZ999","code invalide","01","système nerveux central","","","","",""',
+    '"AAFA002","doublon de la source","01","système nerveux central","","","","",""',
   ].join('\n');
 
   it('écarte les codes invalides et les doublons', () => {
@@ -283,16 +283,68 @@ describe('nomenclature CCAM', () => {
     expect(actes.map((a) => a.code)).toEqual(['AAFA002', 'DEQP003']);
   });
 
+  it('conserve la position de chaque acte dans l’arborescence officielle', () => {
+    const acte = ref.lireCcam(CCAM)[0]!;
+    expect(acte.chapitreCode).toBe('01');
+    expect(acte.chapitreLabel).toBe('système nerveux central');
+    expect(acte.topographieLabel).toBe('encéphale');
+    expect(acte.modeAccesLabel).toBe('abord ouvert');
+  });
+
   it('dérive le plateau lourd et l’exclusivité externe du mode d’accès', () => {
     const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
-    expect(actes[0]).toEqual({
+    expect(actes[0]).toMatchObject({
       code: 'AAFA002',
-      libelle: 'exérèse de tumeur, par craniotomie',
+      libelle: 'exérèse de tumeur intraparenchymateuse du cerveau, par craniotomie',
       acte_marqueur_hdj: true,
       exclusif_externe: false,
       necessite_plateau_lourd: true,
+      chapitre_code: '01',
+      chapitre_libelle: 'système nerveux central',
+      sous_chapitre_code: 'AA',
+      sous_chapitre_libelle: 'encéphale',
     });
     expect(actes[1]?.exclusif_externe).toBe(true);
+  });
+
+  it('replie le sous-thème sur le chapitre quand le site anatomique manque', () => {
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
+    // DEQP003 n'a pas de topographie : son chapitre devient son sous-thème.
+    expect(actes[1]?.sous_chapitre_code).toBe('04');
+    expect(actes[1]?.sous_chapitre_libelle).toBe('appareil circulatoire');
+  });
+
+  it('construit des mots-clés « grand public » à partir du libellé et des axes', () => {
+    const mots = ref.motsClesActe({
+      libelle: 'remnographie [IRM] de l’encéphale',
+      chapitreLabel: 'système nerveux central',
+      topographieLabel: 'encéphale',
+      actionLabel: 'examiner',
+      modeAccesLabel: 'acte par remnographie sans accès',
+      familleLabel: 'IRM du système nerveux',
+    });
+    expect(mots).toContain('irm');
+    expect(mots).toContain('resonance magnetique');
+    // Chaque acte reçoit des mots-clés (colonne non vide).
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
+    expect(actes[0]?.mots_cles).toBeTruthy();
+    expect(actes[0]?.mots_cles).toContain('ablation');
+    expect(actes[0]?.mots_cles).toContain('neurochirurgie');
+  });
+
+  it('reconnaît un mode d’accès malgré l’apostrophe typographique de la source', () => {
+    // La nomenclature écrit « autre qu’abord ouvert » avec une apostrophe courbe :
+    // sans normalisation, ces 150 actes seraient classés « non lourds » à tort.
+    expect(ref.normaliserModeAcces('acte par rayons x, avec accès autre qu’abord ouvert')).toBe(
+      "acte par rayons x, avec accès autre qu'abord ouvert",
+    );
+    const ccam = [
+      'ccam,label,chapterCode,modeAccesLabel',
+      '"EBQH006","scanographie des vaisseaux cervicaux","04","acte par rayons x, avec accès autre qu’abord ouvert"',
+    ].join('\n');
+    const actes = ref.construireActes({ contenuCcam: ccam, surcharges: new Map() });
+    expect(actes[0]?.necessite_plateau_lourd).toBe(true);
+    expect(actes[0]?.acte_marqueur_hdj).toBe(true);
   });
 
   it('applique les surcharges éditoriales locales', () => {

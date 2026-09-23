@@ -40,6 +40,13 @@ export interface ActeRef {
   readonly acte_marqueur_hdj: boolean | null;
   readonly exclusif_externe: boolean | null;
   readonly necessite_plateau_lourd: boolean | null;
+  /** Chapitre d'arborescence (facultatif : renseigné par le référentiel). */
+  readonly chapitre_code?: string | null;
+  readonly chapitre_libelle?: string | null;
+  readonly sous_chapitre_code?: string | null;
+  readonly sous_chapitre_libelle?: string | null;
+  /** Synonymes et vocabulaire courant indexés par la base. */
+  readonly mots_cles?: string | null;
 }
 
 /** Date de mise à jour d'une table de référentiel. */
@@ -48,6 +55,13 @@ export interface MajReferentiel {
   readonly libelle: string;
   readonly maj_le: string;
   readonly lignes: number | null;
+}
+
+/** Nœud de l'arborescence CCAM (chapitre ou sous-thème) avec son nombre d'actes. */
+export interface ThemeRef {
+  readonly code: string;
+  readonly libelle: string;
+  readonly actes: number;
 }
 
 /** État de la liaison au référentiel. */
@@ -261,6 +275,45 @@ export async function acteParCode(code: string): Promise<ActeRef | null> {
 }
 
 /* ------------------------------------------------------------------ *
+ * Arborescence CCAM (chapitres → sous-thèmes → actes)
+ * ------------------------------------------------------------------ */
+
+/** Chapitres de la nomenclature (thématiques), triés par code. */
+export async function chapitresCcam(): Promise<readonly ThemeRef[]> {
+  try {
+    return await appelerRpc<ThemeRef[]>('chapitres_ccam', {});
+  } catch {
+    return chapitresDeSecours();
+  }
+}
+
+/** Sous-thèmes (sites anatomiques) d'un chapitre. */
+export async function sousChapitresCcam(chapitre: string): Promise<readonly ThemeRef[]> {
+  try {
+    return await appelerRpc<ThemeRef[]>('sous_chapitres_ccam', { p_chapitre: chapitre });
+  } catch {
+    return sousChapitresDeSecours(chapitre);
+  }
+}
+
+/** Actes d'un chapitre, éventuellement restreints à un sous-thème. */
+export async function actesParTheme(
+  chapitre: string,
+  sousChapitre: string | null,
+  limite = 200,
+): Promise<readonly ActeRef[]> {
+  try {
+    return await appelerRpc<ActeRef[]>('actes_par_theme', {
+      p_chapitre: chapitre,
+      p_sous_chapitre: sousChapitre,
+      p_limite: limite,
+    });
+  } catch {
+    return ACTES_SECOURS.filter((a) => a.chapitre_code === chapitre).slice(0, limite);
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * Repli local (référentiel de secours embarqué)
  * ------------------------------------------------------------------ */
 
@@ -319,6 +372,11 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: false,
     exclusif_externe: true,
     necessite_plateau_lourd: false,
+    chapitre_code: '04',
+    chapitre_libelle: 'appareil circulatoire',
+    sous_chapitre_code: 'CV',
+    sous_chapitre_libelle: 'cœur',
+    mots_cles: 'ecg electrocardiogramme',
   },
   {
     code: 'HEQE001',
@@ -326,6 +384,11 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: true,
     exclusif_externe: false,
     necessite_plateau_lourd: true,
+    chapitre_code: '07',
+    chapitre_libelle: 'appareil digestif',
+    sous_chapitre_code: 'DG',
+    sous_chapitre_libelle: 'œsophage, estomac et duodénum',
+    mots_cles: 'endoscopie fibroscopie gastroscopie estomac biopsie prelevement',
   },
   {
     code: 'AAFA002',
@@ -333,6 +396,11 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: true,
     exclusif_externe: false,
     necessite_plateau_lourd: true,
+    chapitre_code: '01',
+    chapitre_libelle: 'système nerveux central, périphérique et autonome',
+    sous_chapitre_code: 'AA',
+    sous_chapitre_libelle: 'encéphale',
+    mots_cles: 'exerese ablation retrait excision tumeur',
   },
   {
     code: 'ACQK001',
@@ -340,5 +408,43 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: false,
     exclusif_externe: true,
     necessite_plateau_lourd: false,
+    chapitre_code: '01',
+    chapitre_libelle: 'système nerveux central, périphérique et autonome',
+    sous_chapitre_code: 'AA',
+    sous_chapitre_libelle: 'encéphale',
+    mots_cles: 'scanner tdm tomodensitometrie',
   },
 ];
+
+/* ------------------------------------------------------------------ *
+ * Arborescence de secours (calculée depuis le repli local)
+ * ------------------------------------------------------------------ */
+
+function chapitresDeSecours(): readonly ThemeRef[] {
+  const parChapitre = new Map<string, { libelle: string; actes: number }>();
+  for (const acte of ACTES_SECOURS) {
+    const code = acte.chapitre_code;
+    if (!code) continue;
+    const entree = parChapitre.get(code) ?? { libelle: acte.chapitre_libelle ?? '', actes: 0 };
+    entree.actes += 1;
+    parChapitre.set(code, entree);
+  }
+  return [...parChapitre]
+    .map(([code, valeur]) => ({ code, libelle: valeur.libelle, actes: valeur.actes }))
+    .sort((a, b) => a.code.localeCompare(b.code));
+}
+
+function sousChapitresDeSecours(chapitre: string): readonly ThemeRef[] {
+  const parSousChapitre = new Map<string, { libelle: string; actes: number }>();
+  for (const acte of ACTES_SECOURS.filter((a) => a.chapitre_code === chapitre)) {
+    const code = acte.sous_chapitre_code;
+    if (!code) continue;
+    const entree =
+      parSousChapitre.get(code) ?? { libelle: acte.sous_chapitre_libelle ?? '', actes: 0 };
+    entree.actes += 1;
+    parSousChapitre.set(code, entree);
+  }
+  return [...parSousChapitre]
+    .map(([code, valeur]) => ({ code, libelle: valeur.libelle, actes: valeur.actes }))
+    .sort((a, b) => a.libelle.localeCompare(b.libelle));
+}
