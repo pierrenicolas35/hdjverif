@@ -15,3 +15,6 @@ coverage/
 
 # Cache des sources de référentiel (téléchargées par scripts/import-referentiels.mjs)
 .cache/
+
+# Table de restitution générée par `npm run base:hdj` (régénérable depuis data/atih et data/ccam-complete-2025.csv)
+data/atih/base-hdj-2025.csv

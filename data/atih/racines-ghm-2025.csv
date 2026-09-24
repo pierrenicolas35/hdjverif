@@ -1,0 +1,684 @@
+# Fichiers officiels ATIH — Manuel des GHM, version 2025 (arrêté publié au BO du 23/07/2025) : annexe 2 (GHM classés par CMD), annexe 3 (GHM courts et caractéristiques des racines). Source : https://www.atih.sante.fr/manuel-des-ghm-2025-publication-bo
+# Extraites le 2026-09-24 par scripts/extraire-referentiel-atih.py : données officielles reprises telles quelles.
+# libelle = libellé du GHM représentatif de la racine (version « en ambulatoire » lorsqu'elle existe, sinon premier niveau publié).
+# ghm_court : J = ambulatoire strict (0 nuit) ; T0/T1/T2 = très courte durée (0 jour, 0 à 1 jour, 0 à 2 jours).
+racine_ghm;cmd;categorie_majeure_ghm;ghm_court;admet_sejour_0_nuit;libelle
+01C03;01;Groupes chirurgicaux;;non;Craniotomies pour traumatisme, âge supérieur à 17 ans, niveau 1
+01C04;01;Groupes chirurgicaux;;non;Craniotomies en dehors de tout traumatisme, âge supérieur à 17 ans, niveau 1
+01C05;01;Groupes chirurgicaux;;non;Interventions sur le rachis et la moelle pour des affections neurologiques, niveau 1
+01C06;01;Groupes chirurgicaux;;non;Interventions sur le système vasculaire précérébral, niveau 1
+01C08;01;Groupes chirurgicaux;J;oui;Interventions sur les nerfs crâniens ou périphériques et autres interventions sur le système nerveux, en ambulatoire
+01C09;01;Groupes chirurgicaux;;non;Pose d'un stimulateur cérébral, niveau 1
+01C10;01;Groupes chirurgicaux;J;oui;Pose d'un stimulateur médullaire, en ambulatoire
+01C11;01;Groupes chirurgicaux;;non;Craniotomies pour tumeurs, âge inférieur à 18 ans, niveau 1
+01C12;01;Groupes chirurgicaux;;non;Craniotomies pour affections non tumorales, âge inférieur à 18 ans, niveau 1
+01C14;01;Groupes chirurgicaux;J;oui;Libérations de nerfs superficiels à l'exception du médian au canal carpien, en ambulatoire
+01C15;01;Groupes chirurgicaux;J;oui;Libérations du médian au canal carpien, en ambulatoire
+01K02;01;Groupes avec acte classant non opératoire;;non;Autres embolisations intracrâniennes et médullaires, niveau 1
+01K03;01;Groupes avec acte classant non opératoire;;non;Autres actes thérapeutiques par voie vasculaire du système nerveux, niveau 1
+01K04;01;Groupes avec acte classant non opératoire;J;oui;Injections de toxine botulique, en ambulatoire
+01K05;01;Groupes avec acte classant non opératoire;J;oui;Séjours pour douleurs chroniques rebelles comprenant un bloc ou une infiltration, en ambulatoire
+01K06;01;Groupes avec acte classant non opératoire;J;oui;Affections du système nerveux sans acte opératoire avec anesthésie, en ambulatoire
+01K07;01;Groupes avec acte classant non opératoire;;non;Embolisations intracrâniennes et médullaires pour hémorragie, niveau 1
+01M04;01;"Groupes ""médicaux""";T1;oui;Méningites virales, très courte durée
+01M05;01;"Groupes ""médicaux""";T0;oui;Infections du système nerveux à l'exception des méningites virales, très courte durée
+01M07;01;"Groupes ""médicaux""";T0;oui;Maladies dégénératives du système nerveux, âge supérieur à 79 ans, très courte durée
+01M08;01;"Groupes ""médicaux""";T0;oui;Maladies dégénératives du système nerveux, âge inférieur à 80 ans, très courte durée
+01M09;01;"Groupes ""médicaux""";T0;oui;Affections et lésions du rachis et de la moelle, très courte durée
+01M10;01;"Groupes ""médicaux""";T0;oui;Autres affections cérébrovasculaires, très courte durée
+01M11;01;"Groupes ""médicaux""";T1;oui;Affections des nerfs crâniens et rachidiens, très courte durée
+01M12;01;"Groupes ""médicaux""";T1;oui;Autres affections du système nerveux, très courte durée
+01M13;01;"Groupes ""médicaux""";;non;Troubles de la conscience et comas d'origine non traumatique, niveau 1
+01M15;01;"Groupes ""médicaux""";T2;oui;Accidents ischémiques transitoires et occlusions des artères précérébrales, âge supérieur à 79 ans, très
+01M16;01;"Groupes ""médicaux""";T2;oui;Accidents ischémiques transitoires et occlusions des artères précérébrales, âge inférieur à 80 ans, très courte
+01M17;01;"Groupes ""médicaux""";T0;oui;Sclérose en plaques et ataxie cérébelleuse, très courte durée
+01M18;01;"Groupes ""médicaux""";T1;oui;Lésions traumatiques intracrâniennes sévères, très courte durée
+01M19;01;"Groupes ""médicaux""";;non;Autres lésions traumatiques intracrâniennes, sauf commotions, niveau 1
+01M20;01;"Groupes ""médicaux""";;non;Commotions cérébrales, niveau 1
+01M21;01;"Groupes ""médicaux""";T0;oui;Douleurs chroniques rebelles, très courte durée
+01M22;01;"Groupes ""médicaux""";T0;oui;Migraines et céphalées, très courte durée
+01M23;01;"Groupes ""médicaux""";;non;Convulsions hyperthermiques, niveau 1
+01M24;01;"Groupes ""médicaux""";T1;oui;Epilepsie, âge inférieur à 18 ans, très courte durée
+01M25;01;"Groupes ""médicaux""";T1;oui;Epilepsie, âge supérieur à 17 ans, très courte durée
+01M26;01;"Groupes ""médicaux""";T1;oui;Tumeurs malignes du système nerveux, très courte durée
+01M27;01;"Groupes ""médicaux""";T1;oui;Autres tumeurs du système nerveux, très courte durée
+01M28;01;"Groupes ""médicaux""";T0;oui;Hydrocéphalies, très courte durée
+01M29;01;"Groupes ""médicaux""";;non;Anévrysmes cérébraux, niveau 1
+01M30;01;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour accidents vasculaires intracérébraux non transitoires
+01M31;01;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour autres accidents vasculaires cérébraux non transitoires
+01M32;01;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections du système nerveux
+01M33;01;"Groupes ""médicaux""";;non;Troubles du sommeil, niveau 1
+01M34;01;"Groupes ""médicaux""";T1;oui;Anomalies de la démarche d'origine neurologique, très courte durée
+01M35;01;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 01, très courte durée
+01M36;01;"Groupes ""médicaux""";;non;Accidents vasculaires cérébraux non transitoires avec décès : séjours de moins de 2 jours
+01M37;01;"Groupes ""médicaux""";;non;Autres affections de la CMD 01 avec décès : séjours de moins de 2 jours
+01M38;01;"Groupes ""médicaux""";;non;Autres affections neurologiques concernant majoritairement la petite enfance, niveau 1
+01M39;01;"Groupes ""médicaux""";;non;Troubles de la régulation thermique du nouveau-né et du nourrisson, niveau 1
+02C02;02;Groupes chirurgicaux;J;oui;Interventions sur la rétine, en ambulatoire
+02C03;02;Groupes chirurgicaux;J;oui;Interventions sur l'orbite, en ambulatoire
+02C05;02;Groupes chirurgicaux;J;oui;Interventions sur le cristallin avec ou sans vitrectomie, en ambulatoire
+02C06;02;Groupes chirurgicaux;J;oui;Interventions primaires sur l'iris, en ambulatoire
+02C07;02;Groupes chirurgicaux;J;oui;Autres interventions extraoculaires, âge inférieur à 18 ans, en ambulatoire
+02C08;02;Groupes chirurgicaux;J;oui;Autres interventions extraoculaires, âge supérieur à 17 ans, en ambulatoire
+02C09;02;Groupes chirurgicaux;J;oui;Allogreffes de cornée, en ambulatoire
+02C10;02;Groupes chirurgicaux;J;oui;Autres interventions intraoculaires pour affections sévères, en ambulatoire
+02C11;02;Groupes chirurgicaux;J;oui;Autres interventions intraoculaires en dehors des affections sévères, en ambulatoire
+02C12;02;Groupes chirurgicaux;J;oui;Interventions sur le cristallin avec trabéculectomie, en ambulatoire
+02C13;02;Groupes chirurgicaux;J;oui;Interventions sur les muscles oculomoteurs, âge inférieur à 18 ans, en ambulatoire
+02M02;02;"Groupes ""médicaux""";;non;Hyphéma, niveau 1
+02M03;02;"Groupes ""médicaux""";;non;Infections oculaires aiguës sévères, niveau 1
+02M04;02;"Groupes ""médicaux""";T0;oui;Affections oculaires d'origine neurologique, très courte durée
+02M05;02;"Groupes ""médicaux""";T0;oui;Autres affections oculaires, âge inférieur à 18 ans, très courte durée
+02M07;02;"Groupes ""médicaux""";T0;oui;Autres affections oculaires d'origine diabétique, âge supérieur à 17 ans, très courte durée
+02M08;02;"Groupes ""médicaux""";T0;oui;Autres affections oculaires d'origine non diabétique, âge supérieur à 17 ans, très courte durée
+02M09;02;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections de l'oeil
+02M10;02;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 02, très courte durée
+03C05;03;Groupes chirurgicaux;T2;oui;Réparations de fissures labiale et palatine, très courte durée
+03C06;03;Groupes chirurgicaux;J;oui;Interventions sur les sinus et l'apophyse mastoïde, âge inférieur à 18 ans, en ambulatoire
+03C07;03;Groupes chirurgicaux;J;oui;Interventions sur les sinus et l'apophyse mastoïde, âge supérieur à 17 ans, en ambulatoire
+03C09;03;Groupes chirurgicaux;J;oui;Rhinoplasties, en ambulatoire
+03C10;03;Groupes chirurgicaux;;non;Amygdalectomies et/ou adénoïdectomies isolées, âge inférieur à 18 ans, niveau 1
+03C11;03;Groupes chirurgicaux;;non;Amygdalectomies et/ou adénoïdectomies isolées, âge supérieur à 17 ans, niveau 1
+03C12;03;Groupes chirurgicaux;;non;Interventions sur les amygdales et les végétations adénoïdes autres que les amygdalectomies et/ou les adénoïdectomies isolées, âge inférieur à 18 ans, niveau 1
+03C13;03;Groupes chirurgicaux;;non;Interventions sur les amygdales et les végétations adénoïdes autres que les amygdalectomies et/ou les adénoïdectomies isolées, âge supérieur à 17 ans, niveau 1
+03C14;03;Groupes chirurgicaux;J;oui;Drains transtympaniques, âge inférieur à 18 ans, en ambulatoire
+03C15;03;Groupes chirurgicaux;J;oui;Drains transtympaniques, âge supérieur à 17 ans, en ambulatoire
+03C16;03;Groupes chirurgicaux;J;oui;Autres interventions chirurgicales portant sur les oreilles, le nez, la gorge ou le cou, en ambulatoire
+03C17;03;Groupes chirurgicaux;J;oui;Interventions sur la bouche, en ambulatoire
+03C18;03;Groupes chirurgicaux;;non;Pose d'implants cochléaires, niveau 1
+03C19;03;Groupes chirurgicaux;J;oui;Ostéotomies de la face, en ambulatoire
+03C20;03;Groupes chirurgicaux;J;oui;Interventions de reconstruction de l'oreille moyenne, en ambulatoire
+03C21;03;Groupes chirurgicaux;J;oui;Interventions pour oreilles décollées, en ambulatoire
+03C24;03;Groupes chirurgicaux;J;oui;Interventions sur les glandes salivaires, en ambulatoire
+03C25;03;Groupes chirurgicaux;;non;Interventions majeures sur la tête et le cou, niveau 1
+03C26;03;Groupes chirurgicaux;;non;Autres interventions sur la tête et le cou, niveau 1
+03C27;03;Groupes chirurgicaux;J;oui;Interventions sur les amygdales, en ambulatoire
+03C28;03;Groupes chirurgicaux;J;oui;Interventions sur les végétations adénoïdes, en ambulatoire
+03C29;03;Groupes chirurgicaux;J;oui;Autres interventions sur l'oreille, le nez ou la gorge pour tumeurs malignes, en ambulatoire
+03C30;03;Groupes chirurgicaux;J;oui;Interventions sur l'oreille externe, en ambulatoire
+03K02;03;Groupes avec acte classant non opératoire;J;oui;Affections de la bouche et des dents avec certaines extractions, réparations et prothèses dentaires, en ambulatoire
+03K03;03;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une endoscopie oto-rhino-laryngologique, en ambulatoire
+03K04;03;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant certains actes non opératoires de la CMD 03, en ambulatoire
+03M02;03;"Groupes ""médicaux""";T0;oui;Traumatismes et déformations du nez, très courte durée
+03M03;03;"Groupes ""médicaux""";T1;oui;Otites moyennes et autres infections des voies aériennes supérieures, âge inférieur à 18 ans, très courte
+03M04;03;"Groupes ""médicaux""";T1;oui;Otites moyennes et autres infections des voies aériennes supérieures, âge supérieur à 17 ans, très courte
+03M05;03;"Groupes ""médicaux""";T1;oui;Troubles de l'équilibre, très courte durée
+03M06;03;"Groupes ""médicaux""";T1;oui;Epistaxis, très courte durée
+03M07;03;"Groupes ""médicaux""";T0;oui;Tumeurs malignes des oreilles, du nez, de la gorge ou de la bouche, très courte durée
+03M08;03;"Groupes ""médicaux""";T1;oui;Autres diagnostics portant sur les oreilles, le nez, la gorge ou la bouche, âge inférieur à 18 ans, très courte
+03M09;03;"Groupes ""médicaux""";T1;oui;Autres diagnostics portant sur les oreilles, le nez, la gorge ou la bouche, âge supérieur à 17 ans, très courte
+03M10;03;"Groupes ""médicaux""";T0;oui;Affections de la bouche et des dents sans certaines extractions, réparations ou prothèses dentaires, âge
+03M11;03;"Groupes ""médicaux""";T0;oui;Affections de la bouche et des dents sans certaines extractions, réparations ou prothèses dentaires, âge
+03M12;03;"Groupes ""médicaux""";;non;Infections aigües sévères des voies aériennes supérieures, âge inférieur à 18 ans, niveau 1
+03M13;03;"Groupes ""médicaux""";;non;Infections aigües sévères des voies aériennes supérieures, âge supérieur à 17 ans, niveau 1
+03M14;03;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections ORL
+03M15;03;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 03, très courte durée
+04C02;04;Groupes chirurgicaux;;non;Interventions majeures sur le thorax, niveau 1
+04C03;04;Groupes chirurgicaux;;non;Autres interventions chirurgicales sur le système respiratoire, niveau 1
+04C04;04;Groupes chirurgicaux;;non;Interventions sous thoracoscopie, niveau 1
+04K02;04;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une endoscopie bronchique, en ambulatoire
+04M02;04;"Groupes ""médicaux""";T1;oui;Bronchites et asthme, âge inférieur à 18 ans, très courte durée
+04M03;04;"Groupes ""médicaux""";T1;oui;Bronchites et asthme, âge supérieur à 17 ans, très courte durée
+04M04;04;"Groupes ""médicaux""";;non;Pneumonies et pleurésies banales, âge inférieur à 18 ans, niveau 1
+04M05;04;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours pour pneumonies et pleurésies banales, âge supérieur à 17 ans
+04M06;04;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour infections et inflammations respiratoires, âge inférieur à 18 ans
+04M07;04;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour infections et inflammations respiratoires, âge supérieur à 17 ans
+04M08;04;"Groupes ""médicaux""";T0;oui;Bronchopneumopathies chroniques, très courte durée
+04M09;04;"Groupes ""médicaux""";T1;oui;Tumeurs de l'appareil respiratoire, très courte durée
+04M10;04;"Groupes ""médicaux""";T2;oui;Embolies pulmonaires, très courte durée
+04M11;04;"Groupes ""médicaux""";;non;Signes et symptômes respiratoires, niveau 1
+04M12;04;"Groupes ""médicaux""";T1;oui;Pneumothorax, très courte durée
+04M13;04;"Groupes ""médicaux""";T0;oui;Oedème pulmonaire et détresse respiratoire, très courte durée
+04M14;04;"Groupes ""médicaux""";T0;oui;Maladies pulmonaires interstitielles, très courte durée
+04M15;04;"Groupes ""médicaux""";T1;oui;Autres diagnostics portant sur le système respiratoire, très courte durée
+04M16;04;"Groupes ""médicaux""";T2;oui;Traumatismes thoraciques, très courte durée
+04M17;04;"Groupes ""médicaux""";T0;oui;Epanchements pleuraux, très courte durée
+04M18;04;"Groupes ""médicaux""";T2;oui;Bronchiolites, très courte durée
+04M19;04;"Groupes ""médicaux""";T0;oui;Tuberculoses, très courte durée
+04M20;04;"Groupes ""médicaux""";T0;oui;Bronchopneumopathies chroniques surinfectées, très courte durée
+04M21;04;"Groupes ""médicaux""";;non;Suivis de greffe pulmonaire, niveau 1
+04M22;04;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections de l'appareil respiratoire
+04M23;04;"Groupes ""médicaux""";T0;oui;Autres symptômes et recours aux soins de la CMD 04, très courte durée
+04M24;04;"Groupes ""médicaux""";;non;Affections de la CMD 04 avec décès : séjours de moins de 2 jours
+04M25;04;"Groupes ""médicaux""";T1;oui;Grippes, très courte durée
+04M26;04;"Groupes ""médicaux""";T0;oui;Fibroses kystiques avec manifestations pulmonaires, très courte durée
+04M27;04;"Groupes ""médicaux""";;non;Autres affections respiratoires concernant majoritairement la petite enfance, niveau 1
+05C02;05;Groupes chirurgicaux;;non;Chirurgie de remplacement valvulaire avec circulation extracorporelle et avec cathétérisme cardiaque ou coronarographie, niveau 1
+05C03;05;Groupes chirurgicaux;;non;Chirurgie de remplacement valvulaire avec circulation extracorporelle, sans cathétérisme cardiaque, ni
+05C04;05;Groupes chirurgicaux;;non;Pontages aortocoronariens avec cathétérisme cardiaque ou coronarographie, niveau 1
+05C05;05;Groupes chirurgicaux;;non;Pontages aortocoronariens sans cathétérisme cardiaque, ni coronarographie, niveau 1
+05C06;05;Groupes chirurgicaux;;non;Autres interventions cardiothoraciques, âge supérieur à 1 an, ou vasculaires quel que soit l'âge, avec circulation extracorporelle, niveau 1
+05C07;05;Groupes chirurgicaux;;non;Autres interventions cardiothoraciques, âge inférieur à 2 ans, avec circulation extracorporelle, niveau 1
+05C08;05;Groupes chirurgicaux;T1;oui;Transferts et autres séjours courts pour autres interventions cardiothoraciques, âge supérieur à 1 an, ou vasculaires quel que soit l'âge, sans circulation extracorporelle
+05C09;05;Groupes chirurgicaux;;non;Autres interventions cardiothoraciques, âge inférieur à 2 ans, sans circulation extracorporelle, niveau 1
+05C10;05;Groupes chirurgicaux;;non;Chirurgie majeure de revascularisation, niveau 1
+05C11;05;Groupes chirurgicaux;;non;Autres interventions de chirurgie vasculaire, niveau 1
+05C12;05;Groupes chirurgicaux;;non;Amputations du membre inférieur, sauf des orteils, pour troubles circulatoires, niveau 1
+05C13;05;Groupes chirurgicaux;J;oui;Amputations pour troubles circulatoires portant sur le membre supérieur ou les orteils, en ambulatoire
+05C14;05;Groupes chirurgicaux;;non;Poses d'un stimulateur cardiaque permanent avec infarctus aigu du myocarde ou insuffisance cardiaque
+05C15;05;Groupes chirurgicaux;T1;oui;Poses d'un stimulateur cardiaque permanent sans infarctus aigu du myocarde, ni insuffisance cardiaque
+05C17;05;Groupes chirurgicaux;J;oui;Ligatures de veines et éveinages, en ambulatoire
+05C18;05;Groupes chirurgicaux;J;oui;Autres interventions sur le système circulatoire, en ambulatoire
+05C19;05;Groupes chirurgicaux;T1;oui;Poses d'un défibrillateur cardiaque, très courte durée
+05C20;05;Groupes chirurgicaux;;non;Remplacements ou ablations chirurgicale d'électrodes ou repositionnements de boîtier de stimulation
+05C21;05;Groupes chirurgicaux;J;oui;Créations et réfections de fistules artérioveineuses pour affections de la CMD 05, en ambulatoire
+05C22;05;Groupes chirurgicaux;T1;oui;Remplacements de stimulateurs cardiaques permanents, très courte durée
+05K05;05;Groupes avec acte classant non opératoire;;non;Endoprothèses vasculaires avec infarctus du myocarde, niveau 1
+05K06;05;Groupes avec acte classant non opératoire;T1;oui;Endoprothèses vasculaires sans infarctus du myocarde, très courte durée
+05K10;05;Groupes avec acte classant non opératoire;J;oui;Actes diagnostiques par voie vasculaire, en ambulatoire
+05K12;05;Groupes avec acte classant non opératoire;;non;Actes thérapeutiques par voie vasculaire sauf endoprothèses, âge inférieur à 18 ans, niveau 1
+05K14;05;Groupes avec acte classant non opératoire;;non;Mise en place de certains accès vasculaires pour des affections de la CMD 05, séjours de moins de 2 jours
+05K15;05;Groupes avec acte classant non opératoire;J;oui;Surveillances de greffes de coeur avec acte diagnostique par voie vasculaire, en ambulatoire
+05K17;05;Groupes avec acte classant non opératoire;J;oui;Affections cardiovasculaires sans acte opératoire de la CMD 05, avec anesthésie, en ambulatoire
+05K19;05;Groupes avec acte classant non opératoire;;non;Traitements majeurs de troubles du rythme par voie vasculaire, niveau 1
+05K20;05;Groupes avec acte classant non opératoire;T1;oui;Autres traitements de troubles du rythme par voie vasculaire, très courte durée
+05K21;05;Groupes avec acte classant non opératoire;;non;Poses de bioprothèses de valves cardiaques par voie vasculaire, niveau 1
+05K22;05;Groupes avec acte classant non opératoire;;non;Actes thérapeutiques par voie vasculaire sur les orifices du coeur, âge supérieur à 17 ans, niveau 1
+05K23;05;Groupes avec acte classant non opératoire;J;oui;Ablations, repositionnements et poses de sondes cardiaques supplémentaires par voie vasculaire, âge
+05K24;05;Groupes avec acte classant non opératoire;J;oui;Dilatations coronaires et autres actes thérapeutiques sur le coeur par voie vasculaire, âge supérieur à 17 ans, en ambulatoire
+05K25;05;Groupes avec acte classant non opératoire;J;oui;Actes thérapeutiques sur les artères par voie vasculaire, âge supérieur à 17 ans, en ambulatoire
+05K26;05;Groupes avec acte classant non opératoire;J;oui;Actes thérapeutiques sur les accès vasculaires ou les veines par voie vasculaire, âge supérieur à 17 ans, en ambulatoire
+05M04;05;"Groupes ""médicaux""";T1;oui;Infarctus aigu du myocarde, très courte durée
+05M05;05;"Groupes ""médicaux""";T1;oui;Syncopes et lipothymies, très courte durée
+05M06;05;"Groupes ""médicaux""";T0;oui;Angine de poitrine, très courte durée
+05M07;05;"Groupes ""médicaux""";T2;oui;Thrombophlébites veineuses profondes, très courte durée
+05M08;05;"Groupes ""médicaux""";T1;oui;Arythmies et troubles de la conduction cardiaque, très courte durée
+05M09;05;"Groupes ""médicaux""";T2;oui;Insuffisances cardiaques et états de choc circulatoire, très courte durée
+05M10;05;"Groupes ""médicaux""";T0;oui;Cardiopathies congénitales et valvulopathies, âge inférieur à 18 ans, très courte durée
+05M11;05;"Groupes ""médicaux""";T1;oui;Cardiopathies congénitales et valvulopathies, âge supérieur à 17 ans, très courte durée
+05M12;05;"Groupes ""médicaux""";T1;oui;Troubles vasculaires périphériques, très courte durée
+05M13;05;"Groupes ""médicaux""";T1;oui;Douleurs thoraciques, très courte durée
+05M14;05;"Groupes ""médicaux""";;non;Arrêt cardiaque, niveau 1
+05M15;05;"Groupes ""médicaux""";T1;oui;Hypertension artérielle, très courte durée
+05M16;05;"Groupes ""médicaux""";T0;oui;Athérosclérose coronarienne, très courte durée
+05M17;05;"Groupes ""médicaux""";T1;oui;Autres affections de l'appareil circulatoire, très courte durée
+05M18;05;"Groupes ""médicaux""";T2;oui;Transferts et autres séjours courts pour endocardites aiguës et subaiguës
+05M19;05;"Groupes ""médicaux""";;non;Surveillances de greffes de coeur sans acte diagnostique par voie vasculaire, niveau 1
+05M20;05;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections de l'appareil circulatoire
+05M21;05;"Groupes ""médicaux""";;non;Infarctus aigu du myocarde avec décès : séjours de moins de 2 jours
+05M22;05;"Groupes ""médicaux""";;non;Autres affections de la CMD 05 avec décès : séjours de moins de 2 jours
+05M23;05;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins de la CMD 05, très courte durée
+06C03;06;Groupes chirurgicaux;;non;Résections rectales, niveau 1
+06C04;06;Groupes chirurgicaux;;non;Interventions majeures sur l'intestin grêle et le côlon, niveau 1
+06C05;06;Groupes chirurgicaux;;non;Interventions sur l'oesophage, l'estomac et le duodénum, âge inférieur à 18 ans, niveau 1
+06C07;06;Groupes chirurgicaux;;non;Interventions mineures sur l'intestin grêle et le côlon, niveau 1
+06C08;06;Groupes chirurgicaux;;non;Appendicectomies compliquées, niveau 1
+06C09;06;Groupes chirurgicaux;;non;Appendicectomies non compliquées, niveau 1
+06C10;06;Groupes chirurgicaux;J;oui;Interventions réparatrices pour hernies et éventrations, âge inférieur à 18 ans, en ambulatoire
+06C12;06;Groupes chirurgicaux;J;oui;Interventions réparatrices pour hernies inguinales et crurales, âge supérieur à 17 ans, en ambulatoire
+06C13;06;Groupes chirurgicaux;;non;Libérations d'adhérences péritonéales, niveau 1
+06C14;06;Groupes chirurgicaux;J;oui;Interventions sur le rectum et l'anus autres que les résections rectales, en ambulatoire
+06C15;06;Groupes chirurgicaux;;non;Autres interventions sur le tube digestif en dehors des laparotomies, niveau 1
+06C16;06;Groupes chirurgicaux;;non;Interventions sur l'oesophage, l'estomac et le duodénum pour tumeurs malignes, âge supérieur à 17 ans, niveau 1
+06C19;06;Groupes chirurgicaux;J;oui;Hémorroïdectomies, en ambulatoire
+06C20;06;Groupes chirurgicaux;;non;Interventions sur l'oesophage, l'estomac et le duodénum pour ulcères, âge supérieur à 17 ans, niveau 1
+06C21;06;Groupes chirurgicaux;;non;Autres interventions sur le tube digestif par laparotomie, niveau 1
+06C22;06;Groupes chirurgicaux;;non;Interventions sur l'oesophage, l'estomac et le duodénum pour affections autres que malignes ou ulcères, âge
+06C23;06;Groupes chirurgicaux;J;oui;Certaines interventions pour stomies, en ambulatoire
+06C24;06;Groupes chirurgicaux;J;oui;Cures d'éventrations postopératoires, âge supérieur à 17 ans, en ambulatoire
+06C25;06;Groupes chirurgicaux;J;oui;Interventions réparatrices pour hernies à l'exception des hernies inguinales, crurales, âge supérieur à 17 ans, en ambulatoire
+06K02;06;Groupes avec acte classant non opératoire;;non;Endoscopies digestives thérapeutiques et anesthésie : séjours de moins de 2 jours
+06K03;06;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une endoscopie digestive thérapeutique sans anesthésie, en ambulatoire
+06K04;06;Groupes avec acte classant non opératoire;J;oui;Endoscopie digestive diagnostique et anesthésie, en ambulatoire
+06K05;06;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une endoscopie digestive diagnostique sans anesthésie, en ambulatoire
+06K06;06;Groupes avec acte classant non opératoire;J;oui;Affections digestives sans acte opératoire de la CMD 06, avec anesthésie, en ambulatoire
+06M02;06;"Groupes ""médicaux""";T1;oui;Autres gastroentérites et maladies diverses du tube digestif, âge inférieur à 18 ans, très courte durée
+06M03;06;"Groupes ""médicaux""";T1;oui;Autres gastroentérites et maladies diverses du tube digestif, âge supérieur à 17 ans, très courte durée
+06M04;06;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour hémorragies digestives
+06M05;06;"Groupes ""médicaux""";T1;oui;Autres tumeurs malignes du tube digestif, très courte durée
+06M06;06;"Groupes ""médicaux""";T1;oui;Occlusions intestinales non dues à une hernie, très courte durée
+06M07;06;"Groupes ""médicaux""";T0;oui;Maladies inflammatoires de l'intestin, très courte durée
+06M08;06;"Groupes ""médicaux""";T1;oui;Autres affections digestives, âge inférieur à 18 ans, très courte durée
+06M09;06;"Groupes ""médicaux""";T1;oui;Autres affections digestives, âge supérieur à 17 ans, très courte durée
+06M10;06;"Groupes ""médicaux""";;non;Ulcères gastroduodénaux compliqués, niveau 1
+06M11;06;"Groupes ""médicaux""";T1;oui;Ulcères gastroduodénaux non compliqués, très courte durée
+06M12;06;"Groupes ""médicaux""";T1;oui;Douleurs abdominales, très courte durée
+06M13;06;"Groupes ""médicaux""";T1;oui;Tumeurs malignes de l'oesophage et de l'estomac, très courte durée
+06M14;06;"Groupes ""médicaux""";;non;Invaginations intestinales aigües, niveau 1
+06M15;06;"Groupes ""médicaux""";;non;Suivi de greffes de l'appareil digestif
+06M16;06;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections de l'appareil digestif
+06M17;06;"Groupes ""médicaux""";T0;oui;Soins de stomies digestives, très courte durée
+06M18;06;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 06, très courte durée
+06M19;06;"Groupes ""médicaux""";;non;Affections sévères du tube digestif, niveau 1
+06M20;06;"Groupes ""médicaux""";T1;oui;Tumeurs bénignes de l'appareil digestif, très courte durée
+06M21;06;"Groupes ""médicaux""";;non;Autres affections digestives concernant majoritairement la petite enfance, niveau 1
+07C06;07;Groupes chirurgicaux;;non;Interventions diagnostiques sur le système hépato-biliaire et pancréatique pour affections malignes, niveau 1
+07C07;07;Groupes chirurgicaux;;non;Interventions diagnostiques sur le système hépato-biliaire et pancréatique pour affections non malignes, niveau 1
+07C08;07;Groupes chirurgicaux;;non;Autres interventions sur le système hépato-biliaire et pancréatique, niveau 1
+07C09;07;Groupes chirurgicaux;;non;Interventions sur le foie, le pancréas et les veines porte ou cave pour tumeurs malignes, niveau 1
+07C10;07;Groupes chirurgicaux;;non;Interventions sur le foie, le pancréas et les veines porte ou cave pour affections non malignes, niveau 1
+07C11;07;Groupes chirurgicaux;;non;Dérivations biliaires, niveau 1
+07C12;07;Groupes chirurgicaux;;non;Autres interventions sur les voies biliaires sauf cholécystectomies isolées, niveau 1
+07C13;07;Groupes chirurgicaux;;non;Cholécystectomies sans exploration de la voie biliaire principale pour affections aigües, niveau 1
+07C14;07;Groupes chirurgicaux;J;oui;Cholécystectomies sans exploration de la voie biliaire principale à l'exception des affections aigües, en ambulatoire
+07K02;07;Groupes avec acte classant non opératoire;;non;Endoscopies biliaires thérapeutiques et anesthésie : séjours de moins de 2 jours
+07K04;07;Groupes avec acte classant non opératoire;J;oui;Endoscopie biliaire diagnostique et anesthésie, en ambulatoire
+07K05;07;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une endoscopie biliaire thérapeutique ou diagnostique sans anesthésie, en ambulatoire
+07K06;07;Groupes avec acte classant non opératoire;;non;Actes thérapeutiques par voie vasculaire pour des affections malignes du système hépatobiliaire, niveau 1
+07M02;07;"Groupes ""médicaux""";T1;oui;Affections des voies biliaires, très courte durée
+07M04;07;"Groupes ""médicaux""";T0;oui;Autres affections hépatiques, très courte durée
+07M06;07;"Groupes ""médicaux""";T1;oui;Affections malignes du système hépato-biliaire ou du pancréas, très courte durée
+07M07;07;"Groupes ""médicaux""";T1;oui;Cirrhoses alcooliques, très courte durée
+07M08;07;"Groupes ""médicaux""";T0;oui;Autres cirrhoses et fibrose hépatique, très courte durée
+07M09;07;"Groupes ""médicaux""";T0;oui;Hépatites chroniques, très courte durée
+07M10;07;"Groupes ""médicaux""";T2;oui;Pancréatites aigües, très courte durée
+07M11;07;"Groupes ""médicaux""";T1;oui;Autres affections non malignes du pancréas, très courte durée
+07M12;07;"Groupes ""médicaux""";;non;Suivis de greffe de foie et de pancréas, niveau 1
+07M13;07;"Groupes ""médicaux""";;non;Explorations et surveillance des affections du système hépatobiliaire et du pancréas
+07M14;07;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins de la CMD 07, très courte durée
+07M15;07;"Groupes ""médicaux""";T1;oui;Affections hépatiques sévères à l'exception des tumeurs malignes, des cirrhoses et des hépatites alcooliques, très courte durée
+07M16;07;"Groupes ""médicaux""";;non;Ictères du nouveau-né, niveau 1
+08C02;08;Groupes chirurgicaux;;non;Interventions majeures multiples sur les genoux et/ou les hanches, niveau 1
+08C04;08;Groupes chirurgicaux;;non;Interventions sur la hanche et le fémur, âge inférieur à 18 ans, niveau 1
+08C06;08;Groupes chirurgicaux;;non;Amputations pour affections de l'appareil musculosquelettique et du tissu conjonctif, niveau 1
+08C12;08;Groupes chirurgicaux;J;oui;Biopsies ostéoarticulaires, en ambulatoire
+08C13;08;Groupes chirurgicaux;J;oui;Résections osseuses localisées et/ou ablation de matériel de fixation interne au niveau de la hanche et du fémur, en ambulatoire
+08C14;08;Groupes chirurgicaux;J;oui;Résections osseuses localisées et/ou ablation de matériel de fixation interne au niveau d'une localisation autre
+08C20;08;Groupes chirurgicaux;J;oui;Greffes de peau pour maladie de l'appareil musculosquelettique ou du tissu conjonctif, en ambulatoire
+08C21;08;Groupes chirurgicaux;J;oui;Autres interventions portant sur l'appareil musculosquelettique et le tissu conjonctif, en ambulatoire
+08C22;08;Groupes chirurgicaux;;non;Interventions pour reprise de prothèses articulaires, niveau 1
+08C24;08;Groupes chirurgicaux;;non;Prothèses de genou, niveau 1
+08C25;08;Groupes chirurgicaux;;non;Prothèses d'épaule, niveau 1
+08C27;08;Groupes chirurgicaux;;non;Autres interventions sur le rachis, niveau 1
+08C28;08;Groupes chirurgicaux;J;oui;Interventions maxillofaciales, en ambulatoire
+08C29;08;Groupes chirurgicaux;J;oui;Interventions sur le tissu mou pour tumeurs malignes, en ambulatoire
+08C31;08;Groupes chirurgicaux;;non;Interventions sur la jambe, âge inférieur à 18 ans, niveau 1
+08C32;08;Groupes chirurgicaux;J;oui;Interventions sur la jambe, âge supérieur à 17 ans, en ambulatoire
+08C33;08;Groupes chirurgicaux;;non;Interventions sur la cheville et l'arrière-pied à l'exception des fractures, niveau 1
+08C34;08;Groupes chirurgicaux;J;oui;Interventions sur les ligaments croisés sous arthroscopie, en ambulatoire
+08C35;08;Groupes chirurgicaux;J;oui;Interventions sur le bras, coude et épaule, en ambulatoire
+08C36;08;Groupes chirurgicaux;J;oui;Interventions sur le pied, âge inférieur à 18 ans, en ambulatoire
+08C37;08;Groupes chirurgicaux;J;oui;Interventions sur le pied, âge supérieur à 17 ans, en ambulatoire
+08C38;08;Groupes chirurgicaux;J;oui;Autres arthroscopies du genou, en ambulatoire
+08C39;08;Groupes chirurgicaux;J;oui;Interventions sur l'avant-bras, en ambulatoire
+08C40;08;Groupes chirurgicaux;J;oui;Arthroscopies d'autres localisations, en ambulatoire
+08C42;08;Groupes chirurgicaux;J;oui;Interventions non mineures sur les tissus mous, en ambulatoire
+08C43;08;Groupes chirurgicaux;J;oui;Interventions non mineures sur la main, en ambulatoire
+08C44;08;Groupes chirurgicaux;J;oui;Autres interventions sur la main, en ambulatoire
+08C45;08;Groupes chirurgicaux;J;oui;Ménisectomie sous arthroscopie, en ambulatoire
+08C46;08;Groupes chirurgicaux;J;oui;Autres interventions sur les tissus mous, en ambulatoire
+08C47;08;Groupes chirurgicaux;;non;Prothèses de hanche pour traumatismes récents, niveau 1
+08C48;08;Groupes chirurgicaux;;non;Prothèses de hanche pour des affections autres que des traumatismes récents, niveau 1
+08C49;08;Groupes chirurgicaux;;non;Interventions sur la hanche et le fémur pour traumatismes récents, âge supérieur à 17 ans, niveau 1
+08C50;08;Groupes chirurgicaux;;non;Interventions sur la hanche et le fémur sauf traumatismes récents, âge supérieur à 17 ans, niveau 1
+08C51;08;Groupes chirurgicaux;;non;Interventions majeures sur le rachis pour fractures, cyphoses et scolioses, niveau 1
+08C52;08;Groupes chirurgicaux;;non;Autres interventions majeures sur le rachis, niveau 1
+08C53;08;Groupes chirurgicaux;;non;Interventions sur le genou pour traumatismes, niveau 1
+08C54;08;Groupes chirurgicaux;J;oui;Interventions sur le genou pour des affections autres que traumatiques, en ambulatoire
+08C55;08;Groupes chirurgicaux;;non;Interventions sur la cheville et l'arrière-pied pour fractures, niveau 1
+08C57;08;Groupes chirurgicaux;J;oui;Libérations articulaires du membre inférieur à l'exception de la hanche et du pied, en ambulatoire
+08C58;08;Groupes chirurgicaux;J;oui;Arthroscopies de l'épaule, en ambulatoire
+08C59;08;Groupes chirurgicaux;J;oui;Ténosynovectomies du poignet, en ambulatoire
+08C60;08;Groupes chirurgicaux;J;oui;Interventions sur le poignet autres que les ténosynovectomies, en ambulatoire
+08C61;08;Groupes chirurgicaux;;non;Interventions majeures pour infections ostéoarticulaires, niveau 1
+08C62;08;Groupes chirurgicaux;J;oui;Autres interventions pour infections ostéoarticulaires, en ambulatoire
+08K02;08;Groupes avec acte classant non opératoire;J;oui;Affections de l'appareil musculosquelettique sans acte opératoire de la CMD 08, avec anesthésie, en ambulatoire
+08K03;08;Groupes avec acte classant non opératoire;;non;Tractions continues et réductions progressives : autres que hanche et fémur, niveau 1
+08K04;08;Groupes avec acte classant non opératoire;;non;Tractions continues et réductions progressives : hanche et fémur, niveau 1
+08K05;08;Groupes avec acte classant non opératoire;J;oui;Spondyloplasties, en ambulatoire
+08K06;08;Groupes avec acte classant non opératoire;;non;Autres actes interventionnels sur le rachis, séjours de moins de 2 nuits
+08M04;08;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour fractures de la hanche et du bassin
+08M05;08;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours pour fractures de la diaphyse, de l'épiphyse ou d'une partie non précisée du fémur
+08M06;08;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour fractures, entorses, luxations et dislocations de la jambe, âge inférieur
+08M07;08;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour fractures, entorses, luxations et dislocations de la jambe, âge
+08M08;08;"Groupes ""médicaux""";T1;oui;Transferts et autres séjours courts pour entorses et luxations de la hanche et du bassin
+08M09;08;"Groupes ""médicaux""";T0;oui;Arthropathies non spécifiques, très courte durée
+08M10;08;"Groupes ""médicaux""";T0;oui;Maladies osseuses et arthropathies spécifiques, très courte durée
+08M14;08;"Groupes ""médicaux""";T0;oui;Affections du tissu conjonctif, très courte durée
+08M15;08;"Groupes ""médicaux""";T0;oui;Tendinites, myosites et bursites, très courte durée
+08M18;08;"Groupes ""médicaux""";T1;oui;Suites de traitement après une affection de l'appareil musculosquelettique ou du tissu conjonctif, très courte
+08M19;08;"Groupes ""médicaux""";T1;oui;Autres pathologies de l'appareil musculosquelettique et du tissu conjonctif, très courte durée
+08M20;08;"Groupes ""médicaux""";;non;Fractures, entorses, luxations et dislocations du bras et de l'avant-bras, âge inférieur à 18 ans, niveau 1
+08M21;08;"Groupes ""médicaux""";;non;Entorses, luxations et dislocations du bras et de l'avant-bras, âge supérieur à 17 ans, niveau 1
+08M22;08;"Groupes ""médicaux""";;non;Fractures, entorses, luxations et dislocations de la main, niveau 1
+08M23;08;"Groupes ""médicaux""";;non;Fractures, entorses, luxations et dislocations du pied, niveau 1
+08M24;08;"Groupes ""médicaux""";T1;oui;Tumeurs primitives malignes des os, du cartilage ou des tissus mous, très courte durée
+08M25;08;"Groupes ""médicaux""";T1;oui;Fractures pathologiques et autres tumeurs malignes de l'appareil musculosquelettique et du tissu conjonctif, très courte durée
+08M26;08;"Groupes ""médicaux""";;non;Fractures du rachis, niveau 1
+08M27;08;"Groupes ""médicaux""";T1;oui;Sciatiques et autres radiculopathies, très courte durée
+08M28;08;"Groupes ""médicaux""";T1;oui;Autres rachialgies, très courte durée
+08M29;08;"Groupes ""médicaux""";T1;oui;Autres pathologies rachidiennes relevant d'un traitement médical, très courte durée
+08M30;08;"Groupes ""médicaux""";T1;oui;Rhumatismes et raideurs articulaires, très courte durée
+08M31;08;"Groupes ""médicaux""";T1;oui;Ostéomyélites aigües (y compris vertébrales) et arthrites septiques, très courte durée
+08M32;08;"Groupes ""médicaux""";T1;oui;Ostéomyélites chroniques, très courte durée
+08M33;08;"Groupes ""médicaux""";T0;oui;Ablation de matériel sans acte classant, très courte durée
+08M34;08;"Groupes ""médicaux""";T0;oui;Algoneurodystrophie, très courte durée
+08M35;08;"Groupes ""médicaux""";;non;Explorations et surveillance de l'appareil musculosquelettique et du tissu conjonctif
+08M36;08;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins de la CMD 08, très courte durée
+08M37;08;"Groupes ""médicaux""";T1;oui;Fractures du bras et de l'avant-bras, âge supérieur à 17 ans, très courte durée
+08M38;08;"Groupes ""médicaux""";T1;oui;Entorses et luxations du rachis, très courte durée
+09C08;09;Groupes chirurgicaux;J;oui;Interventions sur la région anale et périanale, en ambulatoire
+09C09;09;Groupes chirurgicaux;;non;Interventions plastiques en dehors de la chirurgie esthétique, niveau 1
+09C13;09;Groupes chirurgicaux;J;oui;Interventions pour condylomes anogénitaux, en ambulatoire
+09C14;09;Groupes chirurgicaux;J;oui;Certains curages lymphonodaux pour des affections de la peau, des tissus sous-cutanés ou des seins, en ambulatoire
+09C16;09;Groupes chirurgicaux;;non;Mastectomies totales avec reconstructions complexes, niveau 1
+09C17;09;Groupes chirurgicaux;;non;Reconstructions complexes isolées, niveau 1
+09C18;09;Groupes chirurgicaux;;non;Interventions majeures pour tumeur maligne du sein avec reconstruction prothétique, niveau 1
+09C19;09;Groupes chirurgicaux;;non;Interventions majeures pour tumeur maligne du sein, niveau 1
+09C20;09;Groupes chirurgicaux;J;oui;Autres interventions pour tumeur maligne du sein, en ambulatoire
+09C21;09;Groupes chirurgicaux;;non;Interventions majeures hors tumeur maligne du sein, niveau 1
+09C22;09;Groupes chirurgicaux;J;oui;Autres interventions hors tumeur maligne du sein, en ambulatoire
+09C23;09;Groupes chirurgicaux;J;oui;Interventions majeures pour tumeur maligne de la peau, en ambulatoire
+09C24;09;Groupes chirurgicaux;J;oui;Interventions intermédiaires pour tumeur maligne de la peau, en ambulatoire
+09C25;09;Groupes chirurgicaux;J;oui;Autres interventions pour tumeur maligne de la peau, en ambulatoire
+09C26;09;Groupes chirurgicaux;J;oui;Interventions pour tumeurs bénignes, naevus, kystes ou atteintes de l'ongle, en ambulatoire
+09C27;09;Groupes chirurgicaux;;non;Interventions d'exérèse ou de greffe pour infection, niveau 1
+09C28;09;Groupes chirurgicaux;J;oui;Interventions majeures d'exérèse ou de greffe, en ambulatoire
+09C29;09;Groupes chirurgicaux;J;oui;Interventions intermédiaires d'exérèse ou de greffe, en ambulatoire
+09C30;09;Groupes chirurgicaux;J;oui;Exérèse de lésions fasciales ou sousfasciales des tissus mous, en ambulatoire
+09C31;09;Groupes chirurgicaux;J;oui;Autres interventions d'exérèse ou de greffe, en ambulatoire
+09C32;09;Groupes chirurgicaux;J;oui;Chirurgie superficielle des orifices sensoriels de la face, en ambulatoire
+09C33;09;Groupes chirurgicaux;;non;Autres interventions majeures de la CMD09, niveau 1
+09C34;09;Groupes chirurgicaux;J;oui;Autres interventions de la CMD09, en ambulatoire
+09K02;09;Groupes avec acte classant non opératoire;J;oui;Affections de la peau, des tissus sous-cutanés et des seins sans acte opératoire de la CMD 09, avec anesthésie, en ambulatoire
+09M02;09;"Groupes ""médicaux""";T0;oui;Traumatismes de la peau et des tissus sous-cutanés, âge inférieur à 18 ans, très courte durée
+09M03;09;"Groupes ""médicaux""";T0;oui;Traumatismes de la peau et des tissus sous-cutanés, âge supérieur à 17 ans, très courte durée
+09M04;09;"Groupes ""médicaux""";T1;oui;Lésions, infections et inflammations de la peau et des tissus sous-cutanés, âge inférieur à 18 ans, très courte
+09M05;09;"Groupes ""médicaux""";T1;oui;Lésions, infections et inflammations de la peau et des tissus sous-cutanés, âge supérieur à 17 ans, très courte
+09M06;09;"Groupes ""médicaux""";T0;oui;Ulcères cutanés, très courte durée
+09M07;09;"Groupes ""médicaux""";T0;oui;Autres affections dermatologiques, très courte durée
+09M08;09;"Groupes ""médicaux""";T1;oui;Affections dermatologiques sévères, très courte durée
+09M09;09;"Groupes ""médicaux""";T1;oui;Affections non malignes des seins, très courte durée
+09M10;09;"Groupes ""médicaux""";T0;oui;Tumeurs malignes des seins, très courte durée
+09M11;09;"Groupes ""médicaux""";T0;oui;Tumeurs de la peau, très courte durée
+09M12;09;"Groupes ""médicaux""";;non;Explorations et surveillance des affections de la peau
+09M13;09;"Groupes ""médicaux""";;non;Explorations et surveillance des affections des seins
+09M14;09;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins concernant les affections de la peau, très courte durée
+09M15;09;"Groupes ""médicaux""";;non;Symptômes et autres recours aux soins concernant les affections des seins
+09Z02;09;"Groupes ""médicaux""";;non;Chirurgie esthétique, sans complication significative
+10C02;10;Groupes chirurgicaux;;non;Interventions sur l'hypophyse, niveau 1
+10C03;10;Groupes chirurgicaux;;non;Interventions sur les glandes surrénales, niveau 1
+10C05;10;Groupes chirurgicaux;;non;Interventions sur les parathyroïdes, niveau 1
+10C07;10;Groupes chirurgicaux;;non;Interventions sur le tractus thyréoglosse, niveau 1
+10C08;10;Groupes chirurgicaux;J;oui;Autres interventions pour troubles endocriniens, métaboliques ou nutritionnels, en ambulatoire
+10C09;10;Groupes chirurgicaux;;non;Gastroplasties pour obésité, niveau 1
+10C10;10;Groupes chirurgicaux;;non;Autres interventions pour obésité, niveau 1
+10C11;10;Groupes chirurgicaux;;non;Interventions sur la thyroïde pour tumeurs malignes, niveau 1
+10C12;10;Groupes chirurgicaux;;non;Interventions sur la thyroïde pour affections non malignes, niveau 1
+10C13;10;Groupes chirurgicaux;;non;Interventions digestives autres que les gastroplasties, pour obésité, niveau 1
+10M02;10;"Groupes ""médicaux""";T1;oui;Diabète, âge supérieur à 35 ans, très courte durée
+10M03;10;"Groupes ""médicaux""";T1;oui;Diabète, âge inférieur à 36 ans, très courte durée
+10M07;10;"Groupes ""médicaux""";T1;oui;Autres troubles endocriniens, très courte durée
+10M08;10;"Groupes ""médicaux""";T1;oui;Acidocétose et coma diabétique, très courte durée
+10M09;10;"Groupes ""médicaux""";T0;oui;Obésité, très courte durée
+10M10;10;"Groupes ""médicaux""";T1;oui;Maladies métaboliques congénitales sévères, très courte durée
+10M11;10;"Groupes ""médicaux""";T0;oui;Autres maladies métaboliques congénitales, très courte durée
+10M12;10;"Groupes ""médicaux""";T1;oui;Tumeurs des glandes endocrines, très courte durée
+10M13;10;"Groupes ""médicaux""";T1;oui;Explorations et surveillance pour affections endocriniennes et métaboliques, très courte durée
+10M14;10;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins de la CMD 10, très courte durée
+10M15;10;"Groupes ""médicaux""";T1;oui;Troubles métaboliques, âge inférieur à 18 ans, très courte durée
+10M16;10;"Groupes ""médicaux""";T1;oui;Troubles métaboliques, âge supérieur à 17 ans, très courte durée
+10M17;10;"Groupes ""médicaux""";T1;oui;Troubles nutritionnels divers, âge inférieur à 18 ans, très courte durée
+10M18;10;"Groupes ""médicaux""";T1;oui;Troubles nutritionnels divers, âge supérieur à 17 ans, très courte durée
+10M19;10;"Groupes ""médicaux""";;non;Autres affections de la CMD 10 concernant majoritairement la petite enfance, niveau 1
+10M20;10;"Groupes ""médicaux""";;non;Problèmes alimentaires du nouveau-né et du nourrisson, niveau 1
+11C02;11;Groupes chirurgicaux;;non;Interventions sur les reins et les uretères et chirurgie majeure de la vessie pour une affection tumorale, niveau
+11C03;11;Groupes chirurgicaux;;non;Interventions sur les reins et les uretères et chirurgie majeure de la vessie pour une affection non tumorale, niveau 1
+11C04;11;Groupes chirurgicaux;J;oui;Autres interventions sur la vessie à l'exception des interventions transurétrales, en ambulatoire
+11C06;11;Groupes chirurgicaux;;non;Interventions sur l'urètre, âge inférieur à 18 ans, niveau 1
+11C07;11;Groupes chirurgicaux;J;oui;Interventions sur l'urètre, âge supérieur à 17 ans, en ambulatoire
+11C08;11;Groupes chirurgicaux;T1;oui;Autres interventions sur les reins et les voies urinaires, très courte durée
+11C09;11;Groupes chirurgicaux;J;oui;Créations et réfections de fistules artérioveineuses pour affections de la CMD 11, en ambulatoire
+11C10;11;Groupes chirurgicaux;J;oui;Interventions pour incontinence urinaire en dehors des interventions transurétrales, en ambulatoire
+11C11;11;Groupes chirurgicaux;J;oui;Interventions par voie transurétrale ou transcutanée pour lithiases urinaires, en ambulatoire
+11C12;11;Groupes chirurgicaux;J;oui;Injections de toxine botulique dans l'appareil urinaire, en ambulatoire
+11C13;11;Groupes chirurgicaux;J;oui;Interventions par voie transurétrale ou transcutanée pour des affections non lithiasiques, en ambulatoire
+11K02;11;Groupes avec acte classant non opératoire;J;oui;Insuffisance rénale, avec dialyse, en ambulatoire
+11K03;11;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires thérapeutiques et anesthésie : séjours de la CMD 11 et de moins de 2 jours
+11K04;11;Groupes avec acte classant non opératoire;;non;Séjours de la CMD 11 comprenant une endoscopie génito-urinaire thérapeutique sans anesthésie : séjours de moins de 2 jours
+11K05;11;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires diagnostiques et anesthésie : séjours de la CMD 11 et de moins de 2 jours
+11K06;11;Groupes avec acte classant non opératoire;;non;Séjours de la CMD 11 comprenant une endoscopie génito-urinaire diagnostique sans anesthésie : séjours de moins de 2 jours
+11K07;11;Groupes avec acte classant non opératoire;;non;Séjours de la CMD 11 comprenant la mise en place de certains accès vasculaires, en ambulatoire
+11K08;11;Groupes avec acte classant non opératoire;J;oui;Lithotritie extracorporelle de l'appareil urinaire, en ambulatoire
+11M02;11;"Groupes ""médicaux""";T1;oui;Lithiases urinaires, très courte durée
+11M03;11;"Groupes ""médicaux""";T0;oui;Infections des reins et des voies urinaires, âge inférieur à 18 ans, très courte durée
+11M04;11;"Groupes ""médicaux""";T0;oui;Infections des reins et des voies urinaires, âge supérieur à 17 ans, très courte durée
+11M06;11;"Groupes ""médicaux""";T1;oui;Insuffisance rénale, sans dialyse, très courte durée
+11M07;11;"Groupes ""médicaux""";T1;oui;Tumeurs des reins et des voies urinaires, très courte durée
+11M08;11;"Groupes ""médicaux""";T0;oui;Autres affections des reins et des voies urinaires, âge inférieur à 18 ans, très courte durée
+11M10;11;"Groupes ""médicaux""";T0;oui;Rétrécissement urétral, très courte durée
+11M11;11;"Groupes ""médicaux""";;non;Signes et symptômes concernant les reins et les voies urinaires, âge inférieur à 18 ans, niveau 1
+11M12;11;"Groupes ""médicaux""";T1;oui;Signes et symptômes concernant les reins et les voies urinaires, âge supérieur à 17 ans, très courte durée
+11M15;11;"Groupes ""médicaux""";T0;oui;Autres affections des reins et des voies urinaires d'origine diabétique, âge supérieur à 17 ans, très courte
+11M16;11;"Groupes ""médicaux""";T0;oui;Autres affections des reins et des voies urinaires, à l'exception de celles d'origine diabétique, âge supérieur à
+11M17;11;"Groupes ""médicaux""";;non;Surveillances de greffes de rein, niveau 1
+11M18;11;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections du rein et des voies urinaires
+11M19;11;"Groupes ""médicaux""";T0;oui;Autres symptômes et recours aux soins de la CMD 11, très courte durée
+11M20;11;"Groupes ""médicaux""";;non;Autres affections uronéphrologiques concernant majoritairement la petite enfance, niveau 1
+12C03;12;Groupes chirurgicaux;J;oui;Interventions sur le pénis, en ambulatoire
+12C04;12;Groupes chirurgicaux;J;oui;Prostatectomies transurétrales, en ambulatoire
+12C05;12;Groupes chirurgicaux;;non;Interventions sur les testicules pour tumeurs malignes, niveau 1
+12C06;12;Groupes chirurgicaux;J;oui;Interventions sur les testicules pour affections non malignes, âge inférieur à 18 ans, en ambulatoire
+12C07;12;Groupes chirurgicaux;J;oui;Interventions sur les testicules pour affections non malignes, âge supérieur à 17 ans, en ambulatoire
+12C08;12;Groupes chirurgicaux;J;oui;Circoncision, en ambulatoire
+12C09;12;Groupes chirurgicaux;;non;Autres interventions pour tumeurs malignes de l'appareil génital masculin, niveau 1
+12C10;12;Groupes chirurgicaux;;non;Autres interventions pour affections non malignes de l'appareil génital masculin, niveau 1
+12C11;12;Groupes chirurgicaux;;non;Interventions pelviennes majeures chez l'homme pour tumeurs malignes, niveau 1
+12C12;12;Groupes chirurgicaux;;non;Interventions pelviennes majeures chez l'homme pour affections non malignes, niveau 1
+12C13;12;Groupes chirurgicaux;J;oui;Stérilisation et vasoplastie, en ambulatoire
+12K02;12;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires et anesthésie : séjours de la CMD 12 et de moins de deux jours
+12K03;12;Groupes avec acte classant non opératoire;;non;Séjours de la CMD 12 comprenant une endoscopie génito-urinaire sans anesthésie : séjours de moins de deux jours
+12K06;12;Groupes avec acte classant non opératoire;J;oui;Séjours comprenant une biopsie prostatique, en ambulatoire
+12M03;12;"Groupes ""médicaux""";T1;oui;Tumeurs malignes de l'appareil génital masculin, très courte durée
+12M04;12;"Groupes ""médicaux""";T1;oui;Hypertrophie prostatique bénigne, très courte durée
+12M05;12;"Groupes ""médicaux""";T0;oui;Autres affections de l'appareil génital masculin, très courte durée
+12M06;12;"Groupes ""médicaux""";T1;oui;Prostatites aigües et orchites, très courte durée
+12M07;12;"Groupes ""médicaux""";T0;oui;Autres infections et inflammations de l'appareil génital masculin, très courte durée
+12M08;12;"Groupes ""médicaux""";;non;Explorations et surveillance des affections de l'appareil génital masculin
+12M09;12;"Groupes ""médicaux""";;non;Symptômes et autres recours aux soins de la CMD 12
+13C03;13;Groupes chirurgicaux;;non;Hystérectomies, niveau 1
+13C04;13;Groupes chirurgicaux;J;oui;Interventions réparatrices sur l'appareil génital féminin, en ambulatoire
+13C05;13;Groupes chirurgicaux;;non;Interventions sur le système utéroannexiel pour tumeurs malignes, niveau 1
+13C06;13;Groupes chirurgicaux;J;oui;Interruptions tubaires, en ambulatoire
+13C07;13;Groupes chirurgicaux;J;oui;Interventions sur le système utéroannexiel pour des affections non malignes, autres que les interruptions
+13C08;13;Groupes chirurgicaux;J;oui;Interventions sur la vulve, le vagin ou le col utérin, en ambulatoire
+13C09;13;Groupes chirurgicaux;J;oui;Laparoscopies ou coelioscopies diagnostiques, en ambulatoire
+13C10;13;Groupes chirurgicaux;J;oui;Ligatures tubaires par laparoscopie ou coelioscopie, en ambulatoire
+13C11;13;Groupes chirurgicaux;J;oui;Dilatations et curetages, conisations pour tumeurs malignes, en ambulatoire
+13C12;13;Groupes chirurgicaux;J;oui;Dilatations et curetages, conisations pour affections non malignes, en ambulatoire
+13C13;13;Groupes chirurgicaux;T1;oui;Autres interventions sur l'appareil génital féminin, très courte durée
+13C14;13;Groupes chirurgicaux;;non;Exentérations pelviennes, hystérectomies élargies ou vulvectomies pour tumeurs malignes, niveau 1
+13C15;13;Groupes chirurgicaux;;non;Exentérations pelviennes, hystérectomies élargies ou vulvectomies pour affections non malignes, niveau 1
+13C16;13;Groupes chirurgicaux;J;oui;Prélèvements d'ovocytes, en ambulatoire
+13C17;13;Groupes chirurgicaux;J;oui;Cervicocystopexie, en ambulatoire
+13C18;13;Groupes chirurgicaux;;non;Myomectomies de l'utérus, niveau 1
+13C19;13;Groupes chirurgicaux;J;oui;Interventions pour stérilité ou motifs de soins liés à la reproduction, en ambulatoire
+13C20;13;Groupes chirurgicaux;J;oui;Exérèses ou destructions de lésions du col de l'utérus sauf conisations, en ambulatoire
+13K02;13;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires thérapeutiques et anesthésie : séjours de la CMD 13 et de moins de 2 jours
+13K03;13;Groupes avec acte classant non opératoire;;non;Séjours de la CMD 13 comprenant une endoscopie génito-urinaire thérapeutique sans anesthésie : séjours de moins de 2 jours
+13K04;13;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires diagnostiques et anesthésie : séjours de la CMD 13 et de moins de 2 jours
+13K05;13;Groupes avec acte classant non opératoire;;non;Endoscopies génito-urinaires diagnostiques sans anesthésie : séjours de la CMD 13 et de moins de 2 jours
+13K06;13;Groupes avec acte classant non opératoire;J;oui;Affections de l'appareil génital féminin sans acte opératoire de la CMD 13, avec anesthésie, en ambulatoire
+13M03;13;"Groupes ""médicaux""";T1;oui;Tumeurs malignes de l'appareil génital féminin, très courte durée
+13M04;13;"Groupes ""médicaux""";T1;oui;Autres affections de l'appareil génital féminin, très courte durée
+13M05;13;"Groupes ""médicaux""";;non;Infections de l'utérus et de ses annexes, niveau 1
+13M06;13;"Groupes ""médicaux""";T1;oui;Autres infections de l'appareil génital féminin, très courte durée
+13M07;13;"Groupes ""médicaux""";;non;Autres tumeurs de l'appareil génital féminin, niveau 1
+13M08;13;"Groupes ""médicaux""";;non;Assistance médicale à la procréation, niveau 1
+13M09;13;"Groupes ""médicaux""";;non;Explorations et surveillance gynécologiques
+13M10;13;"Groupes ""médicaux""";;non;Autres symptômes et recours aux soins de la CMD 13
+14C03;14;Groupes chirurgicaux;;non;Accouchements uniques par voie basse avec autres interventions, sans complication significative
+14C04;14;Groupes chirurgicaux;T1;oui;Affections du post-partum ou du post abortum avec intervention chirurgicale, très courte durée
+14C05;14;Groupes chirurgicaux;J;oui;Avortements avec aspiration ou curetage ou hystérotomie, en ambulatoire
+14C06;14;Groupes chirurgicaux;;non;Césariennes avec naissance d'un mort-né, sans complication significative
+14C07;14;Groupes chirurgicaux;;non;Césariennes pour grossesse multiple, sans complication significative
+14C08;14;Groupes chirurgicaux;;non;Césariennes pour grossesse unique, sans complication significative
+14C09;14;Groupes chirurgicaux;;non;Grossesses ectopiques avec intervention chirurgicale, sans complication significative
+14C10;14;Groupes chirurgicaux;T1;oui;Affections de l'ante partum avec intervention chirurgicale, très courte durée
+14M02;14;"Groupes ""médicaux""";T1;oui;Affections médicales du post-partum ou du post-abortum, sans complication significative
+14M03;14;"Groupes ""médicaux""";T0;oui;Affections de l'ante partum sans intervention chirurgicale, sans complication significative
+14Z04;14;"Groupes ""médicaux""";T1;oui;Avortements sans aspiration, ni curetage, ni hystérotomie, très courte durée
+14Z06;14;"Groupes ""médicaux""";T1;oui;Menaces d'avortement, très courte durée
+14Z08;14;"Groupes ""médicaux""";;non;Interruptions volontaires de grossesse : séjours de moins de 3 jours
+14Z09;14;"Groupes ""médicaux""";;non;Accouchements hors de l'établissement
+14Z10;14;"Groupes ""médicaux""";T1;oui;Accouchements par voie basse avec naissance d'un mort-né, sans complication significative
+14Z11;14;"Groupes ""médicaux""";;non;Accouchements multiples par voie basse chez une primipare, sans complication significative
+14Z12;14;"Groupes ""médicaux""";;non;Accouchements multiples par voie basse chez une multipare, sans complication significative
+14Z13;14;"Groupes ""médicaux""";T1;oui;Accouchements uniques par voie basse chez une primipare, sans complication significative
+14Z14;14;"Groupes ""médicaux""";T1;oui;Accouchements uniques par voie basse chez une multipare, sans complication significative
+14Z15;14;"Groupes ""médicaux""";;non;Grossesses ectopiques sans intervention chirurgicale
+14Z16;14;"Groupes ""médicaux""";T1;oui;Faux travail et menaces d'accouchements prématurés, très courte durée
+15C02;15;Groupes chirurgicaux;;non;Interventions majeures sur l'appareil digestif, groupes nouveau-nés 1 à 7, sans complication significative
+15C03;15;Groupes chirurgicaux;;non;Interventions majeures sur l'appareil cardiovasculaire, groupes nouveau-nés 1 à 7, sans complication
+15C04;15;Groupes chirurgicaux;;non;Autres interventions chirurgicales, groupes nouveau-nés 1 à 7, sans complication significative
+15C05;15;Groupes chirurgicaux;;non;Interventions chirurgicales, groupes nouveau-nés 8 à 9, sans complication significative
+15C06;15;Groupes chirurgicaux;;non;Interventions chirurgicales, groupe nouveau-nés 10, sans complication significative
+15M02;15;"Groupes ""médicaux""";;non;Transferts précoces de nouveau-nés vers un autre établissement MCO
+15M03;15;"Groupes ""médicaux""";;non;Décès précoces de nouveau-nés
+15M04;15;"Groupes ""médicaux""";;non;Décès tardifs de nouveau-nés
+15M05;15;"Groupes ""médicaux""";;non;Nouveau-nés de 3300g et âge gestationnel de 40 SA et assimilés (groupe nouveau-nés 1), sans problème
+15M06;15;"Groupes ""médicaux""";;non;Nouveau-nés de 2400g et âge gestationnel de 38 SA et assimilés (groupe nouveau-nés 2), sans problème
+15M07;15;"Groupes ""médicaux""";;non;Nouveau-nés de 2200g et âge gestationnel de 37 SA et assimilés (groupe nouveau-nés 3), sans problème
+15M08;15;"Groupes ""médicaux""";;non;Nouveau-nés de 2000g et âge gestationnel de 37 SA et assimilés (groupe nouveau-nés 4), sans problème
+15M09;15;"Groupes ""médicaux""";;non;Nouveau-nés de 1800g et âge gestationnel de 36 SA et assimilés (groupe nouveau-nés 5), sans problème
+15M10;15;"Groupes ""médicaux""";;non;Nouveau-nés de 1700g et âge gestationnel de 35 SA et assimilés (groupe nouveau-nés 6), sans problème
+15M11;15;"Groupes ""médicaux""";;non;Nouveau-nés de 1500g et âge gestationnel de 33 SA et assimilés (groupe nouveau-nés 7), sans problème
+15M12;15;"Groupes ""médicaux""";;non;Nouveau-nés de 1300g et âge gestationnel de 32 SA et assimilés (groupe nouveau-nés 8), sans problème
+15M13;15;"Groupes ""médicaux""";;non;Nouveau-nés de 1100g et âge gestationnel de 30 SA et assimilés (groupe nouveau-nés 9), sans problème
+15M14;15;"Groupes ""médicaux""";;non;Nouveau-nés de 800g et âge gestationnel de 28SA et assimilés (groupe nouveau-nés 10), sans problème
+15Z10;15;"Groupes ""médicaux""";;non;Mort-nés
+16C02;16;Groupes chirurgicaux;;non;Interventions sur la rate, niveau 1
+16C03;16;Groupes chirurgicaux;J;oui;Autres interventions pour affections du sang et des organes hématopoïétiques, en ambulatoire
+16M06;16;"Groupes ""médicaux""";T1;oui;Affections de la rate, très courte durée
+16M07;16;"Groupes ""médicaux""";;non;Donneurs de moelle, niveau 1
+16M08;16;"Groupes ""médicaux""";;non;Déficits immunitaires, niveau 1
+16M09;16;"Groupes ""médicaux""";T0;oui;Autres affections du système réticuloendothélial ou immunitaire, très courte durée
+16M10;16;"Groupes ""médicaux""";T1;oui;Troubles sévères de la lignée érythrocytaire, âge supérieur à 17 ans, très courte durée
+16M11;16;"Groupes ""médicaux""";T1;oui;Autres troubles de la lignée érythrocytaire, âge supérieur à 17 ans, très courte durée
+16M12;16;"Groupes ""médicaux""";T1;oui;Purpuras, très courte durée
+16M13;16;"Groupes ""médicaux""";T0;oui;Autres troubles de la coagulation, très courte durée
+16M14;16;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections du sang et des organes hématopoïétiques
+16M15;16;"Groupes ""médicaux""";T0;oui;Symptômes et autres recours aux soins de la CMD 16, très courte durée
+16M16;16;"Groupes ""médicaux""";T1;oui;Troubles sévères de la lignée érythrocytaire, âge inférieur à 18 ans, très courte durée
+16M17;16;"Groupes ""médicaux""";T1;oui;Autres troubles de la lignée érythrocytaire, âge inférieur à 18 ans, très courte durée
+16M18;16;"Groupes ""médicaux""";;non;Autres affections hématologiques concernant majoritairement la petite enfance, niveau 1
+17C06;17;Groupes chirurgicaux;;non;Interventions majeures de la CMD17, niveau 1
+17C07;17;Groupes chirurgicaux;;non;Interventions intermédiaires de la CMD17, niveau 1
+17C08;17;Groupes chirurgicaux;J;oui;Interventions mineures de la CMD17, en ambulatoire
+17K04;17;Groupes avec acte classant non opératoire;;non;Autres irradiations, niveau 1
+17K05;17;Groupes avec acte classant non opératoire;;non;Curiethérapies de la prostate par implants permanents, niveau 1
+17K07;17;Groupes avec acte classant non opératoire;J;oui;Affections myéloprolifératives et tumeurs de siège imprécis sans acte opératoire, avec anesthésie, en ambulatoire
+17K08;17;Groupes avec acte classant non opératoire;;non;Autres curiethérapies, niveau 1
+17K09;17;Groupes avec acte classant non opératoire;;non;Irradiations internes, niveau 1
+17M05;17;"Groupes ""médicaux""";;non;Chimiothérapie pour leucémie aigüe, niveau 1
+17M06;17;"Groupes ""médicaux""";T2;oui;Chimiothérapie pour autre tumeur, très courte durée
+17M08;17;"Groupes ""médicaux""";T0;oui;Leucémies aigües, âge inférieur à 18 ans, très courte durée
+17M09;17;"Groupes ""médicaux""";T0;oui;Leucémies aigües, âge supérieur à 17 ans, très courte durée
+17M14;17;"Groupes ""médicaux""";;non;Explorations et surveillance pour affections myéloprolifératives et tumeurs de siège imprécis ou diffus
+17M15;17;"Groupes ""médicaux""";T0;oui;Lymphomes et autres affections malignes lymphoïdes, très courte durée
+17M16;17;"Groupes ""médicaux""";T0;oui;Hémopathies myéloïdes chroniques, très courte durée
+17M17;17;"Groupes ""médicaux""";T0;oui;Autres affections et tumeurs de siège imprécis ou diffus, très courte durée
+18C02;18;Groupes chirurgicaux;J;oui;Interventions pour maladies infectieuses ou parasitaires, en ambulatoire
+18M02;18;"Groupes ""médicaux""";;non;Maladies virales et fièvres d'étiologie indéterminée, âge inférieur à 18 ans, niveau 1
+18M03;18;"Groupes ""médicaux""";T1;oui;Maladies virales, âge supérieur à 17 ans, très courte durée
+18M04;18;"Groupes ""médicaux""";T1;oui;Fièvres d'étiologie indéterminée, âge supérieur à 17 ans, très courte durée
+18M06;18;"Groupes ""médicaux""";;non;Sepsis, âge inférieur à 18 ans, niveau 1
+18M07;18;"Groupes ""médicaux""";T1;oui;Sepsis, âge supérieur à 17 ans, très courte durée
+18M09;18;"Groupes ""médicaux""";T1;oui;Paludisme, très courte durée
+18M10;18;"Groupes ""médicaux""";T0;oui;Maladies infectieuses sévères, très courte durée
+18M11;18;"Groupes ""médicaux""";T1;oui;Autres maladies infectieuses ou parasitaires, très courte durée
+18M12;18;"Groupes ""médicaux""";;non;Explorations et surveillance pour maladies infectieuses ou parasitaires
+18M13;18;"Groupes ""médicaux""";;non;Affections de la CMD 18 avec décès : séjours de moins de 2 jours
+18M14;18;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 18, très courte durée
+18M15;18;"Groupes ""médicaux""";;non;Autres maladies infectieuses concernant majoritairement la petite enfance, niveau 1
+19C02;19;Groupes chirurgicaux;;non;Interventions chirurgicales avec un diagnostic principal de maladie mentale, niveau 1
+19M02;19;"Groupes ""médicaux""";T1;oui;Troubles aigus de l'adaptation et du fonctionnement psychosocial, très courte durée
+19M06;19;"Groupes ""médicaux""";T1;oui;Troubles mentaux d'origine organique et retards mentaux, âge supérieur à 79 ans, très courte durée
+19M07;19;"Groupes ""médicaux""";T1;oui;Troubles mentaux d'origine organique et retards mentaux, âge inférieur à 80 ans, très courte durée
+19M10;19;"Groupes ""médicaux""";T1;oui;Névroses autres que les névroses dépressives, très courte durée
+19M11;19;"Groupes ""médicaux""";T1;oui;Névroses dépressives, très courte durée
+19M12;19;"Groupes ""médicaux""";T0;oui;Anorexie mentale et boulimie, très courte durée
+19M13;19;"Groupes ""médicaux""";T1;oui;Autres troubles de la personnalité et du comportement avec réactions impulsives, très courte durée
+19M14;19;"Groupes ""médicaux""";T1;oui;Troubles bipolaires et syndromes dépressifs sévères, très courte durée
+19M15;19;"Groupes ""médicaux""";T1;oui;Autres psychoses, âge supérieur à 79 ans, très courte durée
+19M16;19;"Groupes ""médicaux""";T1;oui;Autres psychoses, âge inférieur à 80 ans, très courte durée
+19M17;19;"Groupes ""médicaux""";;non;Maladies et troubles du développement psychologiques de l'enfance, niveau 1
+19M18;19;"Groupes ""médicaux""";T1;oui;Autres maladies et troubles mentaux de l'enfance, très courte durée
+19M19;19;"Groupes ""médicaux""";T0;oui;Troubles de l'humeur, très courte durée
+19M20;19;"Groupes ""médicaux""";T1;oui;Autres troubles mentaux, très courte durée
+19M21;19;"Groupes ""médicaux""";;non;Explorations et surveillance pour maladies et troubles mentaux
+19M22;19;"Groupes ""médicaux""";T1;oui;Symptômes et autres recours aux soins de la CMD 19, très courte durée
+20Z02;20;;T1;oui;Toxicomanies non éthyliques avec dépendance, très courte durée
+20Z03;20;;;non;Abus de drogues non éthyliques sans dépendance, niveau 1
+20Z04;20;;T1;oui;Ethylisme avec dépendance, très courte durée
+20Z05;20;;;non;Ethylisme aigu, niveau 1
+20Z06;20;;T1;oui;Troubles mentaux organiques induits par l'alcool ou d'autres substances, très courte durée
+21C04;21;Groupes chirurgicaux;J;oui;Interventions sur la main ou le poignet à la suite de blessures, en ambulatoire
+21C05;21;Groupes chirurgicaux;J;oui;Autres interventions pour blessures ou complications d'acte, en ambulatoire
+21C06;21;Groupes chirurgicaux;J;oui;Greffes de peau ou parages de plaies pour lésions autres que des brûlures, en ambulatoire
+21K02;21;Groupes avec acte classant non opératoire;J;oui;Traumatismes, allergies et empoisonnements sans acte opératoire, avec anesthésie, en ambulatoire
+21M02;21;"Groupes ""médicaux""";T1;oui;Effets toxiques des médicaments et substances biologiques, âge inférieur à 18 ans, très courte durée
+21M04;21;"Groupes ""médicaux""";T0;oui;Réactions allergiques non classées ailleurs, âge inférieur à 18 ans, très courte durée
+21M05;21;"Groupes ""médicaux""";T1;oui;Réactions allergiques non classées ailleurs, âge supérieur à 17 ans, très courte durée
+21M06;21;"Groupes ""médicaux""";;non;Traumatismes imprécis, âge inférieur à 18 ans, niveau 1
+21M07;21;"Groupes ""médicaux""";T1;oui;Traumatismes imprécis, âge supérieur à 17 ans, très courte durée
+21M10;21;"Groupes ""médicaux""";T1;oui;Effets toxiques des médicaments et substances biologiques, âge supérieur à 17 ans, très courte durée
+21M11;21;"Groupes ""médicaux""";T1;oui;Effets toxiques des autres substances chimiques, très courte durée
+21M12;21;"Groupes ""médicaux""";;non;Autres effets toxiques, niveau 1
+21M13;21;"Groupes ""médicaux""";;non;Maltraitance, niveau 1
+21M14;21;"Groupes ""médicaux""";T1;oui;Autres traumatismes et effets nocifs autres que les intoxications, très courte durée
+21M15;21;"Groupes ""médicaux""";T0;oui;Rejets de greffe, très courte durée
+21M16;21;"Groupes ""médicaux""";T1;oui;Autres complications iatrogéniques non classées ailleurs, très courte durée
+22C02;22;Groupes chirurgicaux;J;oui;Brûlures non étendues avec greffe cutanée, en ambulatoire
+22C03;22;Groupes chirurgicaux;;non;Brûlures non étendues avec parages de plaie ou autres interventions chirurgicales, niveau 1
+22K02;22;Groupes avec acte classant non opératoire;J;oui;Brûlures sans acte opératoire, avec anesthésie, en ambulatoire
+22M02;22;"Groupes ""médicaux""";T1;oui;Brûlures et gelures non étendues sans intervention chirurgicale, très courte durée
+22Z02;22;"Groupes ""médicaux""";;non;Brûlures étendues, niveau 1
+22Z03;22;"Groupes ""médicaux""";;non;Brûlures avec transfert vers un autre établissement MCO : séjours de moins de 2 jours
+23C02;23;Groupes chirurgicaux;J;oui;Interventions chirurgicales avec autres motifs de recours aux services de santé, en ambulatoire
+23K02;23;Groupes avec acte classant non opératoire;;non;Explorations nocturnes et apparentées : séjours de moins de 2 jours
+23K03;23;Groupes avec acte classant non opératoire;J;oui;Motifs de recours de la CMD 23 sans acte opératoire, avec anesthésie, en ambulatoire
+23M02;23;"Groupes ""médicaux""";T0;oui;Rééducation, très courte durée
+23M06;23;"Groupes ""médicaux""";T1;oui;Autres facteurs influant sur l'état de santé, très courte durée
+23M07;23;"Groupes ""médicaux""";J;oui;Autres motifs de recours pour infection à VIH, en ambulatoire
+23M08;23;"Groupes ""médicaux""";J;oui;Autres motifs de recours chez un patient diabétique, en ambulatoire
+23M09;23;"Groupes ""médicaux""";;non;Chimiothérapie pour affections non tumorales, niveau 1
+23M10;23;"Groupes ""médicaux""";T0;oui;Soins de contrôle chirurgicaux, très courte durée
+23M11;23;"Groupes ""médicaux""";T0;oui;Autres motifs concernant majoritairement la petite enfance, très courte durée
+23M14;23;"Groupes ""médicaux""";;non;Traitements prophylactiques
+23M15;23;"Groupes ""médicaux""";;non;Actes non effectués en raison d'une contre-indication
+23M16;23;"Groupes ""médicaux""";T1;oui;Convalescences et autres motifs sociaux, très courte durée
+23M19;23;"Groupes ""médicaux""";;non;Explorations et surveillance pour autres motifs de recours aux soins
+23M20;23;"Groupes ""médicaux""";T1;oui;Autres symptômes et motifs de recours aux soins de la CMD 23, très courte durée
+23M21;23;"Groupes ""médicaux""";T0;oui;Désensibilisations et tests allergologiques nécessitant une hospitalisation, très courte durée
+23Z02;23;"Groupes ""médicaux""";T0;oui;Soins Palliatifs, avec ou sans acte, très courte durée
+23Z03;23;"Groupes ""médicaux""";;non;Interventions de confort et autres interventions non prises en charge par l'assurance maladie obligatoire
+25C02;25;Groupes chirurgicaux;;non;Interventions pour maladie due au VIH, niveau 1
+25M02;25;"Groupes ""médicaux""";T1;oui;Autres maladies dues au VIH
+25Z02;25;"Groupes ""médicaux""";;non;Maladies dues au VIH, avec décès
+25Z03;25;"Groupes ""médicaux""";;non;Maladies dues au VIH, âge inférieur à 13 ans, niveau 1
+26C02;26;Groupes chirurgicaux;;non;Interventions pour traumatismes multiples graves, niveau 1
+26M02;26;"Groupes ""médicaux""";;non;Traumatismes multiples graves, niveau 1
+27C02;27;Groupes chirurgicaux;;non;Transplantations hépatiques, niveau 1
+27C03;27;Groupes chirurgicaux;;non;Transplantations pancréatiques, niveau 1
+27C04;27;Groupes chirurgicaux;;non;Transplantations pulmonaires, niveau 1
+27C05;27;Groupes chirurgicaux;;non;Transplantations cardiaques, niveau 1
+27C06;27;Groupes chirurgicaux;;non;Transplantations rénales, niveau 1
+27C07;27;Groupes chirurgicaux;;non;Autres transplantations, niveau 1
+27Z02;27;Groupes chirurgicaux;;non;Allogreffes de cellules souches hématopoïétiques, niveau 1
+27Z03;27;Groupes chirurgicaux;;non;Autogreffes de cellules souches hématopoïétiques
+27Z04;27;Groupes chirurgicaux;J;oui;Greffes de cellules souches hématopoïétiques, en ambulatoire
+28Z01;28;;;non;Entraînements à la dialyse péritonéale automatisée, en séances
+28Z02;28;;;non;Entraînements à la dialyse péritonéale continue ambulatoire, en séances
+28Z03;28;;;non;Entraînements à l'hémodialyse, en séances
+28Z04;28;;;non;Hémodialyse, en séances
+28Z07;28;;;non;Chimiothérapie pour tumeur, en séances
+28Z10;28;;;non;Curiethérapie, en séances
+28Z11;28;;;non;Techniques spéciales d'irradiation externe, en séances
+28Z14;28;;;non;Transfusions, en séances
+28Z15;28;;;non;Oxygénothérapie hyperbare, en séances
+28Z16;28;;;non;Aphérèses sanguines, en séances
+28Z17;28;;;non;Chimiothérapie pour affection non tumorale, en séances
+28Z18;28;;;non;Radiothérapie conformationnelle avec modulation d'intensité, en séances
+28Z19;28;;;non;Préparations à une irradiation externe par RCMI ou techniques spéciales
+28Z20;28;;;non;Préparations à une irradiation externe avec dosimétrie tridimensionnelle avec HDV
+28Z21;28;;;non;Préparations à une irradiation externe avec dosimétrie tridimensionnelle sans HDV
+28Z22;28;;;non;Autres préparations à une irradiation externe
+28Z23;28;;;non;Techniques complexes d'irradiation externe avec repositionnement, en séances
+28Z24;28;;;non;Techniques complexes d'irradiation externe sans repositionnement, en séances
+28Z25;28;;;non;Autres techniques d'irradiation externe, en séances
+90H01;90;Erreurs et autres séjours inclassables;;non;Erreurs détectées dans les RSA par le logiciel de mesure de l'activité hospitalière
+90Z00;90;Erreurs et autres séjours inclassables;;non;Erreurs détectées par les contrôles effectués sur les RUM et leur séquencement
+90Z01;90;Erreurs et autres séjours inclassables;;non;Diagnostic invalide comme diagnostic principal, dans certaines circonstances
+90Z02;90;Erreurs et autres séjours inclassables;;non;Autres erreurs détectées dans le parcours de l'arbre de groupage
+90Z03;90;Erreurs et autres séjours inclassables;;non;Erreurs d'implémentation de la fonction groupage ou erreur d'exécution d'un programme

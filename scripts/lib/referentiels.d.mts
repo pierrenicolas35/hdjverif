@@ -122,7 +122,15 @@ export function motsClesActe(acte: {
 export function construireActes(entree: {
   contenuCcam: string;
   surcharges: Map<string, SurchargeCcam>;
+  /** Nomenclature consolidée (`data/ccam-complete-2025.csv`) : complète la source libérale. */
+  contenuCcamConsolides?: string;
 }): ActeCcam[];
+/** Nomenclature CCAM consolidée : chapitres 1 à 19, jeu libéral et libellés du manuel. */
+export function lireActesCcamConsolides(
+  contenu: string,
+): Map<string, { libelle: string; chapitre: string; source: string }>;
+/** Libellés des 19 chapitres de la CCAM (le chapitre 18 n'existe que dans la nomenclature ATIH). */
+export declare const CHAPITRES_CCAM: Record<string, string>;
 export function lireSurchargesCcam(contenu: string): Map<string, SurchargeCcam>;
 export function boolOuNull(v: string): boolean | null;
 export function statistiquesReserve(lignes: LigneMedicament[]): StatistiquesReserve;

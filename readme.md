@@ -179,9 +179,14 @@ scripts/
   import-referentiels.mjs         Import des référentiels officiels vers Supabase
   maj-referentiels.mjs            Mise à jour mensuelle légère (empreinte des sources)
   verifier-referentiel.mjs        Porte de contrôle du référentiel publié (lecture seule)
+  base-hdj.mjs                    Base des actes valorisables en HDJ (restitution 6 colonnes)
+  extraire-referentiel-atih.py    Extraction des PDF officiels ATIH → CSV (voir §4)
   lib/referentiels.mjs            Lecture des sources officielles (BDPM, CCAM) — pur, testé
+  lib/ghm.mjs                     Croisement CCAM × Manuel des GHM MCO — pur, testé
   lib/sources.mjs                 Sources officielles : URL, téléchargement, empreinte
 data/                             Listes de travail (réserve hospitalière, surcharges CCAM)
+  ccam-complete-2025.csv          Nomenclature CCAM consolidée, chapitres 1 à 19 (8 065 actes)
+  atih/                           Manuel des GHM 2025 : racines et actes classants (ATIH)
 tests/                            Moteur (5 cas obligatoires), portes, assistant, référentiels
 ```
 
@@ -240,7 +245,7 @@ Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 | Table | Contenu | Source |
 |---|---|---|
 | `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, **surveillance particulière**, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
-| `referentiel_ccam` | 1 969 actes (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd, **chapitre**, **sous-thème = site anatomique**, **mots-clés**) | **Nomenclature CCAM** (jeu de données « CCAM Ameli », data.gouv.fr / InterHop) |
+| `referentiel_ccam` | **8 059 actes** (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd, **chapitre**, **sous-thème = site anatomique**, **mots-clés**, **acte classant**, **racine GHM**, **éligibilité HDJ**…) | **Nomenclature CCAM consolidée** — chapitres 1 à 19 de la CCAM descriptive (ATIH), jeu de données « CCAM Ameli » (data.gouv.fr / InterHop) et libellés abrégés du Manuel des GHM. Voir `data/ccam-complete-2025.csv` |
 
 Dans l’assistant :
 
@@ -262,10 +267,12 @@ qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la
 1. **Des mots-clés de vocabulaire courant**, construits à l’import pour chaque acte à partir de son
    libellé, de ses libellés d’arborescence et d’une table de correspondances
    (`scripts/lib/referentiels.mjs`, colonne `mots_cles` indexée en trigrammes). Ils viennent
-   **s’ajouter** au libellé officiel, jamais le remplacer : 1 437 des 1 969 actes en portent.
+   **s’ajouter** au libellé officiel, jamais le remplacer. Sur la nomenclature complète,
+   4 086 des 8 059 actes en portent.
 2. **Une arborescence officielle à deux niveaux**, navigable à l’écran :
-   - **thématique** = les **chapitres par appareil** de la nomenclature (18 chapitres présents
-     dans le jeu de données, 19 au référentiel complet) ;
+   - **thématique** = les **chapitres par appareil** de la nomenclature — les **19 chapitres**
+     de la CCAM sont désormais présents (le chapitre 18 « gestes complémentaires et
+     modificateurs », absent du jeu libéral, est apporté par les chapitres publiés par l’ATIH) ;
    - **sous-thème** = le **site anatomique** de l’acte (axe « Appareils » de l’arborescence CCAM
      publiée par l’Assurance Maladie), replié sur le chapitre lorsqu’il est absent.
 
@@ -287,6 +294,124 @@ qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la
 > d’accès entiers n’étaient jamais reconnus et **157 actes** (angiographies, échographies
 > endocavitaires…) étaient classés « non lourds » à tort. Le référentiel en compte désormais
 > **1 501 sur plateau technique lourd** (contre 1 344 auparavant).
+
+### Actes valorisables en HDJ : le croisement avec le Manuel des GHM (ATIH)
+
+La nomenclature CCAM dit ce qu’est un acte ; elle ne dit **pas** s’il ouvre un GHS
+d’hospitalisation de jour. Cette question relève du **Manuel des GHM MCO** (version 2025,
+arrêté publié au BO du 23/07/2025). Quatre de ses annexes sont désormais croisées avec la
+nomenclature, dans `scripts/lib/ghm.mjs` :
+
+| Annexe ATIH | Ce qu’elle apporte |
+|---|---|
+| **Annexe 2** — GHM classés par CMD | les codes GHM, leur libellé et leur **catégorie majeure** (« Groupes chirurgicaux », « Groupes avec acte classant non opératoire », « Groupes médicaux ») |
+| **Annexe 3** — caractéristiques des racines | la colonne **« GHM courts »** : `J` = *GHM ambulatoire strict (0 nuit)*, `T0`/`T1`/`T2` = très courte durée (0 jour, 0 à 1 jour, 0 à 2 jours) |
+| **Annexe 8** — actes classants | les actes **classants** et les catégories majeures où ils sont répertoriés (5 483 actes) |
+| **Annexe 11** — actes reclassant en GHM médical | les actes mineurs qui, malgré leur présence dans les listes, laissent le séjour dans un **GHM médical** (214 actes) |
+| **Volume 2** (par CMD) | la seule source qui rattache un acte à une **racine de GHM** : les listes d’actes en CCAM « Voir la liste A-xxx » (16 036 lignes, 5 481 actes) |
+
+> **Le « modificateur J » désigne, en PMSI, la colonne « GHM courts » de l’annexe 3** :
+> `J` = GHM ambulatoire strict (0 nuit). Ce n’est pas un modificateur CCAM — les
+> modificateurs CCAM (chapitre 19.03 : urgence, âge, chirurgie itérative, radiologie…) sont
+> un autre mécanisme, apposé au code de l’acte. C’est bien le `J` du manuel qui commande la
+> recevabilité d’une HDJ.
+
+Le croisement est vérifié par recoupement : le volume 2 rattache 5 481 actes, l’annexe 8 en
+déclare 5 483 — les deux lectures coïncident pour **5 472 actes (99,8 %)**, et les 152 racines
+« `J` » de l’annexe 2 sont exactement celles de l’annexe 3. Ces concordances servent de porte
+de contrôle à l’import.
+
+**Colonnes ajoutées à `referentiel_ccam`** (`supabase/hdj-ghm.sql`) :
+
+| Colonne | Signification |
+|---|---|
+| `acte_classant` | l’acte peut valider un GHS à lui seul |
+| `racines_ghm` | la ou les racines de GHM dans lesquelles il classe |
+| `cmd_classantes` | les CMD où il est répertorié (annexe 8) |
+| `ghm_ambulatoire_strict` | au moins une racine ne contient qu’un **GHM en « J »** (0 nuit) |
+| `admet_sejour_0_nuit` | au moins une racine décrit un séjour de **0 nuit** (`J`, `T0`, `T1`, `T2`) |
+| `reclassant_ghm_medical` | acte mineur reclassant en GHM médical (annexe 11) |
+| `type_acte` | *acte interventionnel classant* · *acte lourd non opératoire* · *acte reclassant en GHM médical* · *acte non classant* |
+| `eligible_hdj` | booléen : GHM ambulatoire strict présent — la valeur retenue en base |
+| `eligibilite_hdj` | version nuancée, **à trois états** : `oui` · `sous condition` · `non` |
+| `environnement_requis` | bloc ou salle interventionnelle, anesthésie mentionnée par la racine, aucun plateau lourd |
+| `commentaire_pmsi` | règles de traçabilité opposables au dossier |
+
+La vue `base_hdj_actes` restitue le tableau à six colonnes demandé par le codage —
+`[Code CCAM] | [Libellé] | [Racine GHM / Type d’acte] | [Éligibilité HDJ] | [Plateau technique
+lourd requis] | [Commentaires / traçabilité PMSI]` — et `node scripts/base-hdj.mjs` en produit
+la version fichier (`data/atih/base-hdj-2025.csv`, 6 377 actes).
+
+**Pourquoi trois états et non deux.** Le GHM retenu n’est pas une propriété de l’acte : il
+dépend du diagnostic principal et du groupage, et un même acte classe dans **plusieurs**
+racines (le rattachement du volume 2 est volontairement large : la liste A-369 « Interventions
+majeures de la CMD 17 » couvre 1 768 actes). Conclure « oui » dès qu’une racine quelconque
+admet un séjour de 0 nuit validerait une **césarienne** en HDJ, au titre des racines
+« accouchement par voie basse, très courte durée ». Le statut est donc :
+
+- **`oui`** — une racine ne contient qu’un GHM en « J » : le séjour de 0 nuit est acquis
+  (libération du canal carpien `01C15`, endoscopie digestive thérapeutique `06K03`…) ;
+- **`sous condition`** — pas de GHM ambulatoire strict, mais une racine en très courte durée :
+  la recevabilité dépend de la racine effectivement retenue ;
+- **`non`** — aucune racine de 0 nuit, acte non classant, ou acte reclassant en GHM médical.
+
+Le commentaire de traçabilité **nomme les racines en « J »** : sur une prothèse de genou,
+il montre que l’ambulatoire ne vient pas de `08C24` (prothèses de genou) mais de `21C05`, et
+laisse donc le coder trancher.
+
+**Les deux limites de la source libérale, désormais levées.**
+
+Le jeu de données « CCAM Ameli » dérive du fichier Cnam `ps-tarifs.csv` : il ne contient que
+les **1 969 actes tarifés en libéral**. Deux manques en découlaient, tous deux corrigés depuis.
+
+1. **4 399 actes classants manquaient à l’appel.** Sur les 5 483 actes classants du manuel,
+   seuls 1 084 étaient dans la base — et les absents étaient majoritairement des actes
+   hospitaliers, précisément ceux qu’une HDJ programme (craniotomies, prothèses, césariennes).
+   La nomenclature est désormais **consolidée à 8 059 actes** à partir de trois sources
+   officielles ; seul l’acte que *aucune* des trois ne porte reste sans libellé (3 actes).
+
+2. **Le chapitre 18 de la CCAM n’existait pas dans la source** — c’est-à-dire **aucun acte
+   d’anesthésie**. Il est maintenant importé : **148 actes** (« Anesthésie générale ou
+   locorégionale complémentaire niveau 1 » `ZZLP025`, « Anesthésie rachidienne au cours d’un
+   accouchement par voie basse » `AFLB010`…). Le manuel est explicite (volume 2, CMD 01) :
+   certains séjours de 0 nuit sont composés « d’actes classants non opératoires avec un
+   **code “activité” égal à 4**, y compris les gestes complémentaires d’anesthésie ». D’où la
+   règle que le référentiel applique et que les tests vérifient : **un acte d’anesthésie n’est
+   jamais classant** — il s’ajoute à l’acte pour le valider en HDJ.
+
+   En revanche, la **présence d’un MAR** reste hors de portée de la nomenclature : elle se
+   trace par l’acte d’anesthésie et ses modificateurs, pas par une colonne d’acte.
+   `environnement_requis` s’en tient donc à ce que les libellés de racines disent
+   (« affections du système nerveux sans acte opératoire **avec anesthésie**, en ambulatoire »
+   → `01K06`).
+
+> **Ce que l’ajout change — et ce qu’il ne change pas.** Les actes nouvellement importés n’ont
+> **aucun mode d’accès CCAM** : leurs indicateurs restent *absents* tant que le croisement GHM
+> ne les renseigne pas. C’est le cas du plateau technique lourd, déduit du **Groupe
+> chirurgical** de la racine (un séjour qui y est groupé suppose un bloc opératoire) ; hors de
+> ce cas la valeur reste absente, jamais convertie en « non ». Les **1 969 actes déjà connus ne
+> changent pas d’une ligne** : c’est ce que vérifie un test, acte par acte.
+
+**Sur la nomenclature complète, le croisement donne :** 5 486 actes classants sur 8 059,
+**4 254 éligibles à l’HDJ** (GHM ambulatoire strict), **4 377** de type « interventionnel
+classant », 901 « lourd non opératoire », 214 reclassant en GHM médical et 2 573 non classants.
+
+### Extraction des PDF officiels (`scripts/extraire-referentiel-atih.py`)
+
+Les sources du croisement sont des **PDF**. La chaîne d’import Node n’embarque aucun extracteur
+PDF : la conversion est donc faite une fois, par ce script Python, puis versionnée en CSV dans
+`data/`. Le reste du traitement — croisement avec la CCAM, classement HDJ — reste en Node.
+
+```bash
+# Télécharge les PDF officiels (Manuel des GHM 2025 et chapitres CCAM 1 à 19) dans .cache/atih,
+# extrait le texte, produit les trois CSV de data/ et exécute les contrôles de cohérence.
+uv run --with pypdf python3 scripts/extraire-referentiel-atih.py
+```
+
+Le script **échoue bruyamment** si une source change de forme : les contrôles portent sur le
+nombre de racines (679), la concordance des 152 racines « J » entre les annexes 2 et 3, le
+recoupement volume 2 / annexe 8 (99,7 %) et la présence du chapitre 18. C’est la raison d’être
+d’un script plutôt que d’un fichier figé.
 
 ### Comment la réserve hospitalière est déterminée
 
@@ -367,6 +492,11 @@ possible depuis le navigateur**.
 ### Mise à jour des référentiels
 
 ```bash
+# 0. Sources PDF (Manuel des GHM 2025 et chapitres CCAM 1 à 19) : téléchargement, extraction
+#    du texte, production des CSV de data/ et contrôles de cohérence. À relancer à chaque
+#    nouvelle version du manuel des GHM ou de la CCAM.
+uv run --with pypdf python3 scripts/extraire-referentiel-atih.py
+
 # 1. Contrôle à blanc : télécharge les sources officielles, prépare et vérifie les lignes
 #    (cas de référence, intégrité des sources) sans rien écrire.
 npm run import:referentiels:controle            # ou --export pour un CSV de secours
@@ -380,10 +510,23 @@ npm run import:referentiels
 npm run verifier:referentiel                    # code retour 0 = conforme
 
 # 4. Le cas échéant : appliquer supabase/hardening.sql, supabase/rpc-recherche.sql,
-#    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM) et, une seule fois,
-#    supabase/referentiel-maj.sql (suivi des dates de mise à jour).
+#    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM), supabase/hdj-ghm.sql
+#    (actes classants, racines de GHM, éligibilité HDJ et vue base_hdj_actes) et, une
+#    seule fois, supabase/referentiel-maj.sql (suivi des dates de mise à jour).
 #    ccam-arbres.sql redéfinit la fonction rechercher_ccam : il doit être appliqué après
 #    rpc-recherche.sql.
+npm run sql:appliquer -- supabase/hdj-ghm.sql --verifier   # psql < … si PostgreSQL est installé
+```
+
+`scripts/appliquer-sql.mjs` exécute un script SQL du dépôt via l'API Management : le même
+jeton `SUPABASE_ACCESS_TOKEN` que pour la clé `service_role` suffit, ce qui évite d'installer
+PostgreSQL sur le poste. Il n'écrit rien d'autre que le SQL fourni.
+
+La base des actes valorisables en HDJ se régénère à tout moment sans accès à Supabase :
+
+```bash
+npm run base:hdj                 # → data/atih/base-hdj-2025.csv (8 065 actes, 6 colonnes)
+npm run base:hdj -- --exemples   # + un échantillon par type d'acte à l'écran
 ```
 
 `supabase/referentiel-maj.sql` crée la table de suivi `referentiel_maj` (une ligne par table :
@@ -471,6 +614,22 @@ Les **5 cas obligatoires** :
 - Code de la sécurité sociale : art. L. 162-22-6, L. 162-26, L. 162-26-1, R. 162-33-1.
 - Code de la santé publique : art. D. 6124-301-1 et s., R. 1112-1-2, R. 5121-82, L. 4111-1.
 - Arrêté du 19 février 2015 modifié (art. 11 et 11 bis) ; arrêté du 23 décembre 2016.
+- **Manuel des GHM, version 2025** (arrêté publié au BO du 23 juillet 2025), annexes 2, 3,
+  8 et 11 et volume 2 par CMD — <https://www.atih.sante.fr/manuel-des-ghm-2025-publication-bo>.
+  C’est la source des actes classants, des racines de GHM et du marqueur `J` (GHM ambulatoire
+  strict, 0 nuit) ; les tables extraites sont versionnées dans `data/atih/`.
+- **Nomenclature CCAM** — deux sources croisées :
+  - **CCAM descriptive**, chapitres 1 à 19 publiés par l'ATIH (nomenclature complète, dont le
+    chapitre 18 « gestes complémentaires et modificateurs ») :
+    <https://www.atih.sante.fr/sites/default/files/public/content/1621/Chapitre_1.pdf> …
+    `Chapitre_19.pdf` ;
+  - jeu de données « **CCAM Ameli** » (data.gouv.fr / InterHop), issu du fichier Cnam
+    `ps-tarifs.csv` : périmètre des 1 969 actes tarifés en libéral, porteur des axes
+    « Appareils / Actions / Techniques » (mode d'accès).
+  Les deux sont consolidés dans `data/ccam-complete-2025.csv` (8 065 actes).
+- **CCAM, chapitre 18** — « Gestes complémentaires et modificateurs », qui porte les actes
+  d'anesthésie : <https://www.atih.sante.fr/sites/default/files/public/content/1621/Chapitre_18.pdf>.
+- Base de données publique des médicaments (BDPM, ANSM / Assurance Maladie).
 
 Outil d’aide à la décision médico-administrative : il ne se substitue ni à l’appréciation du
 médecin DIM, ni aux contrôles de l’Assurance Maladie.

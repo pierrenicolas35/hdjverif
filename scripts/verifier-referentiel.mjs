@@ -46,10 +46,15 @@ const ligne = (ok, texte) => {
   console.log(`${ok ? '✓' : '✗'} ${texte}`);
 };
 
-/** Nombre de lignes correspondant à un filtre PostgREST (`select=cis` + count exact). */
-async function compter(filtres = []) {
-  const requete = new URL(`${URL_SUPABASE}/rest/v1/referentiel_medicaments`);
-  requete.searchParams.set('select', 'cis');
+/**
+ * Nombre de lignes correspondant à un filtre PostgREST (`select` + count exact).
+ *
+ * `colonneCle` sert aussi de colonne de sélection : `cis` pour les médicaments, `code`
+ * pour la nomenclature CCAM.
+ */
+async function compter(filtres = [], table = 'referentiel_medicaments', colonneCle = 'cis') {
+  const requete = new URL(`${URL_SUPABASE}/rest/v1/${table}`);
+  requete.searchParams.set('select', colonneCle);
   requete.searchParams.set('limit', '1');
   for (const f of filtres) requete.searchParams.append(f[0], f[1]);
   const reponse = await fetch(requete, {
@@ -128,6 +133,11 @@ async function principal() {
   console.log(`Contrôle du référentiel : ${URL_SUPABASE}\n`);
 
   const total = await compter();
+  // Nomenclature CCAM : elle porte désormais les actes de la CCAM descriptive (chapitres 1 à 19)
+  // et non plus seulement les actes tarifés en libéral.
+  const totalCcam = await compter([], 'referentiel_ccam', 'code');
+  const classantsCcam = await compter([['acte_classant', 'is.true']], 'referentiel_ccam', 'code');
+  const eligiblesHdj = await compter([['eligible_hdj', 'is.true']], 'referentiel_ccam', 'code');
   const reserve = await compter([['est_reserve_hospitaliere', 'is.true']]);
   const hors = await compter([['est_reserve_hospitaliere', 'is.false']]);
   const indetermine = await compter([['est_reserve_hospitaliere', 'is.null']]);
@@ -136,6 +146,11 @@ async function principal() {
   const surveillanceIndeterminee = await compter([['surveillance_particuliere', 'is.null']]);
 
   console.log('— Intégrité —');
+  ligne(totalCcam >= 8000, `${totalCcam} actes à la nomenclature CCAM`);
+  ligne(
+    classantsCcam >= 5000 && eligiblesHdj > 4000,
+    `croisement ATIH : ${classantsCcam} actes classants, ${eligiblesHdj} éligibles à l'HDJ`,
+  );
   ligne(total > 13000, `${total} spécialités au référentiel`);
   ligne(reserve >= 600, `${reserve} spécialités en réserve hospitalière (CPD « usage HOSPITALIER »)`);
   ligne(
@@ -186,7 +201,7 @@ async function principal() {
       continue;
     }
     const quand = new Date(ligneSuivi.maj_le);
-    const volume = nom === 'referentiel_medicaments' ? total : 1969;
+    const volume = nom === 'referentiel_medicaments' ? total : totalCcam;
     ligne(
       !Number.isNaN(quand.getTime()) && ligneSuivi.lignes === volume,
       `${ligneSuivi.libelle} → mise à jour du ${quand.toLocaleDateString('fr-FR')} ` +

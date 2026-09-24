@@ -489,9 +489,102 @@ export function motsClesActe(acte) {
   return [...mots].join(' ').trim();
 }
 
-/** Lignes de `referentiel_ccam` : croisement nomenclature × surcharges éditoriales locales. */
-export function construireActes({ contenuCcam, surcharges }) {
-  return lireCcam(contenuCcam).map((a) => {
+/**
+ * Libellés des 19 chapitres de la nomenclature CCAM.
+ *
+ * Repris de la nomenclature elle-même (les 18 premiers chapitres portent les libellés du jeu
+ * « CCAM Ameli ») ; le **chapitre 18** — « gestes complémentaires et modificateurs », celui des
+ * anesthésies et des gestes associés — n'existe pas dans ce jeu de données et est donc libellé
+ * ici, d'après le titre du chapitre publié par l'ATIH.
+ */
+export const CHAPITRES_CCAM = {
+  '01': 'système nerveux central, périphérique et autonome',
+  '02': 'oeil et annexes',
+  '03': 'oreille',
+  '04': 'appareil circulatoire',
+  '05': 'système immunitaire et système hématopoïétique',
+  '06': 'appareil respiratoire',
+  '07': 'appareil digestif',
+  '08': 'appareil urinaire et génital',
+  '09': 'actes concernant la procréation, la grossesse et le nouveau-né',
+  '10': 'glandes endocrines et métabolisme',
+  '11': 'appareil ostéoarticulaire et musculaire de la tête',
+  '12': 'appareil ostéoarticulaire et musculaire du cou et du tronc',
+  '13': 'appareil ostéoarticulaire et musculaire du membre supérieur',
+  '14': 'appareil ostéoarticulaire et musculaire du membre inférieur',
+  '15': 'appareil ostéoarticulaire et musculaire, sans précision topographique',
+  '16': 'système tégumentaire - glande mammaire',
+  '17': 'actes sans précision topographique',
+  '18': 'gestes complémentaires et modificateurs',
+  '19': 'adaptations pour la ccam transitoire',
+};
+
+/**
+ * Nomenclature CCAM consolidée (`data/ccam-complete-2025.csv`).
+ *
+ * Elle réunit les chapitres 1 à 19 de la CCAM descriptive publiée par l'ATIH, le jeu
+ * « CCAM Ameli » (actes tarifés en libéral) et les libellés abrégés du Manuel des GHM : c'est
+ * la seule source qui porte le **chapitre 18** (gestes complémentaires et anesthésies) et les
+ * actes hospitaliers absents du périmètre libéral.
+ *
+ * @returns {Map<string, {libelle: string, chapitre: string, source: string}>}
+ */
+export function lireActesCcamConsolides(contenu) {
+  const actes = new Map();
+  const lignes = contenu.split(/\r?\n/).filter((l) => l.trim() && !l.trimStart().startsWith('#'));
+  const entetes = decouperCsv(lignes.shift() ?? '', ';');
+  for (const ligne of lignes) {
+    const c = decouperCsv(ligne, ';');
+    const o = Object.fromEntries(entetes.map((h, i) => [h.trim(), (c[i] ?? '').trim()]));
+    if (!o.code) continue;
+    actes.set(o.code, {
+      libelle: o.libelle || '',
+      // Un acte absent de la CCAM descriptive **et** du jeu libéral n'a pas de chapitre :
+      // la valeur reste vide, elle n'est pas convertie en « 00 ».
+      chapitre: o.chapitre_ccam ? o.chapitre_ccam.padStart(2, '0') : '',
+      source: o.source_libelle || '',
+    });
+  }
+  return actes;
+}
+
+/**
+ * Ligne `referentiel_ccam` d'un acte que la nomenclature CCAM importée ne porte pas.
+ *
+ * Ces actes (hospitaliers, gestes complémentaires d'anesthésie, forfaits du chapitre 19) n'ont
+ * **aucun mode d'accès** connu : les indicateurs CCAM restent donc `null` — valeur absente, que
+ * l'application affiche comme telle plutôt que de la convertir en « non » (même doctrine que
+ * pour la réserve hospitalière). `scripts/lib/ghm.mjs` les complète ensuite à partir de la
+ * classification en GHM, qui est, elle, opposable.
+ */
+function acteHorsNomenclatureCcam(code, fiche) {
+  const chapitre = fiche.chapitre || null;
+  const libelleChapitre = (chapitre && CHAPITRES_CCAM[chapitre]) || null;
+  return {
+    code,
+    libelle: fiche.libelle,
+    acte_marqueur_hdj: null,
+    exclusif_externe: null,
+    necessite_plateau_lourd: null,
+    chapitre_code: chapitre,
+    chapitre_libelle: libelleChapitre,
+    // Repli sur le chapitre : l'acte reste atteignable par l'arborescence.
+    sous_chapitre_code: chapitre,
+    sous_chapitre_libelle: libelleChapitre,
+    mots_cles: motsClesActe({ libelle: fiche.libelle, chapitreLabel: libelleChapitre }) || null,
+  };
+}
+
+/**
+ * Lignes de `referentiel_ccam` : croisement nomenclature × surcharges éditoriales locales.
+ *
+ * Quand `contenuCcamConsolides` est fourni, la nomenclature est **complétée** par les actes que
+ * le jeu de données libéral ne porte pas (chapitre 18, actes hospitaliers, forfaits du
+ * chapitre 19). Les actes déjà présents ne changent pas d'une ligne : leurs indicateurs
+ * continuent de venir du mode d'accès, comme avant.
+ */
+export function construireActes({ contenuCcam, surcharges, contenuCcamConsolides }) {
+  const actes = lireCcam(contenuCcam).map((a) => {
     const mode = normaliserModeAcces(a.modeAcces);
     const lourd = MODES_PLATEAU_LOURD.has(mode);
     const externe = MODES_EXTERNE.has(mode);
@@ -511,6 +604,14 @@ export function construireActes({ contenuCcam, surcharges }) {
       mots_cles: motsClesActe(a) || null,
     };
   });
+  if (!contenuCcamConsolides) return actes;
+
+  const connus = new Set(actes.map((a) => a.code));
+  for (const [code, fiche] of lireActesCcamConsolides(contenuCcamConsolides)) {
+    if (connus.has(code) || !fiche.libelle) continue;
+    actes.push(acteHorsNomenclatureCcam(code, fiche));
+  }
+  return actes;
 }
 
 /** Charge la table de surcharge CCAM (`data/ccam-overlay.csv`, séparateur « ; »). */

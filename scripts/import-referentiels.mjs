@@ -52,6 +52,11 @@ import {
   versCsv,
 } from './lib/referentiels.mjs';
 import { lireSource, telechargerSource } from './lib/sources.mjs';
+import {
+  enrichirActesAvecGhm,
+  lireActesClassantsGhm,
+  lireRacinesGhm,
+} from './lib/ghm.mjs';
 
 const CACHE_DIR = process.env.CACHE_DIR ?? '.cache/referentiels';
 const DATA_DIR = 'data';
@@ -273,12 +278,41 @@ async function principal() {
   // --- CCAM ---------------------------------------------------------
   const contenuCcam = await recuperer('ccam', rafraichir);
   const surcharges = lireSurchargesCcam(readFileSync(join(DATA_DIR, 'ccam-overlay.csv'), 'utf8'));
-  const actes = construireActes({ contenuCcam, surcharges });
+  const actes = construireActes({
+    contenuCcam,
+    surcharges,
+    // Nomenclature CCAM consolidée : elle seule porte le chapitre 18 (gestes complémentaires
+    // et anesthésies) et les actes hospitaliers absents du périmètre libéral.
+    contenuCcamConsolides: readFileSync(join(DATA_DIR, 'ccam-complete-2025.csv'), 'utf8'),
+  });
+
+  // Référentiel ATIH (Manuel des GHM MCO) : ce que la nomenclature CCAM ne porte pas —
+  // actes classants, racine de GHM, catégorie majeure et GHM ambulatoire strict (0 nuit).
+  const racinesGhm = lireRacinesGhm(readFileSync(join(DATA_DIR, 'atih', 'racines-ghm-2025.csv'), 'utf8'));
+  const actesClassantsGhm = lireActesClassantsGhm(
+    readFileSync(join(DATA_DIR, 'atih', 'actes-classants-ghm-2025.csv'), 'utf8'),
+  );
+  if (racinesGhm.size < 600 || actesClassantsGhm.size < 5000) {
+    throw new Error(
+      `référentiel ATIH incomplet (${racinesGhm.size} racines, ${actesClassantsGhm.size} actes ` +
+        'classants) — import interrompu.',
+    );
+  }
+  const enrichis = enrichirActesAvecGhm(actes, { racines: racinesGhm, actesClassants: actesClassantsGhm });
   log(
     `CCAM        : ${actes.length} actes ` +
-      `(${actes.filter((a) => a.necessite_plateau_lourd).length} plateau lourd, ` +
-      `${actes.filter((a) => a.exclusif_externe).length} externe)`,
+      `(${enrichis.filter((a) => a.necessite_plateau_lourd).length} plateau lourd, ` +
+      `${enrichis.filter((a) => a.exclusif_externe).length} externe)`,
   );
+  const classants = enrichis.filter((a) => a.acte_classant);
+  const eligiblesHdj = enrichis.filter((a) => a.eligible_hdj);
+  log(
+    `  · Manuel des GHM 2025 : ${racinesGhm.size} racines · ` +
+      `${classants.length} actes classants · ${eligiblesHdj.length} en GHM ambulatoire strict`,
+  );
+  if (classants.length < 5000) {
+    throw new Error(`croisement ATIH suspect : ${classants.length} actes classants (< 5 000).`);
+  }
 
   // Intégrité de l'arborescence : sans chapitres ni mots-clés, la navigation par
   // thématique et la recherche élargie de l'application seraient privées de données.
@@ -289,9 +323,9 @@ async function principal() {
       `${new Set(actes.map((a) => a.sous_chapitre_code).filter(Boolean)).size} sous-thèmes · ` +
       `${actes.length - sansMotsCles} actes porteurs de mots-clés`,
   );
-  if (chapitres.size < 15) {
+  if (chapitres.size < 18) {
     throw new Error(
-      `arborescence CCAM incomplète : ${chapitres.size} chapitres (< 15) — import interrompu.`,
+      `arborescence CCAM incomplète : ${chapitres.size} chapitres (< 18) — import interrompu.`,
     );
   }
 
@@ -307,7 +341,7 @@ async function principal() {
     ];
     exporter(medicaments, colonnesMedicaments, 'referentiel_medicaments.csv');
     exporter(
-      actes,
+      enrichis,
       [
         'code',
         'libelle',
@@ -319,6 +353,16 @@ async function principal() {
         'sous_chapitre_code',
         'sous_chapitre_libelle',
         'mots_cles',
+        'acte_classant',
+        'racines_ghm',
+        'cmd_classantes',
+        'ghm_ambulatoire_strict',
+        'admet_sejour_0_nuit',
+        'reclassant_ghm_medical',
+        'type_acte',
+        'eligible_hdj',
+        'eligibilite_hdj',
+        'environnement_requis',
       ],
       'referentiel_ccam.csv',
     );
@@ -334,7 +378,7 @@ async function principal() {
   const horodatage = new Date().toISOString();
   const empreinte = process.env.SOURCES_EMPREINTE ?? null;
   await ecrireSupabase('referentiel_medicaments', medicaments, 'cis');
-  await ecrireSupabase('referentiel_ccam', actes, 'code');
+  await ecrireSupabase('referentiel_ccam', enrichis, 'code');
   await enregistrerMaj([
     {
       nom: 'referentiel_medicaments',
