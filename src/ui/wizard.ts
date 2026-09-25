@@ -62,22 +62,29 @@ import {
   acteParCode,
   actesParTheme,
   chapitresCcam,
+  declencherMajReferentiels,
   dernieresMaj,
   detailMaj,
   etatDuReferentiel,
   libelleEtatReferentiel,
   libelleMaj,
+  libellePeremption,
+  peremptionMaj,
+  peremptionSignalee,
   rechercherActesCcam,
   rechercherMedicaments,
   sousChapitresCcam,
   synonymesDe,
   verifierReferentiel,
   type ActeRef,
+  type DeclenchementMaj,
   type MajReferentiel,
   type MedicamentRef,
+  type PeremptionReferentiel,
   type SynonymeRef,
   type ThemeRef,
 } from './referentiels.js';
+import { MAJ_ACTIONS_URL, MAJ_SERVICE_URL } from '../config.js';
 
 /* ================================================================== *
  * Définition des étapes
@@ -159,6 +166,13 @@ const LIBELLES_COURTS_CONTEXTE: Readonly<Record<CritereContextePatient, string>>
 type Ecran = 'accueil' | 'evaluation' | 'ccam' | 'medicaments';
 
 const CLE_AIDE_HORS_CHAMP = 'hdjverif.aide-hors-champ';
+
+/**
+ * Code de service éventuel du déclenchement de mise à jour (`VITE_MAJ_SERVICE_URL`).
+ * Conservé dans le navigateur, jamais dans le dépôt ; il ne donne accès qu'au
+ * déclenchement d'un contrôle de sources, pas à l'écriture en base.
+ */
+const CLE_CODE_MAJ = 'hdjverif.code-maj';
 
 /* ================================================================== *
  * Outils de rendu
@@ -287,8 +301,8 @@ class Assistant {
   private dernierResultat: ResultatAudit | null = null;
   /** Volet d'aide déplié (utile sur smartphone ; toujours ouvert sur PC). */
   private aideOuverte = true;
-  /** Rappel « motifs hors champ » de l'écran d'accueil. */
-  private modaleOuverte = false;
+  /** Modale affichée : rappel « motifs hors champ » de l'accueil, ou mise à jour du référentiel. */
+  private modaleVue: 'aucune' | 'hors-champ' | 'maj' = 'aucune';
 
   /* --- arborescence CCAM --- */
   private chapitres: readonly ThemeRef[] | null = null;
@@ -315,14 +329,25 @@ class Assistant {
   private readonly voyantVerdict = el<HTMLElement>('voyant-verdict');
   private readonly voyantReferentiel = el<HTMLElement>('voyant-referentiel');
   private readonly boutonEntete = el<HTMLButtonElement>('bouton-entete');
+  private readonly alerteReferentiel = el<HTMLElement>('alerte-referentiel');
 
   /** Dates de mise à jour des deux tables de référentiel (affichées dans l'en-tête). */
   private majReferentiels: readonly MajReferentiel[] | null = null;
+
+  /** Fraîcheur du référentiel, déduite du suivi : c'est elle qui déclenche l'alerte. */
+  private peremption: PeremptionReferentiel | null = null;
+
+  /** Résultat de la dernière demande de mise à jour (affiché dans la modale). */
+  private majResultat: DeclenchementMaj | null = null;
+
+  /** Vrai pendant l'appel au service de mise à jour, pour verrouiller le bouton. */
+  private majEnCours = false;
 
   /* -------------------------------------------------- cycle de vie */
 
   demarrer(): void {
     document.body.addEventListener('click', this.gererClic);
+    document.body.addEventListener('keydown', this.gererClavier);
     document.body.addEventListener('change', this.gererChangement);
     this.racine.addEventListener('input', this.gererSaisie);
     this.afficherEtatReferentiel();
@@ -338,11 +363,179 @@ class Assistant {
     const etat = etatDuReferentiel();
     const maj = this.majReferentiels;
     const dates = maj ? libelleMaj(maj) : '';
-    this.voyantReferentiel.className = `voyant ${etat === 'degrade' ? 'degrade' : ''}`;
-    this.voyantReferentiel.title = maj ? detailMaj(maj) : '';
+    // La fraîcheur n'est calculée qu'une fois le suivi lu : elle vient de `referentiel_maj`.
+    this.peremption = maj ? peremptionMaj(maj) : null;
+    const signale = this.peremption ? peremptionSignalee(this.peremption) : false;
+    const classes = [
+      'voyant',
+      etat === 'degrade' ? 'degrade' : '',
+      signale ? this.peremption!.niveau : '',
+    ].filter(Boolean);
+    this.voyantReferentiel.className = classes.join(' ');
+    // Le voyant ouvre la mise à jour du référentiel : c'est le seul endroit de l'en-tête
+    // où le praticien peut agir sur la fraîcheur des données.
+    this.voyantReferentiel.setAttribute('data-action', 'ouvrir-maj');
+    this.voyantReferentiel.setAttribute('role', 'button');
+    this.voyantReferentiel.setAttribute('tabindex', '0');
+    const detail = maj ? detailMaj(maj) : '';
+    this.voyantReferentiel.title = this.peremption
+      ? `${this.peremption.message}\n${this.peremption.detail}\n\n${detail}`
+      : detail;
     this.voyantReferentiel.innerHTML =
       `<span class="point"></span>${esc(libelleEtatReferentiel())}` +
-      (dates ? `<span class="voyant-maj">${esc(dates)}</span>` : '');
+      (dates ? `<span class="voyant-maj">${esc(dates)}</span>` : '') +
+      (signale ? `<span class="voyant-maj">${esc(libellePeremption(this.peremption!))}</span>` : '');
+    this.afficherAlerteReferentiel();
+  }
+
+  /* -------------------------------------------------- fraîcheur du référentiel */
+
+  /**
+   * Bandeau d'alerte affiché sous l'en-tête lorsque le référentiel n'est plus suivi :
+   * contrôle mensuel manqué, mise à jour en échec, ou suivi illisible. Il dit la date du
+   * dernier contrôle et propose de relancer la mise à jour — le praticien n'a pas à
+   * connaître le cron.
+   */
+  private afficherAlerteReferentiel(): void {
+    const peremption = this.peremption;
+    if (!peremption || !peremptionSignalee(peremption)) {
+      this.alerteReferentiel.hidden = true;
+      this.alerteReferentiel.innerHTML = '';
+      this.alerteReferentiel.className = 'alerte';
+      return;
+    }
+    const icone = peremption.niveau === 'a_surveiller' ? '⏳' : '⚠';
+    this.alerteReferentiel.className = `alerte ${peremption.niveau}`;
+    this.alerteReferentiel.hidden = false;
+    this.alerteReferentiel.innerHTML = `
+      <span class="alerte-icone" aria-hidden="true">${icone}</span>
+      <span class="alerte-texte">
+        <strong>${esc(peremption.message)}</strong>
+        <span class="alerte-detail">${esc(peremption.detail)}</span>
+      </span>
+      <button type="button" class="btn-alerte" data-action="ouvrir-maj">
+        Mettre à jour le référentiel
+      </button>`;
+  }
+
+  /**
+   * Contenu de la modale de mise à jour : ce que l'application sait de la fraîcheur, ce
+   * que fait une mise à jour, et le bouton qui la déclenche (service dédié si l'instance
+   * en dispose, GitHub Actions sinon).
+   */
+  private rendreModaleMaj(): string {
+    const peremption = this.peremption;
+    const majs = this.majReferentiels ?? [];
+    const dates = majs
+      .map(
+        (m) =>
+          `<li><strong>${esc(m.libelle)}</strong> — importé le ` +
+          `${esc(new Date(m.maj_le).toLocaleString('fr-FR'))}` +
+          (m.verifie_le
+            ? `, contrôlé le ${esc(new Date(m.verifie_le).toLocaleDateString('fr-FR'))}`
+            : ', jamais recontrôlé') +
+          (typeof m.lignes === 'number'
+            ? ` · ${m.lignes.toLocaleString('fr-FR')} lignes`
+            : '') +
+          `</li>`,
+      )
+      .join('');
+
+    const etat = peremption
+      ? `<p class="maj-etat ${peremption.niveau === 'a_jour' ? '' : 'alerte'}">${esc(
+          `${peremption.message}\n${peremption.detail}`,
+        )}</p>`
+      : '';
+
+    const resultat = this.majResultat
+      ? `<p class="maj-etat ${this.majResultat.ok ? 'succes' : 'alerte'}">${esc(
+          this.majResultat.message,
+        )}</p>`
+      : '';
+
+    // Le code de service n'est demandé que si l'instance dispose d'un service dédié : sans
+    // lui, la mise à jour se lance depuis GitHub Actions, qui authentifie déjà l'opérateur.
+    const code = MAJ_SERVICE_URL
+      ? `<label class="maj-code">
+          <span>Code de service (si l’instance en exige un) :</span>
+          <input type="text" id="code-maj" autocomplete="off" value="${esc(
+            this.lireCodeMaj(),
+          )}" />
+        </label>`
+      : '';
+
+    const lien = this.majResultat?.lien ?? MAJ_ACTIONS_URL;
+    const actions = MAJ_SERVICE_URL
+      ? `<button type="button" class="btn-action principal" data-action="lancer-maj" ${
+          this.majEnCours ? 'disabled' : ''
+        }>${this.majEnCours ? 'Mise à jour en cours…' : '↻ Lancer la mise à jour'}</button>`
+      : `<a class="btn-action principal" href="${esc(lien)}" target="_blank" rel="noopener">
+          ↻ Ouvrir la mise à jour
+        </a>`;
+
+    return `
+      <div class="modale-voile" data-action="fermer-modale"></div>
+      <div class="modale-carte" role="dialog" aria-modal="true" aria-labelledby="modale-titre">
+        <span class="etape-numero">Référentiel</span>
+        <h2 id="modale-titre" class="question">Mettre à jour le référentiel officiel</h2>
+        <p class="sous-question">
+          Les référentiels viennent des sources officielles — base publique des médicaments
+          (BDPM) et nomenclature CCAM. Elles évoluent chaque mois : le contrôle est donc
+          mensuel, et il <strong>n’écrit rien tant que les sources n’ont pas changé</strong>.
+        </p>
+        ${etat}
+        ${resultat}
+        <ul class="maj-dates">${dates || '<li>Suivi des mises à jour indisponible.</li>'}</ul>
+        ${code}
+        <p class="pedagogie">
+          La mise à jour retélécharge les sources officielles, compare leur empreinte à celle
+          du dernier import, réimporte en cas de changement, puis rejoue les contrôles de
+          cohérence. Elle s’exécute côté serveur : l’écriture n’est jamais possible depuis le
+          navigateur.
+        </p>
+        <div class="actions">
+          <button type="button" class="btn-action secondaire" data-action="fermer-modale">
+            ← Fermer
+          </button>
+          ${actions}
+        </div>
+      </div>`;
+  }
+
+  /** Code de service éventuel, conservé localement (jamais dans le dépôt). */
+  private lireCodeMaj(): string {
+    try {
+      return window.localStorage.getItem(CLE_CODE_MAJ) ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  private ecrireCodeMaj(code: string): void {
+    try {
+      if (code) window.localStorage.setItem(CLE_CODE_MAJ, code);
+      else window.localStorage.removeItem(CLE_CODE_MAJ);
+    } catch {
+      // Un stockage indisponible n'empêche pas la mise à jour : le code reste à ressaisir.
+    }
+  }
+
+  /** Demande la mise à jour, puis rafraîchit le suivi affiché. */
+  private async lancerMaj(): Promise<void> {
+    if (this.majEnCours) return;
+    const champ = this.modale.querySelector<HTMLInputElement>('#code-maj');
+    const code = champ?.value.trim() ?? '';
+    this.ecrireCodeMaj(code);
+    this.majEnCours = true;
+    this.majResultat = null;
+    this.rendreModale();
+    this.majResultat = await declencherMajReferentiels(code);
+    this.majEnCours = false;
+    // Le battement de cœur peut avoir bougé si la mise à jour est synchrone : on relit.
+    const majs = await dernieresMaj();
+    if (majs) this.majReferentiels = majs;
+    this.afficherEtatReferentiel();
+    this.rendreModale();
   }
 
   /* -------------------------------------------------- navigation */
@@ -470,6 +663,9 @@ class Assistant {
       this.ecran === 'evaluation' ? '↺ Recommencer' : '⌂ Accueil';
 
     this.rendreVerdict(this.ecran === 'evaluation');
+    // La fraîcheur est recalculée à chaque rendu : un onglet laissé ouvert au-delà du seuil
+    // doit finir par avertir, sans rechargement de page.
+    this.afficherEtatReferentiel();
   }
 
   /* -------------------------------------------------- progression / verdict */
@@ -549,9 +745,14 @@ class Assistant {
   /* -------------------------------------------------- rappel hors champ */
 
   private rendreModale(): void {
-    if (!this.modaleOuverte) {
+    if (this.modaleVue === 'aucune') {
       this.modale.className = 'modale';
       this.modale.innerHTML = '';
+      return;
+    }
+    if (this.modaleVue === 'maj') {
+      this.modale.className = 'modale ouvert';
+      this.modale.innerHTML = this.rendreModaleMaj();
       return;
     }
     this.modale.className = 'modale ouvert';
@@ -1420,6 +1621,32 @@ class Assistant {
 
   /* -------------------------------------------------- résultat */
 
+  /**
+   * Rappel de fraîcheur au moment de conclure.
+   *
+   * C'est ici que la question se pose vraiment : une décision rendue sur un référentiel
+   * qui n'est plus contrôlé doit le dire, sans pour autant invalider le raisonnement — les
+   * règles, elles, ne dépendent pas des sources de données.
+   */
+  private bandeauPeremptionResultat(): string {
+    const peremption = this.peremption;
+    if (!peremption || !peremptionSignalee(peremption)) return '';
+    return `
+      <div class="alerte ${esc(peremption.niveau)} alerte-resultat">
+        <span class="alerte-icone" aria-hidden="true">⚠</span>
+        <span class="alerte-texte">
+          <strong>${esc(peremption.message)}</strong>
+          <span class="alerte-detail">
+            Cette décision repose sur le référentiel national, pas sur une donnée locale :
+            elle est valable, mais elle doit être revérifiée après mise à jour du référentiel.
+          </span>
+        </span>
+        <button type="button" class="btn-alerte" data-action="ouvrir-maj">
+          Mettre à jour
+        </button>
+      </div>`;
+  }
+
   private rendreResultat(): void {
     const dossier = versDossier(this.etat);
     const resultat = evaluerDossier(dossier);
@@ -1459,6 +1686,8 @@ class Assistant {
         <div class="statut">${esc(resultat.libelle_decision)}</div>
         <div class="mention">${esc(mentions[resultat.statut])}</div>
       </div>
+
+      ${this.bandeauPeremptionResultat()}
 
       <div class="bloc-resultat">
         <h3>Les 5 vérifications</h3>
@@ -1549,20 +1778,28 @@ class Assistant {
       case 'demarrer-evaluation':
         if (this.lireAideHorsChamp()) this.changerEcran('evaluation');
         else {
-          this.modaleOuverte = true;
+          this.modaleVue = 'hors-champ';
           this.rendreModale();
         }
         break;
       case 'demarrer-confirme': {
         const case_ = this.modale.querySelector<HTMLInputElement>('#ne-plus-afficher');
         if (case_?.checked) this.ecrireAideHorsChamp(true);
-        this.modaleOuverte = false;
+        this.modaleVue = 'aucune';
         this.changerEcran('evaluation');
         break;
       }
       case 'fermer-modale':
-        this.modaleOuverte = false;
+        this.modaleVue = 'aucune';
         this.rendreModale();
+        break;
+      case 'ouvrir-maj':
+        this.majResultat = null;
+        this.modaleVue = 'maj';
+        this.rendreModale();
+        break;
+      case 'lancer-maj':
+        void this.lancerMaj();
         break;
       case 'ouvrir-ccam':
         this.changerEcran('ccam');
@@ -1689,6 +1926,18 @@ class Assistant {
       default:
         break;
     }
+  };
+
+  /**
+   * Mêmes actions au clavier qu'à la souris : les éléments porteurs de `data-action`
+   * qui ne sont pas des boutons (le voyant du référentiel) restent atteignables.
+   */
+  private gererClavier = (evenement: KeyboardEvent): void => {
+    if (evenement.key !== 'Enter' && evenement.key !== ' ') return;
+    const cible = (evenement.target as HTMLElement).closest<HTMLElement>('[data-action]');
+    if (!cible || cible.tagName === 'BUTTON' || cible.tagName === 'A') return;
+    evenement.preventDefault();
+    cible.click();
   };
 
   private gererChangement = (evenement: Event): void => {

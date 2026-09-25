@@ -15,6 +15,21 @@ const env = import.meta.env as Record<string, string | undefined>;
 export const SUPABASE_URL: string =
   env['VITE_SUPABASE_URL'] ?? 'https://wscfdjkahejquzptvaxg.supabase.co';
 
+/**
+ * Service de mise à jour « un clic » (fonction Edge, voir `supabase/functions/`).
+ *
+ * Vide par défaut : le bouton de mise à jour renvoie alors vers le workflow GitHub
+ * Actions, qui ne demande aucun secret à l'application. Renseigner
+ * `VITE_MAJ_SERVICE_URL=https://<ref>.supabase.co/functions/v1/maj-referentiels`
+ * au build active le déclenchement direct.
+ */
+export const MAJ_SERVICE_URL: string = env['VITE_MAJ_SERVICE_URL'] ?? '';
+
+/** Page du workflow GitHub Actions de mise à jour des référentiels (repli). */
+export const MAJ_ACTIONS_URL: string =
+  env['VITE_MAJ_ACTIONS_URL'] ??
+  'https://github.com/pierrenicolas35/hdjverif/actions/workflows/maj-referentiels.yml';
+
 export const SUPABASE_ANON_KEY: string =
   env['VITE_SUPABASE_ANON_KEY'] ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndzY2ZkamthaGVqcXV6cHR2YXhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAwMDMwMjYsImV4cCI6MjEwNTU3OTAyNn0.Up3eqYWLlvezDQ6DvjvtlHV8Mifobs-Zn8KCwLD0_Z0';

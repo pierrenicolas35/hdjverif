@@ -16,7 +16,7 @@ import { DISCIPLINES } from '../src/ui/pedagogie.js';
 import { detailMaj, libelleMaj } from '../src/ui/referentiels.js';
 import { resolve } from 'node:path';
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 /* ------------------------------------------------------------------ *
  * Référentiel simulé
@@ -107,19 +107,29 @@ const CHAPITRES = [
 
 const SOUS_CHAPITRES = [{ code: 'AA', libelle: 'œsophage, estomac et duodénum', actes: 1 }];
 
-/** Suivi des mises à jour : dates distinctes pour les deux tables. */
+/**
+ * Suivi des mises à jour : dates distinctes pour les deux tables, et un contrôle de la
+ * CCAM volontairement ancien (le 20/07/2026) — c'est lui qui déclenche l'alerte de
+ * fraîcheur de l'en-tête.
+ */
 const MAJ_REFERENTIELS: readonly Record<string, unknown>[] = [
   {
     nom: 'referentiel_ccam',
     libelle: 'Nomenclature CCAM',
     maj_le: '2026-02-09T21:33:08.000Z',
     lignes: 1969,
+    verifie_le: '2026-07-20T06:00:00.000Z',
+    etat_controle: 'a_jour',
+    derniere_erreur: null,
   },
   {
     nom: 'referentiel_medicaments',
     libelle: 'Médicaments (BDPM)',
     maj_le: '2026-09-22T10:52:32.000Z',
     lignes: 13609,
+    verifie_le: '2026-09-22T10:52:35.000Z',
+    etat_controle: 'a_jour',
+    derniere_erreur: null,
   },
 ];
 
@@ -944,6 +954,71 @@ describe('En-tête — dates de mise à jour des référentiels', () => {
     expect(libelleMaj(null)).toBe('');
     expect(libelleMaj([])).toBe('');
     expect(detailMaj(null)).toContain('indisponibles');
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * En-tête — alerte de fraîcheur et mise à jour du référentiel
+ * ------------------------------------------------------------------ */
+
+describe('En-tête — alerte de fraîcheur du référentiel', () => {
+  /** Le suivi simulé date la CCAM du 09/02/2026 : l'horloge de ce test est fixée après. */
+  const AUJOURDHUI = new Date('2026-09-25T08:00:00.000Z');
+
+  beforeEach(() => {
+    // Seule `Date` est simulée : les minuteurs restent réels, `attendre()` continue de
+    // laisser passer les promesses.
+    vi.useFakeTimers({ toFake: ['Date'], now: AUJOURDHUI });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('avertit que le référentiel n’est plus contrôlé, et dit depuis quand', async () => {
+    allerAccueil();
+
+    const alerte = document.querySelector<HTMLElement>('#alerte-referentiel');
+    expect(alerte?.hidden).toBe(false);
+    // 67 jours séparent le dernier contrôle de la CCAM (20/07/2026) de l'horloge du test.
+    expect(alerte?.textContent).toContain('non contrôlé depuis 67 jours');
+    expect(alerte?.textContent).toContain('Nomenclature CCAM');
+    expect(alerte?.textContent).toContain('Mettre à jour le référentiel');
+    // L'alerte n'est pas qu'un chiffre : elle dit quoi faire.
+    expect(alerte?.textContent).toContain('Lancez la mise à jour des référentiels');
+  });
+
+  it('ouvre la mise à jour depuis le voyant du référentiel', async () => {
+    allerAccueil();
+    cliquer('#voyant-referentiel');
+
+    const modale = texte('.modale-carte');
+    expect(modale).toContain('Mettre à jour le référentiel officiel');
+    expect(modale).toContain('Médicaments (BDPM)');
+    expect(modale).toContain('Nomenclature CCAM');
+    // Rien n'est écrit sans changement : c'est ce que la modale doit annoncer.
+    expect(modale).toContain('n’écrit rien tant que les sources n’ont pas changé');
+  });
+
+  it('affiche le bouton de mise à jour depuis l’alerte', async () => {
+    allerAccueil();
+    cliquer('#alerte-referentiel [data-action="ouvrir-maj"]');
+
+    expect(texte('.modale-carte')).toContain('Mettre à jour le référentiel officiel');
+  });
+
+  it('rappelle la fraîcheur au moment de conclure, sans invalider la décision', () => {
+    atteindreActes();
+    suivant(); // médicaments
+    suivant(); // intervenants
+    suivant(); // surveillance et durée
+    repondre('surveillanceActive', 'non');
+    suivant(); // contexte patient
+    suivant(); // décision
+
+    const carte = texte('#carte');
+    expect(carte).toContain('non contrôlé depuis 67 jours');
+    expect(carte).toContain('doit être revérifiée après mise à jour');
   });
 });
 

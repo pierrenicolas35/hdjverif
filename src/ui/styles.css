@@ -224,6 +224,184 @@ button {
 
 /* Barre de progression */
 
+/* ---------------------------------------------------------------------
+   Alerte de fraîcheur du référentiel (bandeau d'en-tête)
+   Elle n'apparaît que lorsque le contrôle mensuel a été manqué ou a échoué.
+   --------------------------------------------------------------------- */
+.alerte {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--texte);
+  background: var(--orange-clair);
+  border-left: 4px solid var(--orange);
+}
+
+.alerte[hidden] {
+  display: none;
+}
+
+.alerte.echec {
+  background: var(--rouge-clair);
+  border-left-color: var(--rouge);
+}
+
+.alerte-icone {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.alerte-texte {
+  flex: 1 1 280px;
+  min-width: 0;
+}
+
+.alerte-texte strong {
+  font-weight: 650;
+}
+
+.alerte-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--texte-doux);
+}
+
+.alerte .btn-alerte {
+  flex: 0 0 auto;
+  border: 1px solid var(--chu-bleu);
+  background: var(--chu-bleu);
+  color: #fff;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.74rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.alerte .btn-alerte:hover {
+  background: var(--chu-bleu-fonce);
+  border-color: var(--chu-bleu-fonce);
+}
+
+.alerte .btn-alerte.secondaire {
+  background: transparent;
+  color: var(--chu-bleu-fonce);
+}
+
+.alerte .btn-alerte.secondaire:hover {
+  background: rgba(0, 143, 219, 0.12);
+}
+
+/* Le voyant du référentiel ouvre la mise à jour : il se comporte comme un bouton */
+.voyant[data-action] {
+  cursor: pointer;
+}
+
+.voyant[data-action]:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.voyant[data-action]:focus-visible,
+.btn-alerte:focus-visible,
+.btn-entete:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Voyant d'en-tête lorsque le référentiel n'est plus suivi */
+.voyant.perime .point,
+.voyant.echec .point {
+  background: #ffb020;
+}
+
+.voyant.perime,
+.voyant.echec {
+  background: rgba(198, 40, 40, 0.28);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* ---------------------------------------------------------------------
+   Modale « mise à jour des référentiels »
+   --------------------------------------------------------------------- */
+/* Le bouton d'ouverture du workflow est un lien : il garde l'apparence d'un bouton. */
+a.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.maj-etat {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  background: var(--surface-douce);
+  border: 1px solid var(--bordure);
+  white-space: pre-line;
+}
+
+.maj-etat.succes {
+  background: var(--vert-clair);
+  border-color: var(--vert);
+}
+
+.maj-etat.alerte {
+  background: var(--rouge-clair);
+  border-color: var(--rouge);
+}
+
+.maj-dates {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.76rem;
+  color: var(--texte-doux);
+}
+
+.maj-dates li {
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.maj-dates li:last-child {
+  border-bottom: none;
+}
+
+.maj-code {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 0.76rem;
+}
+
+.maj-code input {
+  flex: 0 1 220px;
+  padding: 7px 10px;
+  border: 1px solid var(--bordure-forte);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.maj-commande {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #1f2933;
+  color: #f5f7fa;
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.72rem;
+  overflow-x: auto;
+}
+
 .progression {
   margin-top: 12px;
   padding-bottom: 12px;

@@ -153,6 +153,9 @@ pas le revoir une fois qu’il est connu.
 
 ```
 index.html                        Structure de l'assistant (en-tête, progression, carte, aide)
+.github/workflows/
+  ci.yml                          Typage, tests, build, déploiement GitHub Pages
+  maj-referentiels.yml            Contrôle mensuel des sources officielles (+ reprise manuelle)
 src/
   config.ts                       Accès au référentiel Supabase (clé publique anon)
   core/rules-engine/              MOTEUR — pur, typé strict, découplé de l'UI
@@ -174,8 +177,9 @@ src/
     styles.css                    Charte CHU Grenoble Alpes (en-tête bleu, fond blanc)
 supabase/
   hardening.sql                   Row Level Security, privilèges, index, vues
+  functions/maj-referentiels/     Fonction Edge — jeton GitHub côté serveur (facultatif)
   rpc-recherche.sql               RPC de recherche (médicaments, CCAM, acte par code)
-  referentiel-maj.sql             Suivi des dates de mise à jour
+  referentiel-maj.sql             Suivi des dates de mise à jour et de contrôle
   ccam-arbres.sql                 Arborescence CCAM + mots-clés « grand public » et
                                   fonctions de navigation (chapitres, sous-thèmes, actes)
 scripts/
@@ -250,6 +254,13 @@ Projet Supabase `Hdjverif` — trois tables publiques en lecture seule :
 | `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, **surveillance particulière**, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
 | `referentiel_ccam` | **8 059 actes** (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd, **chapitre**, **sous-thème = site anatomique**, **mots-clés**, **acte classant**, **racine GHM**, **éligibilité HDJ**…) | **Nomenclature CCAM consolidée** — chapitres 1 à 19 de la CCAM descriptive (ATIH), jeu de données « CCAM Ameli » (data.gouv.fr / InterHop) et libellés abrégés du Manuel des GHM. Voir `data/ccam-complete-2025.csv` |
 | `thesaurus_synonymes` | **329 termes** de vocabulaire de recherche rangés en **88 notions** (terme, forme normalisée, notion, type, domaine) — la table qu’interroge la recherche élargie | **`data/thesaurus-synonymes.csv`** (fichier versionné, voir « Thésaurus des synonymes ») |
+
+S’y ajoute `referentiel_maj`, table de **service** (lecture publique, écriture réservée au
+`service_role`) : une ligne par table de référentiel, avec la date du dernier **import**
+(`maj_le`), la date du dernier **contrôle des sources** (`verifie_le`), l’état de ce contrôle
+(`etat_controle` : `importe`, `a_jour`, `echec`) et le message d’un éventuel échec. C’est elle
+qui permet à l’application de dire *« référentiel non contrôlé depuis 67 jours »* au lieu de
+laisser croire que des données anciennes sont à jour (voir « Mise à jour mensuelle »).
 
 Dans l’assistant :
 
@@ -632,8 +643,8 @@ npm run verifier:referentiel                    # code retour 0 = conforme
 #    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM), supabase/thesaurus.sql
 #    (thésaurus des synonymes : normalisation SQL, table thesaurus_synonymes, recherche
 #    élargie), supabase/hdj-ghm.sql (actes classants, racines de GHM, éligibilité HDJ et
-#    vue base_hdj_actes) et, une seule fois, supabase/referentiel-maj.sql (suivi des dates
-#    de mise à jour).
+#    vue base_hdj_actes) puis supabase/referentiel-maj.sql (suivi des dates de mise à jour
+#    et de contrôle : à réappliquer après une montée de version, le script est idempotent).
 #    ccam-arbres.sql puis thesaurus.sql redéfinissent la fonction rechercher_ccam : ils
 #    doivent être appliqués après rpc-recherche.sql, et thesaurus.sql en dernier.
 npm run sql:appliquer -- supabase/hdj-ghm.sql --verifier   # psql < … si PostgreSQL est installé
@@ -651,11 +662,21 @@ npm run base:hdj -- --exemples   # + un échantillon par type d'acte à l'écran
 ```
 
 `supabase/referentiel-maj.sql` crée la table de suivi `referentiel_maj` (une ligne par table :
-date de dernière mise à jour effective, volume, empreinte des sources). L’import la renseigne
-automatiquement ; **l’en-tête de l’application affiche ces dates** à côté de l’état de la
-connexion (« Référentiel Supabase connecté · MAJ 22/09/2026 »), avec le détail en infobulle
-(date et heure exactes, nombre de lignes). La date ne bouge que lorsque les sources officielles
-changent réellement. Le contrôle du référentiel vérifie également ce suivi.
+date de dernière mise à jour effective, volume, empreinte des sources, **date et état du dernier
+contrôle des sources**). L’import la renseigne automatiquement ; **l’en-tête de l’application
+affiche ces dates** à côté de l’état de la connexion (« Référentiel Supabase connecté · MAJ
+25/09/2026 »), avec le détail en infobulle (date et heure exactes, nombre de lignes). La date de
+mise à jour ne bouge que lorsque les sources officielles changent réellement ; celle du contrôle,
+à l’inverse, avance à chaque vérification — c’est elle qui permet d’avertir quand le suivi
+s’arrête (voir « Mise à jour mensuelle automatique », § *L’avertissement dans l’application*).
+Le contrôle du référentiel vérifie également ce suivi.
+
+Le script est **idempotent** : sur une base déjà installée, il ajoute les colonnes de suivi du
+contrôle (`verifie_le`, `etat_controle`, `derniere_erreur`, `verifie_par`) sans rien perdre :
+
+```bash
+npm run sql:appliquer -- supabase/referentiel-maj.sql   # met la base au niveau du dépôt
+```
 
 `npm run verifier:referentiel` interroge la base **exactement comme l’application** et refuse (code retour 1) un référentiel dont la réserve hospitalière ne serait pas déterminée, dont la
 DCI serait absente, ou dont une recherche par DCI (`infliximab`, `pembrolizumab`…) ne trouverait
@@ -677,22 +698,115 @@ npm run maj:referentiels:controle   # contrôle seul de la base publiée (aucune
 `scripts/maj-referentiels.mjs` retélécharge les sources officielles puis **compare leur empreinte
 SHA-256** à celle du dernier import réussi :
 
-1. **sources inchangées** → aucune écriture, aucune requête d'écriture sur Supabase : c'est le
-   mode « léger » (quelques secondes, ~8 Mo téléchargés) ;
+1. **sources inchangées** → aucune écriture des données, et une seule écriture de **suivi** : le
+   « battement de cœur » (`referentiel_maj.verifie_le`, `etat_controle = a_jour`). C'est le mode
+   « léger » (quelques secondes, ~8 Mo téléchargés) ;
 2. **sources modifiées** → import complet puis `verifier-referentiel.mjs` ; l'empreinte n'est
    enregistrée **qu'après un contrôle vert**, si bien qu'un échec est automatiquement retenté à
    l'exécution suivante ;
-3. la nomenclature CCAM étant une ressource **datée** sur data.gouv.fr, la dernière version
+3. **échec** → `etat_controle = echec` et le message d'erreur sont enregistrés **sans toucher**
+   à la date du dernier succès : l'application avertit alors l'utilisateur au lieu de lui
+   présenter des données dont plus personne ne garantit la fraîcheur ;
+4. la nomenclature CCAM étant une ressource **datée** sur data.gouv.fr, la dernière version
    publiée est résolue via l'API (repli sur la version épinglée si l'API est injoignable).
 
 L'écriture s'appuie sur la clé `service_role` (récupérée au besoin par le jeton Management API,
 jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
 
+#### Ce qui déclenche le contrôle
+
+Trois chemins, complémentaires — un seul suffit, mais le référentiel n'est plus laissé au
+hasard :
+
+| Déclencheur | Où | Quand | Ce qu'il apporte |
+|---|---|---|---|
+| **Cron du serveur** | `crontab` de la machine | 1ᵉʳ du mois, 05:17 UTC (07:17 à Paris) | le contrôle de proximité, sans dépendance à GitHub |
+| **GitHub Actions** | `.github/workflows/maj-referentiels.yml` | 1ᵉʳ du mois, 05:47 UTC + `workflow_dispatch` | le contrôle a lieu **même serveur éteint** ; en cas d'échec, GitHub prévient le propriétaire du dépôt |
+| **Bouton de l'application** | en-tête → « Mettre à jour le référentiel » | à la demande | le référent DIM n'attend pas le 1ᵉʳ du mois |
+
 **Cron installé sur le serveur** (1ᵉʳ du mois, 05:17 UTC, soit 07:17 à Paris) :
 
 ```cron
-17 5 1 * * cd /home/ubuntu/hdjverif && node scripts/maj-referentiels.mjs >> .cache/maj-cron.log 2>&1
+17 5 1 * * cd /home/ubuntu/hdjverif && MAJ_DECLENCHEUR=cron /home/ubuntu/.local/bin/node scripts/maj-referentiels.mjs >> .cache/maj-cron.log 2>&1
 ```
+
+`MAJ_DECLENCHEUR` n'est qu'une étiquette, recopiée dans `referentiel_maj.verifie_par` : elle
+permet de savoir, des mois plus tard, si le dernier contrôle venait du serveur, de GitHub
+Actions ou d'une personne.
+
+**Workflow GitHub Actions** — il ne demande aucune installation sur le serveur, mais il a
+besoin de la clé d'écriture :
+
+1. créer un secret de dépôt `SUPABASE_SERVICE_ROLE_KEY` (Settings → Secrets and variables →
+   Actions) — la même clé que celle utilisée par l'import ; `SUPABASE_ACCESS_TOKEN` est
+   également accepté si vous préférez ne pas la recopier ;
+2. facultatif : une variable `SUPABASE_URL` si le projet change de référence ;
+3. vérifier une première fois le workflow à la main (onglet **Actions** → *Mise à jour des
+   référentiels* → **Run workflow**). Le résumé de l'exécution affiche la fin du journal.
+
+Sans l'un ou l'autre de ces secrets, le workflow **échoue immédiatement** avec un message
+explicite : c'est volontaire, un contrôle silencieusement inopérant serait pire qu'un contrôle
+absent.
+
+Deux limites connues, assumées : GitHub désactive les workflows planifiés d'un dépôt sans
+activité depuis 60 jours, et un serveur peut être éteint. C'est précisément ce que le
+**battement de cœur** rend visible : si plus rien ne contrôle le référentiel, l'application le
+dit à l'écran plutôt que de laisser croire que tout va bien — et les trois déclencheurs se
+relaient (serveur, GitHub, bouton).
+
+#### L'avertissement dans l'application
+
+Le suivi sert deux fois : à dater (« MAJ 25/09/2026 ») et à **avertir**. `referentiel_maj`
+distingue ce que `maj_le` seul ne peut pas dire : *rien à mettre à jour* (contrôle fait,
+sources inchangées) et *plus personne ne contrôle* (le contrôle n'a pas eu lieu depuis
+longtemps).
+
+`peremptionMaj()` (dans `src/ui/referentiels.ts`) en tire quatre états, affichés dans
+l'en-tête dès que le référentiel n'est plus suivi :
+
+| État | Quand | Ce que l'application affiche |
+|---|---|---|
+| à jour | contrôle réussi il y a moins de **35 jours** | la date, sans alerte |
+| à recontrôler | entre **35 et 62 jours** | bandeau « un contrôle mensuel a été manqué » |
+| périmé | plus de **62 jours** | bandeau : « non contrôlé depuis N jours — les sources ont pu changer » |
+| en échec | dernière tentative en échec | bandeau avec le message d'erreur |
+
+Deux contrôles manqués valent péremption : le premier seuil avise (un contrôle a été raté), le
+second alerte (le suivi est interrompu). Le raisonnement est volontairement **pessimiste** :
+on retient la table la plus ancienne, et l'application préfère dire « fraîcheur inconnue » que
+de laisser croire à des données à jour. Le bandeau est aussi rappelé **au moment de conclure**,
+sous la décision, avec la mention qu'une décision reste valable mais qu'elle doit être
+revérifiée après mise à jour — les règles, elles, ne dépendent pas des sources.
+
+Le même engin sert au bouton **« Mettre à jour le référentiel »** (le voyant du référentiel y
+mène aussi) : la modale montre pour chaque table la date d'import, la date du dernier contrôle
+et le nombre de lignes, puis propose le déclenchement.
+
+#### Déclencher la mise à jour depuis l'application
+
+L'application est une page statique : elle ne détient que la clé `anon`, que Row Level Security
+refuse en écriture. Deux façons de déclencher, sans jamais mettre la clé d'écriture dans le
+navigateur :
+
+1. **Sans rien déployer** (par défaut) — le bouton ouvre la page GitHub Actions du workflow
+   (*Run workflow*) : c'est GitHub qui authentifie l'opérateur. Rien à configurer, mais il faut
+   l'accès au dépôt ;
+2. **Un clic dans l'application** (facultatif) — la fonction Edge
+   `supabase/functions/maj-referentiels/index.ts` garde le jeton GitHub côté serveur et ne fait
+   qu'un appel : *exécute le workflow*. Il faut la déployer et renseigner ses secrets :
+
+```bash
+supabase functions deploy maj-referentiels --project-ref <ref>
+supabase secrets set GITHUB_TOKEN=github_pat_… CODE_MAJ=<code partagé> --project-ref <ref>
+# puis, au build de l'application, indiquer l'URL du service :
+VITE_MAJ_SERVICE_URL=https://<ref>.supabase.co/functions/v1/maj-referentiels npm run build
+```
+
+Le jeton GitHub demandé est un **jeton finement porté**, limité au dépôt, avec la seule
+permission « Actions : read and write » ; il ne peut pas modifier le code. `CODE_MAJ` est un
+code partagé (demandé par la modale, mémorisé localement) qui évite qu'un tiers fasse
+télécharger 8 Mo à GitHub en boucle ; la fonction refuse aussi deux déclenchements à moins de
+30 minutes d'intervalle. Sans `VITE_MAJ_SERVICE_URL`, le bouton reste sur l'option 1.
 
 > **Où trouver la clé d’écriture.** Le jeton **Management API** du projet
 > (`SUPABASE_ACCESS_TOKEN`, préfixe `sbp_`) suffit : il permet de récupérer la clé
@@ -711,9 +825,10 @@ jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
 
 ```bash
 npm install
-npm test              # 184 tests : moteur, portes, assistant (référentiel simulé),
+npm test              # 198 tests : moteur, portes, assistant (référentiel simulé),
                       #             thésaurus des synonymes, lecture des référentiels
-                      #             officiels et croisement GHM
+                      #             officiels, croisement GHM et fraîcheur du référentiel
+                      #             (alerte de péremption, bandeau de décision)
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

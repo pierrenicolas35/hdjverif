@@ -1,0 +1,85 @@
+name: Mise à jour des référentiels
+
+# Contrôle mensuel des sources officielles (BDPM + nomenclature CCAM) et réimport **si et
+# seulement si** elles ont changé. Deux déclencheurs, deux raisons :
+#
+#   • `schedule` — le contrôle a lieu même si le serveur du CHU est éteint, redémarré ou que
+#     son cron a été perdu : GitHub porte la surveillance. C'est ce qui fait qu'un référentiel
+#     ne peut plus vieillir en silence ;
+#   • `workflow_dispatch` — reprise manuelle, depuis GitHub ou depuis le bouton « Mettre à jour
+#     le référentiel » de l'application (qui ouvre cette page).
+#
+# Le script est « léger » par construction : il retélécharge les sources (~8 Mo), compare leur
+# empreinte SHA-256 à celle du dernier import réussi, et n'écrit en base que si elle a changé.
+# Il enregistre dans tous les cas un « battement de cœur » (`referentiel_maj.verifie_le`), que
+# l'application lit pour avertir l'utilisateur quand le contrôle s'est arrêté.
+
+on:
+  schedule:
+    # 1ᵉʳ du mois à 05:47 UTC (07:47 à Paris) — après le cron du serveur, pour ne pas
+    # télécharger deux fois les mêmes sources en même temps.
+    - cron: '47 5 1 * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Réimporter même si les sources n’ont pas changé (contrôle de bout en bout)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+# Un seul contrôle à la fois : deux imports simultanés se marcheraient dessus.
+concurrency:
+  group: maj-referentiels
+  cancel-in-progress: false
+
+jobs:
+  maj:
+    name: Contrôle et import
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Installation de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Vérification de la clé d’écriture
+        env:
+          CLE: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          JETON: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$CLE" ] && [ -z "$JETON" ]; then
+            echo "::error::Renseigner le secret SUPABASE_SERVICE_ROLE_KEY (ou SUPABASE_ACCESS_TOKEN) dans les secrets du dépôt."
+            exit 1
+          fi
+
+      - name: Contrôle des sources officielles et import si nécessaire
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://wscfdjkahejquzptvaxg.supabase.co' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          # Journalisé dans `referentiel_maj.verifie_par` : on saura que le contrôle vient d'ici.
+          MAJ_DECLENCHEUR: actions
+        run: node scripts/maj-referentiels.mjs ${{ inputs.force && '--force' || '' }}
+
+      - name: Résumé de l’exécution
+        if: always()
+        run: |
+          {
+            echo "### Référentiels — \`${GITHUB_REF_NAME}\`"
+            echo
+            echo "Déclencheur : \`${{ github.event_name }}\`"
+            echo
+            if [ -f .cache/maj-referentiels.log ]; then
+              echo '```'
+              tail -n 20 .cache/maj-referentiels.log
+              echo '```'
+            else
+              echo "Aucun journal : l’exécution a échoué avant la première écriture."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

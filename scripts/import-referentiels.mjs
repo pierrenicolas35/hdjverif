@@ -503,6 +503,9 @@ async function principal() {
       lignes: medicaments.length,
       empreinte,
       source: 'BDPM — CIS_bdpm, CIS_COMPO, CIS_CPD',
+      verifie_le: horodatage,
+      etat_controle: 'importe',
+      verifie_par: process.env['MAJ_DECLENCHEUR'] ?? 'manuel',
     },
     {
       nom: 'referentiel_ccam',
@@ -511,6 +514,9 @@ async function principal() {
       lignes: actes.length,
       empreinte,
       source: 'CCAM Ameli — data.gouv.fr',
+      verifie_le: horodatage,
+      etat_controle: 'importe',
+      verifie_par: process.env['MAJ_DECLENCHEUR'] ?? 'manuel',
     },
     {
       nom: 'thesaurus_synonymes',
@@ -519,6 +525,9 @@ async function principal() {
       lignes: thesaurus.entrees.length,
       empreinte: null,
       source: 'data/thesaurus-synonymes.csv (versionné)',
+      verifie_le: horodatage,
+      etat_controle: 'importe',
+      verifie_par: process.env['MAJ_DECLENCHEUR'] ?? 'manuel',
     },
   ]);
   log('import terminé.');

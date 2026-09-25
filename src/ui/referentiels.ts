@@ -21,6 +21,8 @@ import {
 
 import {
   DELAI_REQUETE_MS,
+  MAJ_ACTIONS_URL,
+  MAJ_SERVICE_URL,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
   TAILLE_RESULTATS,
@@ -106,6 +108,16 @@ export interface MajReferentiel {
   readonly libelle: string;
   readonly maj_le: string;
   readonly lignes: number | null;
+  /**
+   * Dernier **contrôle** réussi des sources officielles, qu'il ait donné lieu à une
+   * écriture ou non. C'est cette date — et non `maj_le` — qui dit si le référentiel est
+   * suivi : `maj_le` ne bouge que lorsque les sources changent réellement.
+   */
+  readonly verifie_le?: string | null;
+  /** `importe` (sources modifiées), `a_jour` (sources inchangées), `echec`, `inconnu`. */
+  readonly etat_controle?: string | null;
+  /** Message de la dernière tentative en échec, affiché tel quel à l'utilisateur. */
+  readonly derniere_erreur?: string | null;
 }
 
 /** Nœud de l'arborescence CCAM (chapitre ou sous-thème) avec son nombre d'actes. */
@@ -147,7 +159,8 @@ export function libelleEtatReferentiel(): string {
 export async function dernieresMaj(): Promise<readonly MajReferentiel[] | null> {
   try {
     return await lireTable<MajReferentiel[]>(
-      'referentiel_maj?select=nom,libelle,maj_le,lignes&order=nom',
+      'referentiel_maj?select=nom,libelle,maj_le,lignes,verifie_le,etat_controle,derniere_erreur' +
+        '&order=nom',
     );
   } catch {
     return null;
@@ -189,6 +202,291 @@ export function detailMaj(majs: readonly MajReferentiel[] | null): string {
       return `${m.libelle} : ${horodatage}${volume}`;
     })
     .join('\n');
+}
+
+/* ------------------------------------------------------------------ *
+ * Péremption du référentiel
+ * ------------------------------------------------------------------ */
+
+/**
+ * Seuils d'alerte, en jours depuis le dernier **contrôle réussi** des sources.
+ *
+ * Les sources officielles (BDPM, nomenclature CCAM) évoluent au moins chaque mois ; le
+ * contrôle est donc prévu mensuellement (cron du 1ᵉʳ). Un contrôle manqué n'est pas une
+ * panne : au-delà du premier seuil on avertit, au-delà du second on considère le
+ * référentiel comme périmé — deux contrôles consécutifs manqués.
+ */
+export const SEUIL_SURVEILLANCE_JOURS = 35;
+export const SEUIL_PEREMPTION_JOURS = 62;
+
+/** Gravité de l'état du référentiel, du plus sain au plus préoccupant. */
+export type NiveauPeremption = 'a_jour' | 'a_surveiller' | 'perime' | 'echec' | 'inconnu';
+
+/** Ce que l'application peut dire de la fraîcheur du référentiel. */
+export interface PeremptionReferentiel {
+  readonly niveau: NiveauPeremption;
+  /** Ancienneté, en jours, du dernier contrôle réussi (ou du dernier import). */
+  readonly jours: number | null;
+  /** Sur quoi porte l'ancienneté : le contrôle des sources, ou l'import lui-même. */
+  readonly reference: 'controle' | 'import' | null;
+  /** Date de référence au format ISO, pour l'affichage. */
+  readonly reference_le: string | null;
+  /** Phrase affichée telle quelle : elle dit l'état, la date et la conséquence. */
+  readonly message: string;
+  /** Détail : erreur de la dernière tentative, ou rappel de la marche à suivre. */
+  readonly detail: string;
+}
+
+const JOUR_MS = 24 * 60 * 60 * 1000;
+
+const CONSEIL_MAJ =
+  'Lancez la mise à jour des référentiels (bouton « Mettre à jour ») avant de conclure.';
+
+/** Nombre de jours écoulés depuis une date ISO, ou `null` si la date est illisible. */
+function joursDepuis(iso: string | null | undefined, maintenant: Date): number | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(0, Math.floor((maintenant.getTime() - date.getTime()) / JOUR_MS));
+}
+
+const dateFr = (iso: string): string => new Date(iso).toLocaleDateString('fr-FR');
+
+/**
+ * État de fraîcheur du référentiel, à partir du suivi `referentiel_maj`.
+ *
+ * Règle, volontairement pessimiste (on retient la table la plus ancienne) :
+ *   1. une table en `echec` → alerte, quelle que soit la date ;
+ *   2. sinon l'ancienneté se lit sur `verifie_le` (dernier contrôle réussi), et à défaut
+ *      sur `maj_le` (date du dernier import) pour les bases non encore migrées ;
+ *   3. ≤ 35 jours → à jour ; ≤ 62 jours → à surveiller ; au-delà → périmé ;
+ *   4. suivi illisible ou absent → `inconnu` : l'application le dit, sans laisser croire
+ *      que le référentiel est à jour.
+ */
+export function peremptionMaj(
+  majs: readonly MajReferentiel[] | null,
+  maintenant: Date = new Date(),
+): PeremptionReferentiel {
+  if (!majs || majs.length === 0) {
+    return {
+      niveau: 'inconnu',
+      jours: null,
+      reference: null,
+      reference_le: null,
+      message: 'Fraîcheur du référentiel inconnue : le suivi des mises à jour est indisponible.',
+      detail:
+        'La base est peut-être plus récente que ce que l’application peut en dire. ' +
+        CONSEIL_MAJ,
+    };
+  }
+
+  const enEchec = majs.find((m) => m.etat_controle === 'echec');
+  if (enEchec) {
+    const jours = joursDepuis(enEchec.verifie_le ?? enEchec.maj_le, maintenant);
+    return {
+      niveau: 'echec',
+      jours,
+      reference: enEchec.verifie_le ? 'controle' : 'import',
+      reference_le: enEchec.verifie_le ?? enEchec.maj_le,
+      message: 'La dernière mise à jour du référentiel a échoué : les données ont pu changer depuis.',
+      detail: `${enEchec.derniere_erreur ?? 'Échec sans message.'} ${CONSEIL_MAJ}`,
+    };
+  }
+
+  // Table la plus ancienne : c'est elle qui commande l'alerte.
+  let plusAncienne: MajReferentiel | null = null;
+  let joursMax = -1;
+  let surControle = true;
+  for (const maj of majs) {
+    const surControleIci = Boolean(maj.verifie_le);
+    const jours = joursDepuis(maj.verifie_le ?? maj.maj_le, maintenant);
+    if (jours === null) continue;
+    // À ancienneté égale, un contrôle est plus rassurant qu'un simple import : on ne
+    // dégrade donc pas l'information en passant de l'un à l'autre.
+    if (jours > joursMax || (jours === joursMax && surControleIci && !surControle)) {
+      joursMax = jours;
+      plusAncienne = maj;
+      surControle = surControleIci;
+    }
+  }
+
+  if (!plusAncienne || joursMax < 0) {
+    return {
+      niveau: 'inconnu',
+      jours: null,
+      reference: null,
+      reference_le: null,
+      message: 'Dates de référentiel illisibles : fraîcheur inconnue.',
+      detail: CONSEIL_MAJ,
+    };
+  }
+
+  const referenceLe = (surControle ? plusAncienne.verifie_le : plusAncienne.maj_le) ?? null;
+  const reference = surControle ? 'controle' : 'import';
+  const nom = plusAncienne.libelle;
+  const base = {
+    jours: joursMax,
+    reference,
+    reference_le: referenceLe,
+  } as const;
+
+  if (joursMax >= SEUIL_PEREMPTION_JOURS) {
+    return {
+      ...base,
+      niveau: 'perime',
+      message: surControle
+        ? `Référentiel ${nom} non contrôlé depuis ${joursMax} jours ` +
+          `(dernier contrôle : ${dateFr(referenceLe!)}).`
+        : `Référentiel ${nom} importé il y a ${joursMax} jours ` +
+          `(${dateFr(referenceLe!)}) et jamais recontrôlé depuis.`,
+      detail:
+        'Les sources officielles (BDPM, CCAM) ont pu changer : des actes ou des ' +
+        `références manquent peut-être. ${CONSEIL_MAJ}`,
+    };
+  }
+
+  if (joursMax >= SEUIL_SURVEILLANCE_JOURS) {
+    return {
+      ...base,
+      niveau: 'a_surveiller',
+      message:
+        `Référentiel ${nom} contrôlé il y a ${joursMax} jours (${dateFr(referenceLe!)}) : ` +
+        'le contrôle mensuel a été manqué.',
+      detail: `Un seul contrôle a été manqué : les données restent vraisemblablement bonnes. ${CONSEIL_MAJ}`,
+    };
+  }
+
+  return {
+    ...base,
+    niveau: 'a_jour',
+    message: surControle
+      ? `Référentiel contrôlé il y a ${joursMax} jour${joursMax > 1 ? 's' : ''} ` +
+        `(${dateFr(referenceLe!)}).`
+      : `Référentiel importé il y a ${joursMax} jour${joursMax > 1 ? 's' : ''} ` +
+        `(${dateFr(referenceLe!)}), pas encore recontrôlé.`,
+    detail: CONSEIL_MAJ,
+  };
+}
+
+/** Vrai si l'état du référentiel mérite une bannière visible dans l'application. */
+export function peremptionSignalee(peremption: PeremptionReferentiel): boolean {
+  return (
+    peremption.niveau === 'a_surveiller' ||
+    peremption.niveau === 'perime' ||
+    peremption.niveau === 'echec'
+  );
+}
+
+/** Libellé court de l'état, pour le voyant d'en-tête. */
+export function libellePeremption(peremption: PeremptionReferentiel): string {
+  switch (peremption.niveau) {
+    case 'a_surveiller':
+      return 'à recontrôler';
+    case 'perime':
+      return 'périmé';
+    case 'echec':
+      return 'mise à jour en échec';
+    default:
+      return '';
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * Déclenchement de la mise à jour
+ * ------------------------------------------------------------------ */
+
+/** Résultat d'une demande de mise à jour, prêt à être affiché. */
+export interface DeclenchementMaj {
+  /** Vrai si la mise à jour a réellement été déclenchée. */
+  readonly ok: boolean;
+  /** `service` : déclenchée depuis l'application ; `actions` : à lancer par un humain. */
+  readonly mode: 'service' | 'actions';
+  readonly message: string;
+  /** Page à ouvrir quand la mise à jour n'a pas pu être déclenchée d'ici. */
+  readonly lien: string;
+}
+
+const REFUS_ACTIONS: DeclenchementMaj = {
+  ok: false,
+  mode: 'actions',
+  message:
+    'La mise à jour se lance depuis la page du workflow GitHub Actions (bouton « Run workflow ») : ' +
+    'elle télécharge les sources officielles et n’écrit en base que si elles ont changé.',
+  lien: MAJ_ACTIONS_URL,
+};
+
+/**
+ * Demande une mise à jour des référentiels.
+ *
+ * Deux chemins, dans cet ordre :
+ *   1. **service** (`MAJ_SERVICE_URL`, fonction Edge) : appel direct, sans secret dans le
+ *      navigateur — la clé d'écriture reste côté serveur. Le `code` éventuel est un secret
+ *      partagé stocké dans les secrets de la fonction ;
+ *   2. **repli** : l'application renvoie vers le workflow GitHub Actions, où l'exécution
+ *      est authentifiée par GitHub lui-même.
+ *
+ * Dans tous les cas l'écriture en base n'est jamais faite depuis le navigateur : la clé
+ * `anon` y est refusée (Row Level Security en lecture seule).
+ */
+export async function declencherMajReferentiels(code = ''): Promise<DeclenchementMaj> {
+  if (!MAJ_SERVICE_URL) return REFUS_ACTIONS;
+
+  const controleur = new AbortController();
+  const minuteur = setTimeout(() => controleur.abort(), 30000);
+  try {
+    const reponse = await fetch(MAJ_SERVICE_URL, {
+      method: 'POST',
+      headers: { ...entetes(), ...(code ? { 'x-code-maj': code } : {}) },
+      body: JSON.stringify({ demande: 'maj-referentiels' }),
+      signal: controleur.signal,
+    });
+    if (reponse.status === 404) {
+      return { ...REFUS_ACTIONS, message: 'Service de mise à jour non déployé : à lancer depuis GitHub Actions.' };
+    }
+    if (reponse.status === 401 || reponse.status === 403) {
+      return {
+        ok: false,
+        mode: 'service',
+        message: 'Code de service refusé : vérifiez le code de mise à jour, ou passez par GitHub Actions.',
+        lien: MAJ_ACTIONS_URL,
+      };
+    }
+    if (reponse.status === 429) {
+      return {
+        ok: false,
+        mode: 'service',
+        message: 'Une mise à jour vient d’être demandée : inutile de la relancer maintenant.',
+        lien: MAJ_ACTIONS_URL,
+      };
+    }
+    if (!reponse.ok) {
+      return {
+        ok: false,
+        mode: 'service',
+        message: `Le service de mise à jour a répondu HTTP ${reponse.status}.`,
+        lien: MAJ_ACTIONS_URL,
+      };
+    }
+    const corps = (await reponse.json().catch(() => ({}))) as { message?: string; run?: string };
+    return {
+      ok: true,
+      mode: 'service',
+      message:
+        corps.message ??
+        'Mise à jour lancée : les sources officielles sont retéléchargées et comparées ; ' +
+          'rien n’est écrit si elles n’ont pas changé.',
+      lien: corps.run ?? MAJ_ACTIONS_URL,
+    };
+  } catch {
+    return {
+      ok: false,
+      mode: 'service',
+      message: 'Service de mise à jour injoignable : à lancer depuis GitHub Actions.',
+      lien: MAJ_ACTIONS_URL,
+    };
+  } finally {
+    clearTimeout(minuteur);
+  }
 }
 
 /* ------------------------------------------------------------------ *
