@@ -7,7 +7,8 @@
  *   node scripts/maj-referentiels.mjs --verifier   # contrôle seul de la base publiée (aucune écriture)
  *
  * Principe : les sources officielles (BDPM + nomenclature CCAM) sont **téléchargées à neuf**,
- * puis comparées par empreinte SHA-256 à celles du dernier import réussi. Concrètement :
+ * puis comparées par empreinte SHA-256 à celle **enregistrée en base** lors du dernier import
+ * réussi (le fichier d'état local ne sert que de repli). Concrètement :
  *
  *   1. sources inchangées → aucune écriture des données, et une seule écriture de suivi (le
  *      « battement de cœur » : « sources recontrôlées aujourd'hui, inchangées ») ;
@@ -86,13 +87,44 @@ async function cleEcriture() {
 }
 
 /**
+ * Empreinte des sources enregistrée en base lors du dernier import réussi.
+ *
+ * C'est **la** référence qui compte : elle dit ce que contiennent réellement les tables du
+ * référentiel. Le fichier d'état local, lui, est propre à une machine — absent d'un runner
+ * GitHub, il ferait réimporter tout le référentiel chaque mois pour rien, alors que la
+ * promesse est de n'écrire que si les sources ont changé.
+ */
+async function empreinteEnBase(cle) {
+  if (!cle) return null;
+  try {
+    const reponse = await fetch(
+      `${URL_SUPABASE}/rest/v1/referentiel_maj?select=empreinte&empreinte=not.is.null` +
+        '&order=maj_le.desc&limit=1',
+      {
+        headers: { apikey: cle, Authorization: `Bearer ${cle}` },
+        signal: AbortSignal.timeout(15000),
+      },
+    );
+    if (!reponse.ok) return null;
+    const lignes = await reponse.json();
+    return lignes[0]?.empreinte ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Clé d'écriture si elle est disponible, sans jamais faire échouer l'appelant : le suivi
  * est un service rendu à l'application, pas une condition de la mise à jour.
  */
+/** Raison de l'indisponibilité de la clé, pour ne pas la perdre en chemin. */
+let raisonCleIndisponible = null;
+
 async function cleEcritureOuNull() {
   try {
     return await cleEcriture();
   } catch (erreur) {
+    raisonCleIndisponible = erreur.message;
     log(`clé d'écriture indisponible (${erreur.message}).`);
     return null;
   }
@@ -190,26 +222,37 @@ async function principal() {
   const empreinte = empreinteSources(chemins);
   const etat = existsSync(ETAT) ? JSON.parse(readFileSync(ETAT, 'utf8')) : null;
 
-  if (!force && etat?.empreinte === empreinte) {
-    log(`sources inchangées depuis ${etat.date} — aucune écriture en base.`);
+  // 2. Clé d'écriture, et empreinte de référence : celle de la base prime, le fichier
+  //    d'état local ne sert que de repli (il n'existe pas sur un runner GitHub).
+  const cle = await cleEcritureOuNull();
+  const empreinteBase = await empreinteEnBase(cle);
+  const connue = empreinteBase ?? etat?.empreinte ?? null;
+  const origine = empreinteBase
+    ? 'en base'
+    : etat
+      ? `au fichier d'état du ${etat.date}`
+      : 'nulle part';
+
+  if (!force && connue === empreinte) {
+    log(`sources inchangées (empreinte ${origine}) — aucune écriture en base.`);
     journaliser(`sources inchangées (${empreinte.slice(0, 12)})`);
     // Battement de cœur : les sources ont bien été recontrôlées aujourd'hui, même si les
     // données n'ont pas changé. C'est ce que l'application date dans son avertissement.
-    await marquerControle({ cle: await cleEcritureOuNull(), etat: 'a_jour' });
+    await marquerControle({ cle, etat: 'a_jour' });
     return;
   }
 
   log(
-    etat
-      ? `sources modifiées (${etat.empreinte.slice(0, 12)} → ${empreinte.slice(0, 12)}) : import.`
-      : `premier import référencé (${empreinte.slice(0, 12)}).`,
+    connue
+      ? `sources modifiées (${connue.slice(0, 12)} → ${empreinte.slice(0, 12)}) : import.`
+      : `empreinte de référence inconnue (${origine}) : import.`,
   );
 
-  // 2. Clé d'écriture.
-  const cle = await cleEcriture();
   if (!cle) {
     throw new Error(
-      'Aucune clé d’écriture : fournir SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_ACCESS_TOKEN.',
+      raisonCleIndisponible
+        ? `clé d’écriture indisponible (${raisonCleIndisponible}).`
+        : 'Aucune clé d’écriture : fournir SUPABASE_SERVICE_ROLE_KEY ou SUPABASE_ACCESS_TOKEN.',
     );
   }
 

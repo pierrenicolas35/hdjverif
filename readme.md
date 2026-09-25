@@ -696,7 +696,9 @@ npm run maj:referentiels:controle   # contrôle seul de la base publiée (aucune
 ```
 
 `scripts/maj-referentiels.mjs` retélécharge les sources officielles puis **compare leur empreinte
-SHA-256** à celle du dernier import réussi :
+SHA-256** à celle **enregistrée en base** lors du dernier import réussi : c'est elle qui dit ce
+que contiennent réellement les tables, et elle seule est disponible sur un runner GitHub (le
+fichier d'état local y est absent). Concrètement :
 
 1. **sources inchangées** → aucune écriture des données, et une seule écriture de **suivi** : le
    « battement de cœur » (`referentiel_maj.verifie_le`, `etat_controle = a_jour`). C'est le mode
