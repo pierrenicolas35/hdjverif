@@ -3,7 +3,21 @@
  *
  * Aucune dépendance externe : appels PostgREST via `fetch`, avec repli local si
  * le référentiel est injoignable (l'application reste utilisable hors ligne).
+ *
+ * La recherche est **élargie par le thésaurus des synonymes** (`data/thesaurus-synonymes.csv`,
+ * le fichier même qui alimente la base à l'import). L'élargissement est fait par la base quand
+ * elle répond, et par le thésaurus embarqué dans le paquet quand elle ne répond pas : dans les
+ * deux cas, chercher « scanner » trouve une « scanographie », chercher « anti-TNF » trouve un
+ * « infliximab ».
  */
+
+import thesaurusCsv from '../../data/thesaurus-synonymes.csv?raw';
+import {
+  construireThesaurus,
+  contientTerme,
+  lireThesaurus,
+  normaliserTerme,
+} from '../../scripts/lib/thesaurus.mjs';
 
 import {
   DELAI_REQUETE_MS,
@@ -11,6 +25,15 @@ import {
   SUPABASE_URL,
   TAILLE_RESULTATS,
 } from '../config.js';
+
+/** Nombre d'élargissements proposés sous le champ de recherche. */
+const TAILLE_SYNONYMES = 10;
+
+/**
+ * Thésaurus embarqué : il sert au repli local **et** à l'affichage des synonymes employés.
+ * Construit une fois, au chargement du module.
+ */
+export const THESAURUS = construireThesaurus(lireThesaurus(thesaurusCsv));
 
 /* ------------------------------------------------------------------ *
  * Modèles
@@ -66,6 +89,15 @@ export interface ActeRef {
   readonly sous_chapitre_libelle?: string | null;
   /** Synonymes et vocabulaire courant indexés par la base. */
   readonly mots_cles?: string | null;
+}
+
+/** Synonyme proposé sous le champ de recherche (« recherche élargie à… »). */
+export interface SynonymeRef {
+  readonly terme: string;
+  readonly terme_normalise: string;
+  readonly notion: string;
+  readonly type: string;
+  readonly domaine: string;
 }
 
 /** Date de mise à jour d'une table de référentiel. */
@@ -230,11 +262,49 @@ export async function verifierReferentiel(): Promise<boolean> {
  * Recherches (avec repli local)
  * ------------------------------------------------------------------ */
 
-function normaliser(texte: string): string {
-  return texte
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase();
+/** Texte de recherche d'une fiche de secours : normalisé et encadré d'espaces. */
+function texteDeSecours(...parties: readonly (string | null | undefined)[]): string {
+  return ` ${normaliserTerme(parties.filter(Boolean).join(' '))} `;
+}
+
+/**
+ * Fiches de secours classées pour une saisie : le thésaurus élargit la requête, puis les
+ * fiches sont ordonnées par nombre de mots reconnus — même logique que la base (mots écrits
+ * d'abord, synonymes ensuite).
+ */
+function classerSecours<T>(
+  fiches: readonly T[],
+  texte: (fiche: T) => string,
+  requete: string,
+  domaine: 'actes' | 'medicaments',
+): readonly T[] {
+  const ecrits = THESAURUS.elargir(requete, domaine);
+  return fiches
+    .map((fiche) => {
+      const cible = texte(fiche);
+      return { fiche, score: ecrits.filter((terme) => contientTerme(cible, terme)).length };
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || texte(a.fiche).length - texte(b.fiche).length)
+    .map(({ fiche }) => fiche);
+}
+
+/** Synonymes d'une saisie : proposés par la base, ou par le thésaurus embarqué. */
+export async function synonymesDe(
+  terme: string,
+  domaine: 'actes' | 'medicaments',
+): Promise<readonly SynonymeRef[]> {
+  const requete = terme.trim();
+  if (requete.length < 2) return [];
+  try {
+    return await appelerRpc<SynonymeRef[]>('synonymes_de', {
+      p_terme: requete,
+      p_domaine: domaine,
+      p_limite: TAILLE_SYNONYMES,
+    });
+  } catch {
+    return THESAURUS.synonymesDe(requete, domaine).slice(0, TAILLE_SYNONYMES);
+  }
 }
 
 /** Recherche de spécialités pharmaceutiques. */
@@ -251,11 +321,11 @@ export async function rechercherMedicaments(
       p_limite: limite,
     });
   } catch {
-    const cible = normaliser(requete);
-    return MEDICAMENTS_SECOURS.filter(
-      (m) =>
-        normaliser(m.denomination).includes(cible) ||
-        normaliser(m.dci ?? '').includes(cible),
+    return classerSecours(
+      MEDICAMENTS_SECOURS,
+      (m) => texteDeSecours(m.denomination, m.dci, m.cis),
+      requete,
+      'medicaments',
     ).slice(0, limite);
   }
 }
@@ -274,9 +344,11 @@ export async function rechercherActesCcam(
       p_limite: limite,
     });
   } catch {
-    const cible = normaliser(requete);
-    return ACTES_SECOURS.filter(
-      (a) => normaliser(a.code).startsWith(cible) || normaliser(a.libelle).includes(cible),
+    return classerSecours(
+      ACTES_SECOURS,
+      (a) => texteDeSecours(a.code, a.libelle, a.mots_cles),
+      requete,
+      'actes',
     ).slice(0, limite);
   }
 }

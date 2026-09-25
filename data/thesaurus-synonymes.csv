@@ -1,0 +1,471 @@
+# =====================================================================
+# HDJ Vérif — thésaurus des synonymes de la recherche par mots-clés
+#
+# OBJET
+#   Un soignant (ou un secrétariat) ne cherche pas un acte avec les mots de la
+#   nomenclature : il écrit « IRM » là où la CCAM écrit « remnographie », « scanner »
+#   là où elle écrit « scanographie », « fibro » là où elle écrit « endoscopie
+#   œso-gastro-duodénale ». De même, il cherche un médicament par sa classe
+#   (« anti-TNF ») plutôt que par sa DCI.
+#
+#   Ce fichier réunit le **vocabulaire de recherche** en *notions* : chaque ligne
+#   appartient à une notion (le concept pivot) et porte un terme, éventuellement typé
+#   (sigle, ancienne dénomination, anglicisme, nom commercial, classe thérapeutique…).
+#
+# RÈGLE DE LECTURE
+#   • Deux termes de la même notion sont **synonymes** : chercher l'un trouve l'autre.
+#   • Un terme normalisé n'appartient qu'à **une seule** notion (vérifié par les tests) :
+#     l'élargissement reste prévisible.
+#   • Colonne `domaine` : `actes` (nomenclature CCAM), `medicaments` (BDPM),
+#     `commun` (les deux). Les notions `actes`/`commun` alimentent aussi la colonne
+#     `mots_cles` des actes à l'import ; les notions `medicaments` n'y sont jamais
+#     injectées.
+#
+#   Ce thésaurus est une **aide à la recherche**, pas une nomenclature : il rapproche
+#   des mots, il ne fonde aucune décision médico-administrative.
+#
+# COLONNES
+#   notion  · concept pivot, en clair (jamais affiché à l'usager)
+#   terme   · mot ou expression tel qu'on l'écrit
+#   type    · vocabulaire courant | sigle | ancienne dénomination | anglicisme |
+#             nom commercial | classe thérapeutique | libellé officiel
+#   domaine · actes | medicaments | commun
+#   source  · d'où vient le rapprochement (usage courant, CCAM, BDPM, Manuel des GHM…)
+# =====================================================================
+notion;terme;type;domaine;source
+
+# --- Imagerie ---------------------------------------------------------
+imagerie;imagerie;vocabulaire courant;actes;usage courant
+imagerie;imagerie medicale;vocabulaire courant;actes;usage courant
+imagerie;examen d imagerie;vocabulaire courant;actes;usage courant
+imagerie;radiologie;vocabulaire courant;actes;usage courant
+
+imagerie par resonance magnetique;IRM;sigle;actes;CCAM (remnographie)
+imagerie par resonance magnetique;remnographie;libellé officiel;actes;CCAM
+imagerie par resonance magnetique;resonance magnetique;vocabulaire courant;actes;usage courant
+imagerie par resonance magnetique;imagerie par resonance magnetique;libellé officiel;actes;Académie nationale de médecine
+imagerie par resonance magnetique;mri;anglicisme;actes;usage courant
+imagerie par resonance magnetique;magnetic resonance imaging;anglicisme;actes;usage courant
+
+tomodensitometrie;scanner;vocabulaire courant;actes;usage courant
+tomodensitometrie;TDM;sigle;actes;Académie nationale de médecine
+tomodensitometrie;tomodensitometrie;libellé officiel;actes;CCAM (scanographie)
+tomodensitometrie;scanographie;libellé officiel;actes;CCAM
+tomodensitometrie;examen tomodensitometrique;vocabulaire courant;actes;usage courant
+tomodensitometrie;ct scanner;anglicisme;actes;usage courant
+
+radiographie;radio;vocabulaire courant;actes;usage courant
+radiographie;radiographie;libellé officiel;actes;CCAM
+radiographie;RX;sigle;actes;usage courant
+radiographie;rayons x;vocabulaire courant;actes;CCAM (acte par rayons x)
+radiographie;cliche radiographique;vocabulaire courant;actes;usage courant
+
+echographie;echo;vocabulaire courant;actes;usage courant
+echographie;echographie;libellé officiel;actes;CCAM
+echographie;ultrason;vocabulaire courant;actes;CCAM (acte par ultrasons)
+echographie;ultrasons;vocabulaire courant;actes;CCAM
+echographie;ultrasonore;vocabulaire courant;actes;CCAM
+echographie;ecographie;vocabulaire courant;actes;usage courant
+
+scintigraphie;scintigraphie;libellé officiel;actes;CCAM
+scintigraphie;medecine nucleaire;vocabulaire courant;actes;usage courant
+
+pet scanner;TEP;sigle;actes;Académie nationale de médecine
+pet scanner;pet scanner;anglicisme;actes;usage courant
+pet scanner;tomographie par emission de positons;libellé officiel;actes;Académie nationale de médecine
+
+produit de contraste;produit de contraste;vocabulaire courant;commun;usage courant
+produit de contraste;produit de contraste iode;vocabulaire courant;actes;usage courant
+produit de contraste;gadolinium;vocabulaire courant;commun;usage courant
+
+# --- Explorations fonctionnelles --------------------------------------
+electrocardiogramme;ECG;sigle;actes;usage courant
+electrocardiogramme;electrocardiogramme;libellé officiel;actes;CCAM (électrocardiographie)
+electrocardiogramme;electrocardiographie;libellé officiel;actes;CCAM
+
+electromyogramme;EMG;sigle;actes;usage courant
+electromyogramme;electromyogramme;libellé officiel;actes;CCAM (électromyographie)
+electromyogramme;electromyographie;libellé officiel;actes;CCAM
+
+electroencephalogramme;EEG;sigle;actes;usage courant
+electroencephalogramme;electroencephalogramme;libellé officiel;actes;CCAM (électroencéphalographie)
+electroencephalogramme;electroencephalographie;libellé officiel;actes;CCAM
+electroencephalogramme;holter eeg;vocabulaire courant;actes;usage courant
+
+epreuve fonctionnelle respiratoire;epreuve fonctionnelle respiratoire;libellé officiel;actes;CCAM
+epreuve fonctionnelle respiratoire;EFR;sigle;actes;usage courant
+epreuve fonctionnelle respiratoire;spirometrie;vocabulaire courant;actes;Académie nationale de médecine
+
+
+# --- Endoscopie et voies digestives -----------------------------------
+endoscopie;endoscopie;libellé officiel;actes;CCAM
+endoscopie;endoscopique;libellé officiel;actes;CCAM
+endoscopie;fibroscopie;vocabulaire courant;actes;usage courant
+endoscopie;fibro;vocabulaire courant;actes;usage courant
+
+gastroscopie;gastroscopie;libellé officiel;actes;CCAM (endoscopie œso-gastro-duodénale)
+gastroscopie;EOGD;sigle;actes;usage courant
+gastroscopie;oesogastroduodenale;libellé officiel;actes;CCAM
+gastroscopie;estomac;vocabulaire courant;actes;usage courant
+gastroscopie;gastroscopie haute;vocabulaire courant;actes;usage courant
+
+coloscopie;coloscopie;libellé officiel;actes;CCAM (coloscopie totale)
+coloscopie;colonoscopie;libellé officiel;actes;CCAM
+
+oesophage;oesophage;libellé officiel;actes;CCAM
+oesophage;oesophagien;libellé officiel;actes;CCAM
+oesophage;oesophagienne;libellé officiel;actes;CCAM
+
+endoscopie bronchique;bronchoscopie;libellé officiel;actes;CCAM
+endoscopie bronchique;fibroscopie bronchique;vocabulaire courant;actes;usage courant
+endoscopie bronchique;bronches;vocabulaire courant;actes;usage courant
+
+cystoscopie;cystoscopie;libellé officiel;actes;CCAM
+cystoscopie;endoscopie vesicale;libellé officiel;actes;CCAM
+cystoscopie;vessie;vocabulaire courant;actes;usage courant
+
+arthroscopie;arthroscopie;libellé officiel;actes;CCAM
+arthroscopie;arthroscopique;libellé officiel;actes;CCAM
+arthroscopie;articulation;vocabulaire courant;actes;usage courant
+
+coelioscopie;coelioscopie;libellé officiel;actes;CCAM
+coelioscopie;laparoscopie;libellé officiel;actes;CCAM
+coelioscopie;laparotomie;vocabulaire courant;actes;usage courant
+
+# --- Chirurgie : gestes et vocabulaire --------------------------------
+chirurgie;chirurgie;libellé officiel;actes;CCAM
+chirurgie;chirurgical;libellé officiel;actes;CCAM
+chirurgie;operation;vocabulaire courant;actes;usage courant
+chirurgie;intervention chirurgicale;vocabulaire courant;actes;usage courant
+chirurgie;bloc operatoire;vocabulaire courant;actes;usage courant
+
+exerese;exerese;libellé officiel;actes;CCAM
+exerese;ablation;vocabulaire courant;actes;usage courant
+exerese;retrait;vocabulaire courant;actes;usage courant
+exerese;excision;libellé officiel;actes;CCAM
+exerese;resection;vocabulaire courant;actes;usage courant
+
+biopsie;biopsie;libellé officiel;actes;CCAM
+biopsie;microbiopsie;libellé officiel;actes;CCAM
+biopsie;prelevement;vocabulaire courant;actes;usage courant
+biopsie;prelevement tissulaire;vocabulaire courant;actes;usage courant
+
+ponction;ponction;libellé officiel;actes;CCAM
+ponction;ponction lombaire;libellé officiel;actes;CCAM
+ponction;ponction articulaire;libellé officiel;actes;CCAM
+
+drainage;drainage;libellé officiel;actes;CCAM
+drainage;evacuation;vocabulaire courant;actes;usage courant
+drainage;drain;vocabulaire courant;actes;usage courant
+
+suture;suture;libellé officiel;actes;CCAM
+suture;points;vocabulaire courant;actes;usage courant
+suture;plaie;vocabulaire courant;actes;usage courant
+
+craniotomie;craniotomie;libellé officiel;actes;CCAM
+craniotomie;ouverture du crane;vocabulaire courant;actes;usage courant
+craniotomie;neurochirurgie;vocabulaire courant;actes;usage courant
+
+perfusion;perfusion;libellé officiel;actes;CCAM
+perfusion;intraveineuse;vocabulaire courant;actes;usage courant
+perfusion;IV;sigle;actes;usage courant
+
+injection;injection;libellé officiel;actes;CCAM
+injection;injectable;vocabulaire courant;actes;usage courant
+injection;injection intraveineuse;vocabulaire courant;actes;usage courant
+
+dilatation;dilatation;libellé officiel;actes;CCAM
+dilatation;elargissement;vocabulaire courant;actes;usage courant
+dilatation;calibrage;vocabulaire courant;actes;usage courant
+
+cauterisation;cauterisation;libellé officiel;actes;CCAM
+cauterisation;electrocoagulation;vocabulaire courant;actes;usage courant
+cauterisation;coagulation;vocabulaire courant;actes;usage courant
+
+catheter;catheter;libellé officiel;actes;CCAM
+catheter;voie veineuse;vocabulaire courant;actes;usage courant
+catheter;chambre implante;vocabulaire courant;actes;usage courant
+
+# --- Dispositifs et prothèses -----------------------------------------
+prothese;prothese;libellé officiel;actes;CCAM
+prothese;implant;vocabulaire courant;actes;usage courant
+prothese;materiel d osteosynthese;vocabulaire courant;actes;usage courant
+
+endoprothese;endoprothese;libellé officiel;actes;CCAM
+endoprothese;stent;vocabulaire courant;actes;usage courant
+endoprothese;ressort;vocabulaire courant;actes;usage courant
+
+prothese de hanche;prothese de hanche;vocabulaire courant;actes;usage courant
+prothese de hanche;PTH;sigle;actes;usage courant
+prothese de hanche;prothese totale de hanche;libellé officiel;actes;CCAM
+prothese de hanche;hanche;vocabulaire courant;actes;usage courant
+
+prothese de genou;prothese de genou;vocabulaire courant;actes;usage courant
+prothese de genou;PTG;sigle;actes;usage courant
+prothese de genou;genou;vocabulaire courant;actes;usage courant
+
+osteosynthese;osteosynthese;libellé officiel;actes;CCAM
+osteosynthese;plaque;vocabulaire courant;actes;usage courant
+osteosynthese;broche;vocabulaire courant;actes;usage courant
+
+pacemaker;pacemaker;anglicisme;actes;usage courant
+pacemaker;stimulateur cardiaque;libellé officiel;actes;CCAM
+pacemaker;stimulateur;vocabulaire courant;actes;usage courant
+
+defibrillateur;defibrillateur;libellé officiel;actes;CCAM
+defibrillateur;DAI;sigle;actes;usage courant
+defibrillateur;choc electrique;vocabulaire courant;actes;usage courant
+
+# --- Cardiologie et vaisseaux -----------------------------------------
+coronaire;coronaire;libellé officiel;actes;CCAM
+coronaire;coronarienne;libellé officiel;actes;CCAM
+coronaire;coeur;vocabulaire courant;actes;usage courant
+
+angioplastie;angioplastie;libellé officiel;actes;CCAM
+angioplastie;ballon;vocabulaire courant;actes;usage courant
+angioplastie;dilatation coronaire;vocabulaire courant;actes;usage courant
+
+valve cardiaque;valve;vocabulaire courant;actes;usage courant
+valve cardiaque;valvul;libellé officiel;actes;CCAM
+valve cardiaque;valvuloplastie;libellé officiel;actes;CCAM
+
+anevrisme;anevrisme;libellé officiel;actes;CCAM
+anevrisme;aorta;vocabulaire courant;actes;usage courant
+anevrisme;artere;vocabulaire courant;actes;usage courant
+
+# --- Appareil digestif, abdomen ---------------------------------------
+appendice;appendice;libellé officiel;actes;CCAM
+appendice;appendicectomie;libellé officiel;actes;CCAM
+appendice;appendicite;vocabulaire courant;actes;usage courant
+
+cholecystectomie;cholecystectomie;libellé officiel;actes;CCAM
+cholecystectomie;vesicule biliaire;vocabulaire courant;actes;usage courant
+cholecystectomie;lithiase vesiculaire;vocabulaire courant;actes;usage courant
+cholecystectomie;calcul;vocabulaire courant;actes;usage courant
+
+hemorroide;hemorroide;libellé officiel;actes;CCAM
+hemorroide;hemorroides;libellé officiel;actes;CCAM
+hemorroide;anus;vocabulaire courant;actes;usage courant
+
+fissure anale;fissure;vocabulaire courant;actes;usage courant
+fissure anale;fissure anale;libellé officiel;actes;CCAM
+fissure anale;sphincter;vocabulaire courant;actes;usage courant
+
+polype;polype;libellé officiel;actes;CCAM
+polype;polypes;libellé officiel;actes;CCAM
+polype;polypectomie;libellé officiel;actes;CCAM
+
+# --- Appareil urinaire et génital -------------------------------------
+prostate;prostate;libellé officiel;actes;CCAM
+prostate;prostatique;libellé officiel;actes;CCAM
+prostate;prostatectomie;libellé officiel;actes;CCAM
+
+nephrectomie;nephrectomie;libellé officiel;actes;CCAM
+nephrectomie;rein;vocabulaire courant;actes;usage courant
+nephrectomie;renal;vocabulaire courant;actes;usage courant
+
+lithotritie;lithotritie;libellé officiel;actes;CCAM
+lithotritie;calculs urinaires;vocabulaire courant;actes;usage courant
+lithotritie;lithiase urinaire;vocabulaire courant;actes;usage courant
+
+hysterectomie;hysterectomie;libellé officiel;actes;CCAM
+hysterectomie;uterus;vocabulaire courant;actes;usage courant
+hysterectomie;fibrome;vocabulaire courant;actes;usage courant
+
+cesarienne;cesarienne;libellé officiel;actes;CCAM
+cesarienne;accouchement;vocabulaire courant;actes;usage courant
+cesarienne;obstetrical;vocabulaire courant;actes;usage courant
+
+# --- Ostéoarticulaire -------------------------------------------------
+fracture;fracture;libellé officiel;actes;CCAM
+fracture;traumatologie;vocabulaire courant;actes;usage courant
+
+hallux valgus;hallux;vocabulaire courant;actes;usage courant
+hallux valgus;hallux valgus;libellé officiel;actes;CCAM
+hallux valgus;oignon du pied;vocabulaire courant;actes;usage courant
+
+kyste;kyste;libellé officiel;actes;CCAM
+kyste;kystique;libellé officiel;actes;CCAM
+kyste;ganglion;vocabulaire courant;actes;usage courant
+
+# --- ORL, ophtalmologie ------------------------------------------------
+amygdalectomie;amygdalectomie;libellé officiel;actes;CCAM
+amygdalectomie;amygdale;vocabulaire courant;actes;usage courant
+amygdalectomie;amygdales;vocabulaire courant;actes;usage courant
+
+adenoides;vegetations;vocabulaire courant;actes;usage courant
+adenoides;adenoides;libellé officiel;actes;CCAM
+adenoides;adenoidectomie;libellé officiel;actes;CCAM
+
+cataracte;cataracte;libellé officiel;actes;CCAM
+cataracte;cristallin;vocabulaire courant;actes;usage courant
+cataracte;oeil;vocabulaire courant;actes;usage courant
+cataracte;ophtalmologie;vocabulaire courant;actes;usage courant
+
+# --- Endocrinologie, métabolisme, obésité ------------------------------
+thyroide;thyroide;libellé officiel;actes;CCAM
+thyroide;thyroidectomie;libellé officiel;actes;CCAM
+thyroide;thyroidien;libellé officiel;actes;CCAM
+
+obesite;obesite;libellé officiel;actes;CCAM
+obesite;surpoids;vocabulaire courant;actes;usage courant
+obesite;by-pass;vocabulaire courant;actes;usage courant
+obesite;sleeve;anglicisme;actes;usage courant
+
+# --- Tumeurs, infections, hématologie ---------------------------------
+tumeur;tumeur;libellé officiel;actes;CCAM
+tumeur;neoplasme;libellé officiel;actes;CCAM
+tumeur;cancer;vocabulaire courant;actes;usage courant
+tumeur;carcinome;libellé officiel;actes;CCAM
+tumeur;lesion tumorale;vocabulaire courant;actes;usage courant
+
+abces;abces;libellé officiel;actes;CCAM
+abces;collection purulente;vocabulaire courant;actes;usage courant
+abces;suppuration;vocabulaire courant;actes;usage courant
+
+greffe;greffe;libellé officiel;actes;CCAM
+greffe;greffon;libellé officiel;actes;CCAM
+greffe;transplantation;libellé officiel;actes;CCAM
+
+transfusion;transfusion;libellé officiel;commun;CCAM
+transfusion;culot globulaire;vocabulaire courant;commun;usage courant
+transfusion;CGR;sigle;commun;usage courant
+transfusion;transfusion sanguine;libellé officiel;commun;CCAM
+
+# --- Explorations et traitements spécialisés ---------------------------
+dialyse;dialyse;libellé officiel;commun;CCAM
+dialyse;hemodialyse;libellé officiel;commun;CCAM
+dialyse;epuration renale;vocabulaire courant;commun;usage courant
+dialyse;epuration extra-renale;vocabulaire courant;commun;usage courant
+
+chimiotherapie;chimiotherapie;libellé officiel;commun;CCAM
+chimiotherapie;cytotoxique;classe thérapeutique;commun;usage courant
+chimiotherapie;antineoplasique;classe thérapeutique;commun;usage courant
+chimiotherapie;cure de chimio;vocabulaire courant;commun;usage courant
+
+radiotherapie;radiotherapie;libellé officiel;commun;CCAM
+radiotherapie;radiotherapique;libellé officiel;commun;CCAM
+radiotherapie;irradiation;vocabulaire courant;commun;usage courant
+
+oxygene;oxygene;libellé officiel;commun;CCAM
+oxygene;oxygenotherapie;libellé officiel;commun;CCAM
+oxygene;caisson hyperbare;vocabulaire courant;commun;usage courant
+
+anesthesie;anesthesie;libellé officiel;actes;CCAM
+anesthesie;anesthesique;libellé officiel;actes;CCAM
+anesthesie;anesthesie generale;libellé officiel;actes;CCAM
+anesthesie;sedation;vocabulaire courant;actes;usage courant
+
+echange plasmatique;echange plasmatique;libellé officiel;commun;CCAM
+echange plasmatique;plasmapherese;libellé officiel;commun;Académie nationale de médecine
+echange plasmatique;echange plasmatique therapeutique;libellé officiel;commun;CCAM
+
+# --- Accidents vasculaires --------------------------------------------
+# Les actes ne portent pas le syndrome mais le geste : la notion réunit donc les deux
+# vocabularies (« AVC » comme « thrombectomie », « carotide »), sans quoi chercher « AVC »
+# ne trouverait aucun acte. AIT y est joint : les gestes sont les mêmes.
+accident vasculaire cerebral;AVC;sigle;actes;usage courant
+accident vasculaire cerebral;accident vasculaire cerebral;libellé officiel;actes;Académie nationale de médecine
+accident vasculaire cerebral;attaque cerebrale;vocabulaire courant;actes;usage courant
+accident vasculaire cerebral;stroke;anglicisme;actes;usage courant
+accident vasculaire cerebral;AIT;sigle;actes;usage courant
+accident vasculaire cerebral;accident ischemique transitoire;libellé officiel;actes;Académie nationale de médecine
+accident vasculaire cerebral;ischemie cerebrale transitoire;libellé officiel;actes;Académie nationale de médecine
+accident vasculaire cerebral;thrombectomie;libellé officiel;actes;CCAM
+accident vasculaire cerebral;thrombolyse;libellé officiel;actes;CCAM
+accident vasculaire cerebral;carotide;libellé officiel;actes;CCAM
+
+# --- Classes thérapeutiques (médicaments) ------------------------------
+immunoglobuline;immunoglobuline;libellé officiel;medicaments;BDPM (DCI)
+immunoglobuline;immunoglobulines;libellé officiel;medicaments;BDPM (DCI)
+immunoglobuline;immunoglobuline humaine normale;libellé officiel;medicaments;BDPM (DCI)
+immunoglobuline;IgIV;sigle;medicaments;usage courant
+immunoglobuline;IVIG;anglicisme;medicaments;usage courant
+
+anticorps monoclonaux;anticorps monoclonaux;classe thérapeutique;medicaments;BDPM (DCI)
+anticorps monoclonaux;anticorps monoclonal;classe thérapeutique;medicaments;BDPM (DCI)
+anticorps monoclonaux;therapie ciblee;classe thérapeutique;medicaments;usage courant
+anticorps monoclonaux;biotherapie;classe thérapeutique;medicaments;usage courant
+anticorps monoclonaux;biomedicament;classe thérapeutique;medicaments;usage courant
+
+anti-tnf;anti-TNF;classe thérapeutique;medicaments;HAS
+anti-tnf;anti-tnf alpha;classe thérapeutique;medicaments;HAS
+anti-tnf;infliximab;libellé officiel;medicaments;BDPM (DCI)
+anti-tnf;adalimumab;libellé officiel;medicaments;BDPM (DCI)
+anti-tnf;etanercept;libellé officiel;medicaments;BDPM (DCI)
+anti-tnf;golimumab;libellé officiel;medicaments;BDPM (DCI)
+anti-tnf;certolizumab;libellé officiel;medicaments;BDPM (DCI)
+
+inhibiteur de point de controle;anti-PD1;classe thérapeutique;medicaments;HAS
+inhibiteur de point de controle;anti-PD-L1;classe thérapeutique;medicaments;HAS
+inhibiteur de point de controle;pembrolizumab;libellé officiel;medicaments;BDPM (DCI)
+inhibiteur de point de controle;nivolumab;libellé officiel;medicaments;BDPM (DCI)
+inhibiteur de point de controle;ipilimumab;libellé officiel;medicaments;BDPM (DCI)
+inhibiteur de point de controle;atezolizumab;libellé officiel;medicaments;BDPM (DCI)
+inhibiteur de point de controle;immunotherapie;classe thérapeutique;medicaments;usage courant
+
+anti-angiogenique;anti-VEGF;classe thérapeutique;medicaments;HAS
+anti-angiogenique;anti-angiogenique;classe thérapeutique;medicaments;HAS
+anti-angiogenique;bevacizumab;libellé officiel;medicaments;BDPM (DCI)
+anti-angiogenique;ranibizumab;libellé officiel;medicaments;BDPM (DCI)
+anti-angiogenique;aflibercept;libellé officiel;medicaments;BDPM (DCI)
+
+anti-cd20;anti-CD20;classe thérapeutique;medicaments;HAS
+anti-cd20;rituximab;libellé officiel;medicaments;BDPM (DCI)
+anti-cd20;obinutuzumab;libellé officiel;medicaments;BDPM (DCI)
+
+facteur de croissance;facteur de croissance;classe thérapeutique;medicaments;usage courant
+facteur de croissance;G-CSF;sigle;medicaments;HAS
+facteur de croissance;filgrastim;libellé officiel;medicaments;BDPM (DCI)
+facteur de croissance;pegfilgrastim;libellé officiel;medicaments;BDPM (DCI)
+facteur de croissance;lenograstim;libellé officiel;medicaments;BDPM (DCI)
+
+corticoide;corticoide;classe thérapeutique;medicaments;usage courant
+corticoide;corticotherapie;classe thérapeutique;medicaments;usage courant
+corticoide;methylprednisolone;libellé officiel;medicaments;BDPM (DCI)
+corticoide;prednisolone;libellé officiel;medicaments;BDPM (DCI)
+corticoide;dexamethasone;libellé officiel;medicaments;BDPM (DCI)
+
+anticoagulant;anticoagulant;classe thérapeutique;medicaments;usage courant
+anticoagulant;heparine;classe thérapeutique;medicaments;BDPM (DCI)
+anticoagulant;HBPM;sigle;medicaments;usage courant
+anticoagulant;AVK;sigle;medicaments;usage courant
+anticoagulant;anticoagulant oral direct;classe thérapeutique;medicaments;HAS
+anticoagulant;enoxaparine;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;tinzaparine;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;dalteparine;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;fondaparinux;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;apixaban;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;rivaroxaban;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;dabigatran;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;edoxaban;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;warfarine;libellé officiel;medicaments;BDPM (DCI)
+anticoagulant;fluindione;libellé officiel;medicaments;BDPM (DCI)
+
+fer injectable;fer injectable;classe thérapeutique;medicaments;usage courant
+fer injectable;ferrique;libellé officiel;medicaments;BDPM (DCI — CARBOXYMALTOSE FERRIQUE)
+fer injectable;ferreux;libellé officiel;medicaments;BDPM (DCI — SULFATE FERREUX)
+fer injectable;carboxymaltose ferrique;libellé officiel;medicaments;BDPM (DCI)
+fer injectable;hydroxyde ferrique saccharose;libellé officiel;medicaments;BDPM (DCI)
+
+vitamine b12;vitamine B12;classe thérapeutique;medicaments;usage courant
+vitamine b12;cyanocobalamine;libellé officiel;medicaments;BDPM (DCI)
+vitamine b12;hydroxocobalamine;libellé officiel;medicaments;BDPM (DCI)
+vitamine b12;cobalamine;libellé officiel;medicaments;BDPM (DCI)
+
+albumine;albumine;classe thérapeutique;medicaments;BDPM (DCI)
+albumine;albumine humaine;libellé officiel;medicaments;BDPM (DCI)
+
+antibiotique;antibiotique;classe thérapeutique;medicaments;usage courant
+antibiotique;antibiotherapie;classe thérapeutique;medicaments;usage courant
+antibiotique;antibiogramme;vocabulaire courant;medicaments;usage courant
+
+insuline;insuline;libellé officiel;medicaments;BDPM (DCI)
+insuline;pompe a insuline;vocabulaire courant;medicaments;usage courant
+
+chorio gonadotrophine;hCG;sigle;medicaments;BDPM (DCI)
+chorio gonadotrophine;chorio gonadotrophine;libellé officiel;medicaments;BDPM (DCI)
+chorio gonadotrophine;gonadotrophine chorionique;libellé officiel;medicaments;BDPM (DCI)
+
+vaccin;vaccin;classe thérapeutique;medicaments;BDPM
+vaccin;vaccination;classe thérapeutique;medicaments;usage courant

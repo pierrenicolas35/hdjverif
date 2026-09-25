@@ -6,6 +6,12 @@
 --
 -- Les fonctions sont `security invoker` : elles s'exécutent avec les droits de
 -- l'appelant (rôle `anon`), donc soumises à la RLS et en lecture seule.
+--
+-- NB : `supabase/ccam-arbres.sql` (mots-clés « grand public », arborescence) puis
+--      `supabase/thesaurus.sql` (thésaurus des synonymes) REDÉFINISSENT ensuite les
+--      deux fonctions de recherche. Le présent fichier reste la version de base et la
+--      description du modèle ; en cas d'installation neuve, l'appliquer AVANT les deux
+--      autres.
 -- =====================================================================
 
 create extension if not exists unaccent;
@@ -79,9 +85,10 @@ $$;
 -- **définie pour tous les actes**, et non sur une colonne vide hors jeu libéral.
 --
 -- NB : `supabase/ccam-arbres.sql` REDÉFINIT cette fonction pour y ajouter la
---      recherche par mots-clés (§ « grand public ») et l'arborescence. Le
---      présent fichier reste la version de base ; en cas d'installation neuve,
---      appliquer `ccam-arbres.sql` APRÈS celui-ci.
+--      recherche par mots-clés (§ « grand public ») et l'arborescence, puis
+--      `supabase/thesaurus.sql` la reprend pour y brancher le thésaurus des synonymes.
+--      Le présent fichier reste la version de base ; en cas d'installation neuve,
+--      appliquer `ccam-arbres.sql` APRÈS celui-ci, puis `thesaurus.sql` en DERNIER.
 -- ---------------------------------------------------------------------
 drop function if exists public.rechercher_ccam(text, integer);
 

@@ -52,6 +52,7 @@ import {
   versCsv,
 } from './lib/referentiels.mjs';
 import { lireSource, telechargerSource } from './lib/sources.mjs';
+import { thesaurusDepuisCsv } from './lib/thesaurus.mjs';
 import {
   enrichirActesAvecGhm,
   lireActesClassantsGhm,
@@ -168,6 +169,89 @@ function controler(medicaments, origineReserve) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Thésaurus des synonymes
+ * ------------------------------------------------------------------ */
+
+/** Contrôle le thésaurus avant écriture : un thésaurus vide ou appauvri appauvrit la recherche. */
+function controlerThesaurus(thesaurus) {
+  const constats = [];
+  let erreurs = 0;
+
+  const parNotion = new Map();
+  for (const entree of thesaurus.entrees) {
+    if (!parNotion.has(entree.notion)) parNotion.set(entree.notion, []);
+    parNotion.get(entree.notion).push(entree);
+  }
+  const notionsSeules = [...parNotion].filter(([, entrees]) => entrees.length < 2);
+  const domaines = thesaurus.entrees.reduce((compte, entree) => {
+    compte[entree.domaine] = (compte[entree.domaine] ?? 0) + 1;
+    return compte;
+  }, {});
+
+  // Une notion à un seul terme n'apprend rien : elle n'élargit aucune recherche.
+  if (notionsSeules.length > 0) {
+    erreurs += 1;
+    constats.push(`✗ ${notionsSeules.length} notion(s) à un seul terme : ${notionsSeules.map(([n]) => n).join(', ')}`);
+  }
+  if (thesaurus.entrees.length < 200) {
+    erreurs += 1;
+    constats.push(`✗ thésaurus trop pauvre : ${thesaurus.entrees.length} entrées (< 200)`);
+  }
+  const domaineActes = (domaines['actes'] ?? 0) + (domaines['commun'] ?? 0);
+  if (domaineActes < 150 || (domaines['medicaments'] ?? 0) < 40) {
+    erreurs += 1;
+    constats.push(
+      `✗ couverture insuffisante : ${domaineActes} termes pour les actes, ` +
+        `${domaines['medicaments'] ?? 0} pour les médicaments`,
+    );
+  }
+
+  // Cas de référence : le vocabulaire pour lequel le thésaurus a été écrit.
+  const CAS_THESAURUS = [
+    ['scanner', 'scanographie'],
+    ['irm', 'remnographie'],
+    ['ecg', 'electrocardiogramme'],
+    ['avc', 'accident vasculaire cerebral'],
+    ['anti-tnf', 'infliximab'],
+    ['immunoglobuline', 'ivig'],
+  ];
+  for (const [saisie, synonymeAttendu] of CAS_THESAURUS) {
+    const elargis = thesaurus.elargir(saisie);
+    const ok = elargis.includes(synonymeAttendu);
+    if (!ok) erreurs += 1;
+    constats.push(
+      `${ok ? '✓' : '✗'} « ${saisie} » → ${elargis.length} terme(s)` +
+        (ok ? ` dont « ${synonymeAttendu} »` : ` — « ${synonymeAttendu} » ABSENT`),
+    );
+  }
+
+  constats.push(
+    `· ${thesaurus.entrees.length} termes · ${parNotion.size} notions · ` +
+      `actes ${domaines['actes'] ?? 0} · commun ${domaines['commun'] ?? 0} · ` +
+      `médicaments ${domaines['medicaments'] ?? 0}`,
+  );
+  return { constats, erreurs };
+}
+
+/** Remplace intégralement une table : un terme retiré du fichier doit disparaître de la base. */
+async function remplacerTable(table, lignes, cleConflit) {
+  const url = process.env.SUPABASE_URL;
+  const cle = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const reponse = await fetch(`${url}/rest/v1/${table}?id=gt.0`, {
+    method: 'DELETE',
+    headers: {
+      apikey: cle,
+      Authorization: `Bearer ${cle}`,
+      Prefer: 'return=minimal',
+    },
+  });
+  if (!reponse.ok) {
+    throw new Error(`Purge de ${table} échouée (HTTP ${reponse.status}) : ${await reponse.text()}`);
+  }
+  await ecrireSupabase(table, lignes, cleConflit);
+}
+
+/* ------------------------------------------------------------------ *
  * Écriture Supabase
  * ------------------------------------------------------------------ */
 
@@ -275,12 +359,28 @@ async function principal() {
   for (const c of constats) log(`  ${c}`);
   if (erreurs > 0) throw new Error(`${erreurs} contrôle(s) en échec : la base n’a pas été modifiée.`);
 
+  // --- Thésaurus des synonymes --------------------------------------
+  // Fichier **versionné** (aucun téléchargement) : il porte les rapprochements de
+  // vocabulaire, alimente la colonne `mots_cles` des actes et la table
+  // `thesaurus_synonymes` interrogée par la recherche de l'application.
+  const thesaurus = thesaurusDepuisCsv(
+    readFileSync(join(DATA_DIR, 'thesaurus-synonymes.csv'), 'utf8'),
+  );
+  const controleThesaurus = controlerThesaurus(thesaurus);
+  for (const c of controleThesaurus.constats) log(`  ${c}`);
+  if (controleThesaurus.erreurs > 0) {
+    throw new Error(
+      `${controleThesaurus.erreurs} contrôle(s) du thésaurus en échec : la base n’a pas été modifiée.`,
+    );
+  }
+
   // --- CCAM ---------------------------------------------------------
   const contenuCcam = await recuperer('ccam', rafraichir);
   const surcharges = lireSurchargesCcam(readFileSync(join(DATA_DIR, 'ccam-overlay.csv'), 'utf8'));
   const actes = construireActes({
     contenuCcam,
     surcharges,
+    thesaurus,
     // Nomenclature CCAM consolidée : elle seule porte le chapitre 18 (gestes complémentaires
     // et anesthésies) et les actes hospitaliers absents du périmètre libéral.
     contenuCcamConsolides: readFileSync(join(DATA_DIR, 'ccam-complete-2025.csv'), 'utf8'),
@@ -328,6 +428,14 @@ async function principal() {
       `arborescence CCAM incomplète : ${chapitres.size} chapitres (< 18) — import interrompu.`,
     );
   }
+  // Le thésaurus est ce qui porte la recherche par vocabulaire courant : sa couverture
+  // doit rester large (elle dépassait les 4 000 actes avant son unification).
+  if (actes.length - sansMotsCles < 5000) {
+    throw new Error(
+      `mots-clés trop rares : ${actes.length - sansMotsCles} actes en portent (< 5 000) — ` +
+        'vérifier data/thesaurus-synonymes.csv ; import interrompu.',
+    );
+  }
 
   if (process.argv.includes('--export')) {
     const colonnesMedicaments = [
@@ -338,6 +446,7 @@ async function principal() {
       'est_liste_en_sus',
       'surveillance_particuliere',
       'surveillance_renforcee',
+      'recherche_normalisee',
     ];
     exporter(medicaments, colonnesMedicaments, 'referentiel_medicaments.csv');
     exporter(
@@ -364,6 +473,8 @@ async function principal() {
         'eligibilite_hdj',
         'motif_eligibilite_hdj',
         'environnement_requis',
+        'recherche_normalisee',
+        'libelle_normalisee',
       ],
       'referentiel_ccam.csv',
     );
@@ -380,6 +491,10 @@ async function principal() {
   const empreinte = process.env.SOURCES_EMPREINTE ?? null;
   await ecrireSupabase('referentiel_medicaments', medicaments, 'cis');
   await ecrireSupabase('referentiel_ccam', enrichis, 'code');
+  // Le thésaurus est un référentiel éditorial : il est **remplacé** à chaque import
+  // (un terme retiré du fichier doit disparaître de la base, sinon la recherche
+  // continuerait de l'employer).
+  await remplacerTable('thesaurus_synonymes', thesaurus.versLignesBase(), 'notion,terme_normalise');
   await enregistrerMaj([
     {
       nom: 'referentiel_medicaments',
@@ -396,6 +511,14 @@ async function principal() {
       lignes: actes.length,
       empreinte,
       source: 'CCAM Ameli — data.gouv.fr',
+    },
+    {
+      nom: 'thesaurus_synonymes',
+      libelle: 'Thésaurus des synonymes',
+      maj_le: horodatage,
+      lignes: thesaurus.entrees.length,
+      empreinte: null,
+      source: 'data/thesaurus-synonymes.csv (versionné)',
     },
   ]);
   log('import terminé.');

@@ -70,10 +70,12 @@ import {
   rechercherActesCcam,
   rechercherMedicaments,
   sousChapitresCcam,
+  synonymesDe,
   verifierReferentiel,
   type ActeRef,
   type MajReferentiel,
   type MedicamentRef,
+  type SynonymeRef,
   type ThemeRef,
 } from './referentiels.js';
 
@@ -268,6 +270,16 @@ class Assistant {
   private minuteurRecherche: number | null = null;
   private termeRecherche = '';
   private suggestionsHtml = '';
+  /**
+   * Synonymes employés pour la recherche en cours (thésaurus).
+   *
+   * Ils sont affichés sous le champ, en pastilles cliquables : l'usager voit **comment** sa
+   * saisie a été comprise, et peut relancer la recherche sur un synonyme plus proche de ce
+   * qu'il cherchait. C'est le thésaurus rendu visible.
+   */
+  private synonymes: readonly SynonymeRef[] = [];
+  /** Type de la recherche en cours (`actes` ou `medicaments`) : domaine du thésaurus. */
+  private typeRecherche: 'actes' | 'medicaments' = 'actes';
   /** Objets complets du référentiel indexés par identifiant de suggestion. */
   private refsSuggerees = new Map<string, MedicamentRef | ActeRef>();
   private messageRecherche = '';
@@ -382,6 +394,7 @@ class Assistant {
   private changerEtape(id: string): void {
     this.etapeId = id;
     this.suggestionsHtml = '';
+    this.synonymes = [];
     this.refsSuggerees.clear();
     this.messageRecherche = '';
     this.termeRecherche = '';
@@ -393,6 +406,7 @@ class Assistant {
   private changerEcran(ecran: Ecran): void {
     this.ecran = ecran;
     this.suggestionsHtml = '';
+    this.synonymes = [];
     this.refsSuggerees.clear();
     this.messageRecherche = '';
     this.termeRecherche = '';
@@ -773,7 +787,32 @@ class Assistant {
     if (this.termeRecherche.trim().length >= 2 && !this.suggestionsHtml) {
       return '<div class="etat-recherche">Recherche en cours…</div>';
     }
-    return this.suggestionsHtml ? `<ul class="suggestions">${this.suggestionsHtml}</ul>` : '';
+    return this.suggestionsHtml
+      ? `${this.ligneSynonymes()}<ul class="suggestions">${this.suggestionsHtml}</ul>`
+      : '';
+  }
+
+  /**
+   * Synonymes employés pour la saisie en cours (thésaurus des synonymes).
+   *
+   * Chaque pastille relance la recherche sur le synonyme : l'usager corrige lui-même
+   * l'interprétation de sa saisie — « AVC » élargi à « thrombectomie », « scanner » à
+   * « scanographie ». Les mots déjà écrits ne figurent pas dans la liste.
+   */
+  private ligneSynonymes(): string {
+    if (this.synonymes.length === 0) return '';
+    const pastilles = this.synonymes
+      .map(
+        (synonyme) =>
+          `<button type="button" class="pastille-synonyme" data-action="synonyme"
+                   data-recherche="${this.typeRecherche}" data-valeur="${esc(synonyme.terme)}"
+                   title="${esc(`${synonyme.notion} — ${synonyme.type}`)}"
+                   >${esc(synonyme.terme)}</button>`,
+      )
+      .join('');
+    return `<div class="synonymes-recherche">
+      <span class="etiquette-synonymes">Recherche élargie</span>${pastilles}
+    </div>`;
   }
 
   /* -------------------------------------------------- intervenants */
@@ -958,7 +997,7 @@ class Assistant {
       return '<div class="etat-recherche">Recherche en cours…</div>';
     }
     if (!this.suggestionsHtml) return '';
-    return `<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
+    return `${this.ligneSynonymes()}<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
   }
 
   private rendreArbreActes(): string {
@@ -1180,7 +1219,7 @@ class Assistant {
     if (!this.suggestionsHtml) {
       return '<div class="etat-recherche">Saisissez au moins deux caractères.</div>';
     }
-    return `<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
+    return `${this.ligneSynonymes()}<ul class="resultats-actes">${this.suggestionsHtml}</ul>`;
   }
 
   /** Ligne d'un médicament : dénomination, DCI et classement au référentiel. */
@@ -1595,6 +1634,14 @@ class Assistant {
         this.rendre();
         break;
       }
+      case 'synonyme': {
+        // La pastille remplace la saisie par le synonyme et relance la recherche : le champ
+        // reflète le nouveau terme (le rendu de la zone de suggestions suit).
+        const champ = this.racine.querySelector<HTMLInputElement>('#champ-recherche');
+        if (champ) champ.value = valeur;
+        this.planifierRecherche(cible.dataset.recherche ?? this.typeRecherche, valeur);
+        break;
+      }
       case 'suggestion-acte':
         void this.ajouterActe(valeur);
         break;
@@ -1688,10 +1735,12 @@ class Assistant {
 
   private planifierRecherche(type: string, terme: string): void {
     this.termeRecherche = terme;
+    this.typeRecherche = type === 'medicaments' ? 'medicaments' : 'actes';
     if (this.minuteurRecherche !== null) window.clearTimeout(this.minuteurRecherche);
 
     if (terme.trim().length < 2) {
       this.suggestionsHtml = '';
+      this.synonymes = [];
       this.messageRecherche = '';
       this.rafraichirSuggestions();
       return;
@@ -1708,10 +1757,17 @@ class Assistant {
   private async executerRecherche(type: string, terme: string): Promise<void> {
     const jeton = (this.jetonRequete += 1);
     const consultation = this.ecran !== 'evaluation';
+    this.typeRecherche = type === 'medicaments' ? 'medicaments' : 'actes';
     try {
       if (type === 'actes') {
-        const resultats = await rechercherActesCcam(terme, consultation ? 30 : 12);
+        // Les synonymes employés sont affichés sous le champ : la recherche et son
+        // élargissement se lisent ensemble, y compris en repli local (thésaurus embarqué).
+        const [resultats, synonymes] = await Promise.all([
+          rechercherActesCcam(terme, consultation ? 30 : 12),
+          synonymesDe(terme, 'actes').catch(() => [] as readonly SynonymeRef[]),
+        ]);
         if (jeton !== this.jetonRequete) return;
+        this.synonymes = resultats.length ? synonymes : [];
         this.refsSuggerees.clear();
         for (const acte of resultats) this.refsSuggerees.set(acte.code, acte);
         this.suggestionsHtml = consultation
@@ -1729,8 +1785,12 @@ class Assistant {
               .join('');
         this.messageRecherche = resultats.length ? '' : 'Aucun acte trouvé pour cette recherche.';
       } else {
-        const resultats = await rechercherMedicaments(terme, consultation ? 30 : 12);
+        const [resultats, synonymes] = await Promise.all([
+          rechercherMedicaments(terme, consultation ? 30 : 12),
+          synonymesDe(terme, 'medicaments').catch(() => [] as readonly SynonymeRef[]),
+        ]);
         if (jeton !== this.jetonRequete) return;
+        this.synonymes = resultats.length ? synonymes : [];
         this.refsSuggerees.clear();
         for (const medicament of resultats) this.refsSuggerees.set(medicament.cis, medicament);
         this.suggestionsHtml = consultation

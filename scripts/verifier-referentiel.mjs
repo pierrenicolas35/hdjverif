@@ -17,7 +17,9 @@
  *      colonne `dci` contenait le nom commercial ;
  *   4. la colonne `surveillance_particuliere` (libellé CPD) et la doctrine de la valeur
  *      absente : une spécialité hors CPD reste « non déterminée » (`null`), jamais « non » ;
- *   5. le suivi des mises à jour (`referentiel_maj`), affiché dans l'en-tête de l'application :
+ *   5. le **thésaurus des synonymes** : sa présence, sa couverture, et le fait que la recherche
+ *      élargie qu'il porte répond (« scanner » → scanographie, « anti-TNF » → infliximab) ;
+ *   6. le suivi des mises à jour (`referentiel_maj`), affiché dans l'en-tête de l'application :
  *      chaque table doit porter une date et un volume cohérents.
  *
  * Code retour : 0 si tout est conforme, 1 sinon.
@@ -168,6 +170,26 @@ async function principal() {
     `DCI renseignée pour ${total - sansDci}/${total} spécialités (${sansDci} sans DCI)`,
   );
 
+  // Le thésaurus et la colonne de recherche qu'il alimente : sans eux, la recherche par
+  // mots-clés de l'application ne trouve plus que les libellés officiels.
+  let termesThesaurus = 0;
+  try {
+    termesThesaurus = await compter([], 'thesaurus_synonymes', 'terme');
+  } catch (erreur) {
+    ligne(false, `table thesaurus_synonymes inaccessible (${erreur.message})`);
+  }
+  ligne(termesThesaurus >= 200, `thésaurus des synonymes : ${termesThesaurus} termes indexés`);
+  const ccamSansRecherche = await compter([['recherche_normalisee', 'is.null']], 'referentiel_ccam', 'code');
+  const medsSansRecherche = await compter(
+    [['recherche_normalisee', 'is.null']],
+    'referentiel_medicaments',
+  );
+  ligne(
+    ccamSansRecherche === 0 && medsSansRecherche === 0,
+    `colonne de recherche renseignée pour tous (${ccamSansRecherche} acte(s) et ` +
+      `${medsSansRecherche} spécialité(s) sans texte de recherche)`,
+  );
+
   console.log('\n— Doctrine de la valeur absente —');
   const sansCpd = await specialite('GRANIONS');
   if (!sansCpd) {
@@ -194,14 +216,19 @@ async function principal() {
   } catch (erreur) {
     ligne(false, `table referentiel_maj inaccessible (${erreur.message})`);
   }
-  for (const nom of ['referentiel_ccam', 'referentiel_medicaments']) {
+  for (const nom of ['referentiel_ccam', 'referentiel_medicaments', 'thesaurus_synonymes']) {
     const ligneSuivi = suivi.find((s) => s.nom === nom);
     if (!ligneSuivi) {
       ligne(false, `${nom} : aucune date de mise à jour enregistrée`);
       continue;
     }
     const quand = new Date(ligneSuivi.maj_le);
-    const volume = nom === 'referentiel_medicaments' ? total : totalCcam;
+    const volume =
+      nom === 'referentiel_medicaments'
+        ? total
+        : nom === 'referentiel_ccam'
+          ? totalCcam
+          : termesThesaurus;
     ligne(
       !Number.isNaN(quand.getTime()) && ligneSuivi.lignes === volume,
       `${ligneSuivi.libelle} → mise à jour du ${quand.toLocaleDateString('fr-FR')} ` +
@@ -232,6 +259,33 @@ async function principal() {
         (trouve ? ` dont ${dciAttendue}` : ` — ${dciAttendue} NON trouvé`),
     );
   }
+  // Recherche par **classe thérapeutique** : « fer injectable » ne figure dans aucune
+  // dénomination, le thésaurus le relie aux DCI (ferrique, ferreux, carboxymaltose…).
+  const fer = await rechercher('fer injectable');
+  ligne(
+    fer.some((r) => /FERRIQUE|FERREUX|CARBOXYMALTOSE/i.test(r.dci ?? '')),
+    `« fer injectable » → ${fer.length} résultat(s) — correspondance par classe thérapeutique`,
+  );
+
+  console.log('\n— Thésaurus des synonymes (appel RPC de l’application) —');
+  for (const [terme, domaine, attendu] of [
+    ['scanner', 'actes', 'tomodensitometrie'],
+    ['avc', 'actes', 'thrombectomie'],
+    ['anti-tnf', 'medicaments', 'infliximab'],
+    ['immunoglobuline', 'medicaments', 'ivig'],
+  ]) {
+    const synonymes = await rpcCcam('synonymes_de', {
+      p_terme: terme,
+      p_domaine: domaine,
+      p_limite: 40,
+    });
+    const trouve = synonymes.some((s) => s.terme_normalise === attendu);
+    ligne(
+      trouve,
+      `« ${terme} » (${domaine}) → ${synonymes.length} synonyme(s)` +
+        (trouve ? ` dont « ${attendu} »` : ` — « ${attendu} » ABSENT`),
+    );
+  }
 
   console.log('\n— Recherche CCAM élargie et arborescence —');
   // Vocabulaire courant : le référentiel parle de « scanographie » et de
@@ -245,6 +299,20 @@ async function principal() {
   ligne(
     irm.some((a) => /remnographie|irm/i.test(a.libelle)),
     `« irm » → ${irm.length} résultat(s) — correspondance par vocabulaire courant`,
+  );
+
+  // Recherche par notion : « AVC » ne figure dans aucun libellé, le thésaurus le relie aux
+  // gestes qui s'y rapportent (thrombectomie, thrombolyse, carotide).
+  const avc = await rpcCcam('rechercher_ccam', { p_terme: 'avc', p_limite: 5 });
+  ligne(
+    avc.some((a) => /thrombectomie|thrombolyse|carotide/i.test(a.libelle)),
+    `« avc » → ${avc.length} résultat(s) — correspondance par notion (geste et non syndrome)`,
+  );
+  // Recherche multi-mots : c'est le thésaurus qui retrouve la prothèse derrière ses mots.
+  const hanche = await rpcCcam('rechercher_ccam', { p_terme: 'prothese de hanche', p_limite: 5 });
+  ligne(
+    hanche.some((a) => /proth[eè]se/i.test(a.libelle)),
+    `« prothese de hanche » → ${hanche.length} résultat(s) — classement par mots reconnus`,
   );
 
   const chapitres = await rpcCcam('chapitres_ccam', {});

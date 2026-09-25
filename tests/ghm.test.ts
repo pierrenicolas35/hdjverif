@@ -31,6 +31,7 @@ import {
   lireRacinesGhm,
 } from '../scripts/lib/ghm.mjs';
 import { construireActes, lireSurchargesCcam } from '../scripts/lib/referentiels.mjs';
+import { thesaurusDepuisCsv } from '../scripts/lib/thesaurus.mjs';
 
 /* ------------------------------------------------------------------ *
  * Fixtures
@@ -70,6 +71,7 @@ const CACHE_PRESENT = existsSync(FILE_AMELI);
 const lireAmeli = () => readFileSync(FILE_AMELI, 'utf8');
 
 const OUTILS = {
+  thesaurus: () => thesaurusDepuisCsv(readFileSync('data/thesaurus-synonymes.csv', 'utf8')),
   ccam: () => readFileSync('data/ccam-complete-2025.csv', 'utf8'),
   surcharges: () => lireSurchargesCcam(readFileSync('data/ccam-overlay.csv', 'utf8')),
   racines: () => lireRacinesGhm(readFileSync('data/atih/racines-ghm-2025.csv', 'utf8')),
@@ -128,7 +130,7 @@ describe('lecture des fichiers ATIH', () => {
 
 describe('lecture de la nomenclature CCAM', () => {
   it('déduit le plateau technique lourd et le réalisable en externe du mode d’accès', () => {
-    const actes = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map() });
+    const actes = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map(), thesaurus: OUTILS.thesaurus() });
     expect(actes).toHaveLength(4);
     const par = new Map(actes.map((a) => [a.code, a]));
     expect(par.get('AAFA002')).toMatchObject({
@@ -151,7 +153,7 @@ describe('lecture de la nomenclature CCAM', () => {
   });
 
   it('construit l’arborescence : chapitre, sous-thème anatomique et mots-clés', () => {
-    const actes = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map() });
+    const actes = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map(), thesaurus: OUTILS.thesaurus() });
     const cranio = actes.find((a) => a.code === 'AAFA002');
     expect(cranio).toMatchObject({
       chapitre_code: '01',
@@ -162,11 +164,12 @@ describe('lecture de la nomenclature CCAM', () => {
   });
 
   it('complète la nomenclature par les actes absents du périmètre libéral', () => {
-    const ameli = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map() });
+    const ameli = construireActes({ contenuCcam: CCAM_AMELI, surcharges: new Map(), thesaurus: OUTILS.thesaurus() });
     const complet = construireActes({
       contenuCcam: CCAM_AMELI,
       surcharges: new Map(),
       contenuCcamConsolides: OUTILS.ccam(),
+      thesaurus: OUTILS.thesaurus(),
     });
     expect(complet.length).toBeGreaterThan(ameli.length);
     // Aucun doublon, et les actes connus gardent libellé et indicateurs.
@@ -269,6 +272,7 @@ describe('référentiel livré (data/atih et data/ccam-complete-2025.csv)', () =
       contenuCcam: '',
       surcharges: OUTILS.surcharges(),
       contenuCcamConsolides: OUTILS.ccam(),
+      thesaurus: OUTILS.thesaurus(),
     }),
     { racines, actesClassants },
   );
@@ -374,12 +378,17 @@ describe.skipIf(!CACHE_PRESENT)('source libérale CCAM Ameli (.cache/)', () => {
         contenuCcam: lireAmeli(),
         surcharges: OUTILS.surcharges(),
         contenuCcamConsolides: OUTILS.ccam(),
+        thesaurus: OUTILS.thesaurus(),
       }),
       { racines: OUTILS.racines(), actesClassants: OUTILS.classants() },
     );
     return {
       enrichis,
-      ameliSeul: construireActes({ contenuCcam: lireAmeli(), surcharges: OUTILS.surcharges() }),
+      ameliSeul: construireActes({
+        contenuCcam: lireAmeli(),
+        surcharges: OUTILS.surcharges(),
+        thesaurus: OUTILS.thesaurus(),
+      }),
       par: new Map(enrichis.map((a) => [a.code, a])),
     };
   };

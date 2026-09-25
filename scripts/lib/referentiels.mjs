@@ -12,7 +12,34 @@
  *                            source officielle de la réserve hospitalière, via le libellé
  *                            « réservé à l'usage HOSPITALIER » (art. R. 5121-82 CSP).
  *   • `ccam-ameli.csv`     — nomenclature CCAM (modes d'accès).
+ *
+ * Les correspondances de vocabulaire (synonymes) ne sont plus écrites ici : elles vivent dans
+ * le **thésaurus** `data/thesaurus-synonymes.csv`, lu par `scripts/lib/thesaurus.mjs` et passé
+ * aux fonctions de construction (`thesaurus`). Une même notion alimente ainsi la colonne
+ * `mots_cles` des actes à l'import **et** l'élargissement de la requête dans l'application.
+ *
+ * Chaque ligne porte en outre deux textes pré-normalisés (minuscules, sans accent,
+ * séparateurs ramenés à une espace, encadrés d'espaces), payés **une fois, à l'import**,
+ * et non à chaque frappe :
+ *   • `recherche_normalisee` — libellé, mots-clés et code : la colonne interrogée, couverte
+ *     par un index trigramme ;
+ *   • `libelle_normalisee` — le libellé seul, pour **classer** : les mots-clés d'un acte
+ *     réunissent tous les synonymes de ses notions, si bien qu'ils ne distinguent plus
+ *     « prothèse totale de hanche » de « hanche ».
  */
+
+import { normaliserTerme } from './thesaurus.mjs';
+
+/**
+ * Texte de recherche d'une ligne : parties normalisées, encadrées d'espaces.
+ *
+ * L'espace de tête et de queue permet à la recherche de reconnaître un **sigle** comme
+ * mot entier (`like '% irm %'`) — c'est ce que fait `thesaurus_contient` côté SQL — et
+ * au classement de repérer un libellé qui *commence* par la saisie (`like ' terme%'`).
+ */
+function texteRecherche(parties) {
+  return ` ${normaliserTerme(parties.filter(Boolean).join(' '))} `;
+}
 
 /* ------------------------------------------------------------------ *
  * Normalisation
@@ -279,6 +306,8 @@ export function construireMedicaments({ contenuBdpm, contenuCompo, contenuCpd, m
       est_liste_en_sus: reserve === true ? true : null,
       surveillance_particuliere: determinerSurveillanceParticuliere(libellesCpd),
       surveillance_renforcee: s.surveillanceRenforcee,
+      // Nom commercial et DCI : ce que l'application interroge (« infliximab », « REMICADE »).
+      recherche_normalisee: texteRecherche([s.denomination, dci]),
     };
   });
 
@@ -382,95 +411,23 @@ export function lireCcam(contenu) {
  * ------------------------------------------------------------------ */
 
 /**
- * Correspondances de vocabulaire.
+ * Mots-clés supplémentaires d'un acte, construits depuis le **thésaurus**.
  *
- * OBJET : élargir la recherche à la façon dont un soignant (ou un secrétariat) désigne
- *          spontanément un acte, plutôt qu'au seul libellé de la nomenclature.
- *          Le référentiel officiel parle par exemple de « remnographie », là où tout le
- *          monde cherche « IRM » ; de « scanographie », là où l'on cherche « scanner ».
+ * Réunit le libellé officiel et les libellés d'arborescence (chapitre, site anatomique,
+ * action, technique, famille), puis y **reconnaît les notions du thésaurus** : chaque notion
+ * dont un terme apparaît dans ce texte apporte tous ses synonymes. C'est ce qui permet de
+ * trouver une « scanographie » en cherchant « scanner », ou une « remnographie » en cherchant
+ * « IRM ».
  *
- * Chaque entrée : une expression à reconnaître dans le libellé (ou les libellés
- * d'arborescence) → les mots-clés supplémentaires à indexer. Le vocabulaire est **ajouté**
- * au libellé, jamais substitué : « remnographie » continue de trouver l'acte.
+ * Le vocabulaire est **ajouté** au libellé, jamais substitué : les mots de la nomenclature
+ * continuent de trouver l'acte. Le résultat est **normalisé** (minuscules, sans accent) : la
+ * colonne est un index de recherche, pas un libellé affiché.
+ *
+ * @param {object} acte axes de l'acte (libellé et libellés d'arborescence)
+ * @param {import('./thesaurus.mjs').Thesaurus} thesaurus
  */
-const SYNONYMES = [
-  ['remnographie', 'irm resonance magnetique'],
-  ['scanographie', 'scanner tdm tomodensitometrie'],
-  ['radiographie', 'radio rx radiologie'],
-  ['echographie', 'echo ultrason ultrasonore'],
-  ['electrocardiograph', 'ecg electrocardiogramme'],
-  ['electromyograph', 'emg electromyogramme'],
-  ['electroencephalo', 'eeg electroencephalogramme'],
-  ['endoscopie', 'endoscopie fibroscopie'],
-  ['endoscopique', 'endoscopie fibroscopie'],
-  ['exerese', 'ablation retrait excision'],
-  ['ablation', 'ablation retrait'],
-  ['biopsie', 'biopsie prelevement ponction'],
-  ['ponction', 'ponction prelevement'],
-  ['perfusion', 'perfusion intraveineuse injectable'],
-  ['injection', 'injection injectable'],
-  ['dilatation', 'dilatation elargissement'],
-  ['prothese', 'prothese implant'],
-  ['implant', 'implant prothese'],
-  ['craniotomie', 'ouverture du crane neurochirurgie'],
-  ['cataracte', 'cristallin oeil'],
-  ['coronar', 'coronaire coeur'],
-  ['valvul', 'valve cardiaque'],
-  ['pacemaker', 'stimulateur cardiaque'],
-  ['defibrillateur', 'defibrillateur choc electrique'],
-  ['angioplastie', 'angioplastie ballon',
-  ],
-  ['stent', 'endoprothese stent'],
-  ['endoprothese', 'stent endoprothese'],
-  ['anevrisme', 'anevrisme aorta artere'],
-  ['diplegie', 'accident vasculaire cerebral'],
-  ['thyroide', 'thyroide'],
-  ['greffe', 'transplantation greffe'],
-  ['amygdale', 'amygdalectomie'],
-  ['adenoide', 'vegetations adenoides'],
-  ['appendice', 'appendicectomie appendicite'],
-  ['cholecyst', 'vesicule biliaire'],
-  ['coloscopie', 'colon coloscopie'],
-  ['gastroscopie', 'estomac gastroscopie fibroscopie'],
-  ['oesophage', 'oesophage'],
-  ['hemorroide', 'hemorroide anus'],
-  ['fissure', 'fissure anale'],
-  ['hemodialyse', 'dialyse epuration renale'],
-  ['dialyse', 'dialyse reins epuration renale'],
-  ['hysterectomie', 'uterus hysterectomie'],
-  ['cesarienne', 'cesarienne accouchement'],
-  ['prostate', 'prostate'],
-  ['nephrectomie', 'rein nephrectomie'],
-  ['litotritie', 'calculs urinaires lithiase'],
-  ['fracture', 'fracture os traumatologie'],
-  ['arthroscopie', 'arthroscopie articulation genou epaule'],
-  ['osteosynthese', 'osteosynthese plaque vis'],
-  ['prothese de hanche', 'prothese hanche'],
-  ['prothese de genou', 'prothese genou'],
-  ['hallux', 'hallux valgus oignon pied'],
-  ['kyste', 'kyste'],
-  ['tumeur', 'tumeur neoplasme cancer'],
-  ['polype', 'polype'],
-  ['absces', 'abces collection suppuration'],
-  ['suture', 'suture points plaie'],
-  ['greffon', 'greffe transplant'],
-  ['drainage', 'drainage evacuation'],
-  ['catheter', 'catheter voie veineuse'],
-  ['oxygene', 'oxygene oxygene hyperbare caisson'],
-  ['obesite', 'obesite surpoids by-pass sleeve'],
-  ['radiotherapie', 'radiotherapie'],
-  ['chimiotherapie', 'chimiotherapie'],
-  ['transfusion', 'transfusion culot globulaire'],
-];
-
-/**
- * Mots-clés supplémentaires d'un acte.
- *
- * Réunit : le libellé officiel, les libellés d'arborescence (chapitre, site anatomique,
- * action, technique, famille) et les correspondances de vocabulaire reconnues. Le résultat
- * alimente la colonne `mots_cles`, indexée en trigrammes et interrogée par `rechercher_ccam`.
- */
-export function motsClesActe(acte) {
+export function motsClesActe(acte, thesaurus) {
+  if (!thesaurus) throw new Error('motsClesActe : thésaurus requis (data/thesaurus-synonymes.csv)');
   const sources = [
     acte.libelle,
     acte.chapitreLabel,
@@ -481,12 +438,7 @@ export function motsClesActe(acte) {
   ]
     .filter(Boolean)
     .join(' ');
-  const cible = normaliser(sources);
-  const mots = new Set();
-  for (const [declencheur, ajout] of SYNONYMES) {
-    if (cible.includes(declencheur)) for (const m of ajout.split(' ')) mots.add(m);
-  }
-  return [...mots].join(' ').trim();
+  return thesaurus.motsClesPour(sources).join(' ').trim();
 }
 
 /**
@@ -557,7 +509,7 @@ export function lireActesCcamConsolides(contenu) {
  * pour la réserve hospitalière). `scripts/lib/ghm.mjs` les complète ensuite à partir de la
  * classification en GHM, qui est, elle, opposable.
  */
-function acteHorsNomenclatureCcam(code, fiche) {
+function acteHorsNomenclatureCcam(code, fiche, thesaurus) {
   const chapitre = fiche.chapitre || null;
   const libelleChapitre = (chapitre && CHAPITRES_CCAM[chapitre]) || null;
   return {
@@ -571,7 +523,14 @@ function acteHorsNomenclatureCcam(code, fiche) {
     // Repli sur le chapitre : l'acte reste atteignable par l'arborescence.
     sous_chapitre_code: chapitre,
     sous_chapitre_libelle: libelleChapitre,
-    mots_cles: motsClesActe({ libelle: fiche.libelle, chapitreLabel: libelleChapitre }) || null,
+    mots_cles:
+      motsClesActe({ libelle: fiche.libelle, chapitreLabel: libelleChapitre }, thesaurus) || null,
+    recherche_normalisee: texteRecherche([
+      fiche.libelle,
+      motsClesActe({ libelle: fiche.libelle, chapitreLabel: libelleChapitre }, thesaurus),
+      code,
+    ]),
+    libelle_normalisee: texteRecherche([fiche.libelle]),
   };
 }
 
@@ -582,8 +541,17 @@ function acteHorsNomenclatureCcam(code, fiche) {
  * le jeu de données libéral ne porte pas (chapitre 18, actes hospitaliers, forfaits du
  * chapitre 19). Les actes déjà présents ne changent pas d'une ligne : leurs indicateurs
  * continuent de venir du mode d'accès, comme avant.
+ *
+ * @param {object} entree
+ * @param {import('./thesaurus.mjs').Thesaurus} entree.thesaurus thésaurus des synonymes
+ *        (`data/thesaurus-synonymes.csv`) : il fonde la colonne `mots_cles` des actes.
  */
-export function construireActes({ contenuCcam, surcharges, contenuCcamConsolides }) {
+export function construireActes({
+  contenuCcam,
+  surcharges,
+  contenuCcamConsolides,
+  thesaurus,
+}) {
   const actes = lireCcam(contenuCcam).map((a) => {
     const mode = normaliserModeAcces(a.modeAcces);
     const lourd = MODES_PLATEAU_LOURD.has(mode);
@@ -601,7 +569,9 @@ export function construireActes({ contenuCcam, surcharges, contenuCcamConsolides
       // Repli sur le chapitre : chaque acte reste atteignable par l'arbre.
       sous_chapitre_code: a.topographie || a.chapitreCode || null,
       sous_chapitre_libelle: a.topographieLabel || a.chapitreLabel || null,
-      mots_cles: motsClesActe(a) || null,
+      mots_cles: motsClesActe(a, thesaurus) || null,
+      recherche_normalisee: texteRecherche([a.libelle, motsClesActe(a, thesaurus), a.code]),
+      libelle_normalisee: texteRecherche([a.libelle]),
     };
   });
   if (!contenuCcamConsolides) return actes;
@@ -609,7 +579,7 @@ export function construireActes({ contenuCcam, surcharges, contenuCcamConsolides
   const connus = new Set(actes.map((a) => a.code));
   for (const [code, fiche] of lireActesCcamConsolides(contenuCcamConsolides)) {
     if (connus.has(code) || !fiche.libelle) continue;
-    actes.push(acteHorsNomenclatureCcam(code, fiche));
+    actes.push(acteHorsNomenclatureCcam(code, fiche, thesaurus));
   }
   return actes;
 }

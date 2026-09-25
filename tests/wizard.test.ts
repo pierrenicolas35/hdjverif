@@ -161,7 +161,29 @@ beforeAll(async () => {
       const corps = init?.body ? (JSON.parse(init.body) as Record<string, unknown>) : {};
 
       if (url.includes('referentiel_maj')) return reponseJson(MAJ_REFERENTIELS);
-      if (url.includes('rechercher_ccam')) return reponseJson([ACTE_ECG]);
+      // Thésaurus : la base rend les synonymes employés (« recherche élargie »).
+      if (url.includes('synonymes_de')) {
+        const terme = String(corps['p_terme'] ?? '');
+        return reponseJson(
+          terme === 'exploration'
+            ? [
+                {
+                  terme: 'scanographie',
+                  terme_normalise: 'scanographie',
+                  notion: 'tomodensitométrie',
+                  type: 'libellé officiel',
+                  domaine: 'actes',
+                },
+              ]
+            : [],
+        );
+      }
+      if (url.includes('rechercher_ccam')) {
+        // La recherche est bien réinterrogée telle quelle : le synonyme « scanographie »
+        // rend un autre acte que « exploration », ce qui prouve la relance.
+        const terme = String(corps['p_terme'] ?? '');
+        return reponseJson(terme === 'scanographie' ? [ACTES['DEQP003']] : [ACTE_ECG]);
+      }
       // Attention : « sous_chapitres_ccam » contient « chapitres_ccam » — tester le plus spécifique d'abord.
       if (url.includes('sous_chapitres_ccam')) return reponseJson(SOUS_CHAPITRES);
       if (url.includes('chapitres_ccam')) return reponseJson(CHAPITRES);
@@ -630,6 +652,23 @@ describe('Référentiel CCAM — éligibilité HDJ et arborescence', () => {
     expect(ligne?.textContent).toContain('Non recevable en HDJ sur cet acte seul');
     expect(ligne?.textContent).toContain('Acte marqueur HDJ : non');
     expect(ligne?.textContent).toContain('Plateau technique lourd : non');
+  });
+
+  it('affiche les synonymes employés et relance la recherche sur l’un d’eux', async () => {
+    allerAccueil();
+    cliquer('[data-action="ouvrir-ccam"]');
+    await rechercher('exploration');
+
+    const pastilles = [...document.querySelectorAll('.pastille-synonyme')];
+    expect(pastilles.map((p) => p.textContent?.trim())).toEqual(['scanographie']);
+    expect(texte('.synonymes-recherche')).toContain('Recherche élargie');
+
+    // La pastille remplace la saisie et relance la recherche : le référentiel est réinterrogé
+    // (la suggestion passe de ZZQL002 à DEQP003) et le champ porte le synonyme.
+    cliquer('.pastille-synonyme');
+    await attendre(420);
+    expect(document.querySelector<HTMLInputElement>('#champ-recherche')?.value).toBe('scanographie');
+    expect(texte('#zone-suggestions')).toContain('DEQP003');
   });
 
   it('parcourt l’arborescence chapitre → sous-thème → actes', async () => {

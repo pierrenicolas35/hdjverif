@@ -24,6 +24,8 @@ export interface LigneMedicament {
   /** Libellé CPD « surveillance particulière pendant le traitement » (tri-état). */
   readonly surveillance_particuliere: boolean | null;
   readonly surveillance_renforcee: boolean;
+  /** Texte de recherche normalisé et encadré d'espaces (index trigramme). */
+  readonly recherche_normalisee: string;
 }
 
 export interface OrigineReserve {
@@ -46,6 +48,10 @@ export interface ActeCcam {
   readonly sous_chapitre_libelle: string | null;
   /** Synonymes et vocabulaire courant (recherche élargie). */
   readonly mots_cles: string | null;
+  /** Texte de recherche normalisé et encadré d'espaces (colonne interrogée, index trigramme). */
+  readonly recherche_normalisee: string;
+  /** Libellé seul, normalisé et encadré d'espaces : sert à **classer** les résultats. */
+  readonly libelle_normalisee: string;
 }
 
 /** Position d'un acte dans l'arborescence officielle CCAM (issue de `lireCcam`). */
@@ -111,19 +117,24 @@ export function construireMedicaments(entree: {
   motifs: MotifsReserve;
 }): { lignes: LigneMedicament[]; origineReserve: OrigineReserve };
 export function lireCcam(contenu: string): ActeCcamSource[];
-export function motsClesActe(acte: {
-  libelle: string;
-  chapitreLabel?: string;
-  topographieLabel?: string;
-  actionLabel?: string;
-  modeAccesLabel?: string;
-  familleLabel?: string;
-}): string;
+export function motsClesActe(
+  acte: {
+    libelle: string;
+    chapitreLabel?: string;
+    topographieLabel?: string;
+    actionLabel?: string;
+    modeAccesLabel?: string;
+    familleLabel?: string;
+  },
+  thesaurus: import('./thesaurus.mjs').Thesaurus,
+): string;
 export function construireActes(entree: {
   contenuCcam: string;
   surcharges: Map<string, SurchargeCcam>;
   /** Nomenclature consolidée (`data/ccam-complete-2025.csv`) : complète la source libérale. */
   contenuCcamConsolides?: string;
+  /** Thésaurus des synonymes (`data/thesaurus-synonymes.csv`) : fonde la colonne `mots_cles`. */
+  thesaurus: import('./thesaurus.mjs').Thesaurus;
 }): ActeCcam[];
 /** Nomenclature CCAM consolidée : chapitres 1 à 19, jeu libéral et libellés du manuel. */
 export function lireActesCcamConsolides(

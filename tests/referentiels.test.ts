@@ -12,12 +12,16 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import * as ref from '../scripts/lib/referentiels.mjs';
 import { empreinteSources } from '../scripts/lib/sources.mjs';
+import { thesaurusDepuisCsv } from '../scripts/lib/thesaurus.mjs';
+
+/** Thésaurus versionné : il fonde les mots-clés des actes (colonne `mots_cles`). */
+const THESAURUS = thesaurusDepuisCsv(readFileSync('data/thesaurus-synonymes.csv', 'utf8'));
 
 /** Ligne de `CIS_bdpm.txt` (11 colonnes, tabulée). */
 const ligneBdpm = (
@@ -292,7 +296,7 @@ describe('nomenclature CCAM', () => {
   });
 
   it('dérive le plateau lourd et l’exclusivité externe du mode d’accès', () => {
-    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map(), thesaurus: THESAURUS });
     expect(actes[0]).toMatchObject({
       code: 'AAFA002',
       libelle: 'exérèse de tumeur intraparenchymateuse du cerveau, par craniotomie',
@@ -308,28 +312,67 @@ describe('nomenclature CCAM', () => {
   });
 
   it('replie le sous-thème sur le chapitre quand le site anatomique manque', () => {
-    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map(), thesaurus: THESAURUS });
     // DEQP003 n'a pas de topographie : son chapitre devient son sous-thème.
     expect(actes[1]?.sous_chapitre_code).toBe('04');
     expect(actes[1]?.sous_chapitre_libelle).toBe('appareil circulatoire');
   });
 
   it('construit des mots-clés « grand public » à partir du libellé et des axes', () => {
-    const mots = ref.motsClesActe({
-      libelle: 'remnographie [IRM] de l’encéphale',
-      chapitreLabel: 'système nerveux central',
-      topographieLabel: 'encéphale',
-      actionLabel: 'examiner',
-      modeAccesLabel: 'acte par remnographie sans accès',
-      familleLabel: 'IRM du système nerveux',
-    });
+    const mots = ref.motsClesActe(
+      {
+        libelle: 'remnographie [IRM] de l’encéphale',
+        chapitreLabel: 'système nerveux central',
+        topographieLabel: 'encéphale',
+        actionLabel: 'examiner',
+        modeAccesLabel: 'acte par remnographie sans accès',
+        familleLabel: 'IRM du système nerveux',
+      },
+      THESAURUS,
+    );
     expect(mots).toContain('irm');
     expect(mots).toContain('resonance magnetique');
     // Chaque acte reçoit des mots-clés (colonne non vide).
-    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map() });
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges: new Map(), thesaurus: THESAURUS });
     expect(actes[0]?.mots_cles).toBeTruthy();
     expect(actes[0]?.mots_cles).toContain('ablation');
     expect(actes[0]?.mots_cles).toContain('neurochirurgie');
+  });
+
+  it('prépare les textes de recherche des actes (indexés en trigrammes)', () => {
+    const actes = ref.construireActes({
+      contenuCcam: CCAM,
+      surcharges: new Map(),
+      thesaurus: THESAURUS,
+    });
+    const cranio = actes[0]!;
+    // Texte de recherche : normalisé, encadré d'espaces, libellé + mots-clés + code.
+    expect(cranio.recherche_normalisee.startsWith(' ')).toBe(true);
+    expect(cranio.recherche_normalisee.endsWith(' ')).toBe(true);
+    expect(cranio.recherche_normalisee).toContain('exerese de tumeur');
+    expect(cranio.recherche_normalisee).toContain('ablation');
+    expect(cranio.recherche_normalisee).toContain('aafa002');
+
+    // Libellé seul : il sert au **classement**. Il porte le libellé officiel mais pas les
+    // mots-clés — sans quoi « prothèse totale de hanche » et « hanche » ne se
+    // distingueraient plus, tous deux porteurs de tous les synonymes de la notion.
+    expect(cranio.libelle_normalisee.startsWith(' ')).toBe(true);
+    expect(cranio.libelle_normalisee).toContain('exerese de tumeur');
+    expect(cranio.libelle_normalisee).not.toContain('ablation');
+    expect(cranio.libelle_normalisee).not.toContain('aafa002');
+  });
+
+  it('prépare le texte de recherche des médicaments (dénomination et DCI)', () => {
+    const { lignes } = ref.construireMedicaments({
+      contenuBdpm: ligneBdpm('12345678', 'REMICADE 100 mg, poudre pour perfusion'),
+      contenuCompo: ligneCompo('12345678', 'INFLIXIMAB'),
+      contenuCpd: ligneCpd('12345678', "réservé à l'usage HOSPITALIER"),
+      motifs: ref.lireMotifsReserve(''),
+    });
+    const remicade = lignes[0]!;
+    expect(remicade.recherche_normalisee.startsWith(' ')).toBe(true);
+    expect(remicade.recherche_normalisee).toContain('remicade 100 mg');
+    expect(remicade.recherche_normalisee).toContain('infliximab');
   });
 
   it('reconnaît un mode d’accès malgré l’apostrophe typographique de la source', () => {
@@ -342,7 +385,7 @@ describe('nomenclature CCAM', () => {
       'ccam,label,chapterCode,modeAccesLabel',
       '"EBQH006","scanographie des vaisseaux cervicaux","04","acte par rayons x, avec accès autre qu’abord ouvert"',
     ].join('\n');
-    const actes = ref.construireActes({ contenuCcam: ccam, surcharges: new Map() });
+    const actes = ref.construireActes({ contenuCcam: ccam, surcharges: new Map(), thesaurus: THESAURUS });
     expect(actes[0]?.necessite_plateau_lourd).toBe(true);
     expect(actes[0]?.acte_marqueur_hdj).toBe(true);
   });
@@ -358,7 +401,7 @@ describe('nomenclature CCAM', () => {
       exclusif_externe: true,
       necessite_plateau_lourd: false,
     });
-    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges });
+    const actes = ref.construireActes({ contenuCcam: CCAM, surcharges, thesaurus: THESAURUS });
     expect(actes[1]?.acte_marqueur_hdj).toBe(true);
   });
 });

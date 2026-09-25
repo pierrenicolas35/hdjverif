@@ -243,12 +243,13 @@ la pharmacie à usage intérieur).
 
 ## 4. Référentiels Supabase
 
-Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
+Projet Supabase `Hdjverif` — trois tables publiques en lecture seule :
 
 | Table | Contenu | Source |
 |---|---|---|
 | `referentiel_medicaments` | 13 609 spécialités (CIS, dénomination, **DCI réelle**, réserve hospitalière, liste en sus, **surveillance particulière**, surveillance renforcée) | **Base de données publique des médicaments** (BDPM, ANSM / Assurance Maladie) : `CIS_bdpm.txt`, **`CIS_COMPO_bdpm.txt`** (composition → DCI) et **`CIS_CPD_bdpm.txt`** (conditions de prescription et de délivrance → réserve hospitalière) |
 | `referentiel_ccam` | **8 059 actes** (code, libellé, acte marqueur HDJ, exclusif externe, plateau technique lourd, **chapitre**, **sous-thème = site anatomique**, **mots-clés**, **acte classant**, **racine GHM**, **éligibilité HDJ**…) | **Nomenclature CCAM consolidée** — chapitres 1 à 19 de la CCAM descriptive (ATIH), jeu de données « CCAM Ameli » (data.gouv.fr / InterHop) et libellés abrégés du Manuel des GHM. Voir `data/ccam-complete-2025.csv` |
+| `thesaurus_synonymes` | **329 termes** de vocabulaire de recherche rangés en **88 notions** (terme, forme normalisée, notion, type, domaine) — la table qu’interroge la recherche élargie | **`data/thesaurus-synonymes.csv`** (fichier versionné, voir « Thésaurus des synonymes ») |
 
 Dans l’assistant :
 
@@ -269,10 +270,10 @@ où l’on cherche « **scanner** », et un secrétariat cherchera « fibro » p
 qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la recherche par code :
 
 1. **Des mots-clés de vocabulaire courant**, construits à l’import pour chaque acte à partir de son
-   libellé, de ses libellés d’arborescence et d’une table de correspondances
+   libellé, de ses libellés d’arborescence et du **thésaurus des synonymes**
    (`scripts/lib/referentiels.mjs`, colonne `mots_cles` indexée en trigrammes). Ils viennent
    **s’ajouter** au libellé officiel, jamais le remplacer. Sur la nomenclature complète,
-   4 086 des 8 059 actes en portent.
+   6 186 des 8 059 actes en portent.
 2. **Une arborescence officielle à deux niveaux**, navigable à l’écran :
    - **thématique** = les **chapitres par appareil** de la nomenclature — les **19 chapitres**
      de la CCAM sont désormais présents (le chapitre 18 « gestes complémentaires et
@@ -298,6 +299,59 @@ qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la
 > d’accès entiers n’étaient jamais reconnus et **157 actes** (angiographies, échographies
 > endocavitaires…) étaient classés « non lourds » à tort. Le référentiel en compte désormais
 > **1 501 sur plateau technique lourd** (contre 1 344 auparavant).
+
+### Thésaurus des synonymes : élargir la requête, pas seulement indexer
+
+Indexer du vocabulaire ne suffit pas : une saisie ne contient pas toujours le mot indexé.
+« **prothèse de hanche** » ne trouve rien si l’acte parle de « **prothèse totale de hanche** » ;
+« **anti-TNF** » ne trouve pas l’infliximab si l’on cherche par nom de classe. Le thésaurus sert
+donc **deux fois** : à l’import (colonne `mots_cles`) **et** au moment de la recherche, où il
+**élargit la requête** à ses synonymes.
+
+**Source de vérité : `data/thesaurus-synonymes.csv`** — fichier versionné, lisible et relu à chaque
+import : **329 termes** rangés en **88 notions** (le concept pivot), avec cinq types de termes
+(`libellé officiel` 160, `vocabulaire courant` 112, `classe thérapeutique` 28, `sigle` 21,
+`anglicisme` 8) et trois domaines (`actes` 228, `commun` 23, `medicaments` 78).
+
+| Notion (jamais affichée) | Termes synonymes |
+|---|---|
+| tomodensitométrie | `TDM` · `scanographie` · `scanner` · `CT scanner` · `examen tomodensitométrique` |
+| endoscopie œso-gastro-duodénale | `fibroscopie` · `fibro` · `gastroscopie` · `endoscopie digestive` |
+| anti-TNF | `infliximab` · `adalimumab` · `etanercept` · `biosimilaire` |
+| immunoglobulines polyvalentes | `IgIV` · `immunoglobuline humaine normale` |
+
+Le module `scripts/lib/thesaurus.mjs` est **pur** (il reçoit le contenu du CSV, jamais le disque) :
+le même code sert à l’import et à l’application, ce qui interdit toute divergence entre les deux.
+
+- **Une seule notion par terme normalisé** : chercher « avc » ne peut pas renvoyer deux univers
+  incompatibles — l’élargissement reste prévisible ;
+- **Les mots vides** (`de`, `du`, `pour`, `avec`…) ne sont jamais interrogés seuls : sans cela,
+  « prothèse **de** hanche » ramènerait tout ce qui contient « de » ;
+- **Les sigles courts** (≤ 4 lettres : `IRM`, `ECG`, `AVC`, `PTH`) ne sont cherchés que comme **mot
+  entier** — sinon « AIT » (accident ischémique transitoire) serait reconnu dans « trai**t**ement » ;
+- **Les mots courts ne sont interrogés que s’ils sont eux-mêmes un terme du thésaurus** : sans cette
+  règle, « anti-TNF » se découperait en « anti » et « tnf », et « anti » ramènerait toute
+  l’immunologie ;
+- **Seuls les domaines `actes` et `commun` alimentent `mots_cles`** : une classe thérapeutique n’est
+  jamais injectée comme mot-clé d’un acte technique.
+
+Dans l’application, l’usager **voit l’élargissement** : sous le champ, une ligne « **Recherche
+élargie** » affiche des pastilles portant les synonymes employés ; cliquer l’une d’elles remplace la
+saisie et relance la recherche. L’usager corrige ainsi lui-même l’interprétation de ses mots, au
+lieu de subir une recherche muette. Les synonymes viennent de la base (RPC `synonymes_de`) et, si
+le référentiel est injoignable, du **thésaurus embarqué** — le repli local cherche donc exactement
+la même chose que la base.
+
+`supabase/thesaurus.sql` rejoue la même normalisation en SQL (`normaliser_terme`, `thesaurus_contient`,
+`thesaurus_saisie`) et **rebranche `rechercher_ccam` et `rechercher_medicaments`** sur le thésaurus :
+il doit donc être appliqué **après** `rpc-recherche.sql` et `ccam-arbres.sql`. Les deux listes qui ne
+peuvent pas être importées d’un fichier — les **mots vides** et le **seuil des sigles** — sont
+recopiées à l’identique ; `tests/thesaurus.test.ts` compare les deux fichiers pour qu’en ligne et
+hors ligne la recherche reste la même.
+
+> **Ce que le thésaurus n’est pas.** Une **aide à la recherche**, pas une nomenclature : il rapproche
+> des mots, il ne fonde **aucune** décision médico-administrative. Le verdict d’éligibilité HDJ reste
+> rendu par la seule confrontation au Manuel des GHM.
 
 ### Actes valorisables en HDJ : le croisement avec le Manuel des GHM (ATIH)
 
@@ -575,11 +629,13 @@ npm run import:referentiels
 npm run verifier:referentiel                    # code retour 0 = conforme
 
 # 4. Le cas échéant : appliquer supabase/hardening.sql, supabase/rpc-recherche.sql,
-#    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM), supabase/hdj-ghm.sql
-#    (actes classants, racines de GHM, éligibilité HDJ et vue base_hdj_actes) et, une
-#    seule fois, supabase/referentiel-maj.sql (suivi des dates de mise à jour).
-#    ccam-arbres.sql redéfinit la fonction rechercher_ccam : il doit être appliqué après
-#    rpc-recherche.sql.
+#    supabase/ccam-arbres.sql (arborescence + mots-clés CCAM), supabase/thesaurus.sql
+#    (thésaurus des synonymes : normalisation SQL, table thesaurus_synonymes, recherche
+#    élargie), supabase/hdj-ghm.sql (actes classants, racines de GHM, éligibilité HDJ et
+#    vue base_hdj_actes) et, une seule fois, supabase/referentiel-maj.sql (suivi des dates
+#    de mise à jour).
+#    ccam-arbres.sql puis thesaurus.sql redéfinissent la fonction rechercher_ccam : ils
+#    doivent être appliqués après rpc-recherche.sql, et thesaurus.sql en dernier.
 npm run sql:appliquer -- supabase/hdj-ghm.sql --verifier   # psql < … si PostgreSQL est installé
 ```
 
@@ -655,8 +711,9 @@ jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
 
 ```bash
 npm install
-npm test              # 155 tests : moteur, portes, assistant (référentiel simulé),
-                      #             lecture des référentiels officiels et croisement GHM
+npm test              # 184 tests : moteur, portes, assistant (référentiel simulé),
+                      #             thésaurus des synonymes, lecture des référentiels
+                      #             officiels et croisement GHM
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

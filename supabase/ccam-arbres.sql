@@ -245,5 +245,7 @@ grant execute on function public.actes_par_theme(text, text, integer) to anon, a
 
 -- `rechercher_ccam` est recréée ici (nouvelle signature) : les privilèges posés par
 -- `rpc-recherche.sql` sont repris, sinon la fonction retomberait sur le droit PUBLIC par défaut.
+-- `supabase/thesaurus.sql` la reprend ensuite pour y brancher le thésaurus : c'est lui qui
+-- doit être appliqué en DERNIER.
 revoke all on function public.rechercher_ccam(text, integer) from public;
 grant execute on function public.rechercher_ccam(text, integer) to anon, authenticated;

@@ -29,6 +29,7 @@ import { dirname, join } from 'node:path';
 
 import { construireActes, lireSurchargesCcam } from './lib/referentiels.mjs';
 import { classerActeHdj, lireActesClassantsGhm, lireRacinesGhm, TYPE_ACTE } from './lib/ghm.mjs';
+import { thesaurusDepuisCsv } from './lib/thesaurus.mjs';
 
 const args = process.argv.slice(2);
 const option = (nom, defaut) => {
@@ -47,6 +48,7 @@ const actes = construireActes({
   contenuCcam: readFileSync(CACHE, 'utf8'),
   surcharges: lireSurchargesCcam(readFileSync('data/ccam-overlay.csv', 'utf8')),
   contenuCcamConsolides: readFileSync('data/ccam-complete-2025.csv', 'utf8'),
+  thesaurus: thesaurusDepuisCsv(readFileSync('data/thesaurus-synonymes.csv', 'utf8')),
 });
 const parCode = new Map(actes.map((a) => [a.code, a]));
 
