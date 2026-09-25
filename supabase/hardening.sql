@@ -77,14 +77,21 @@ select
   surveillance_renforcee
 from public.referentiel_medicaments;
 
-create or replace view public.v_ccam_hdj
+drop view if exists public.v_ccam_hdj;
+
+create view public.v_ccam_hdj
 with (security_invoker = true) as
 select
   code,
   libelle,
   acte_marqueur_hdj,
   exclusif_externe,
-  necessite_plateau_lourd
+  necessite_plateau_lourd,
+  acte_classant,
+  eligibilite_hdj,
+  motif_eligibilite_hdj,
+  type_acte,
+  racines_ghm
 from public.referentiel_ccam;
 
 grant select on public.v_medicaments_hdj to anon, authenticated;

@@ -115,10 +115,13 @@ pas le revoir une fois qu’il est connu.
   désélectionne. Un second médecin s’ajoute par un bouton dédié (autre spécialité).
   **Aucune autre saisie** : ni spécialité, ni question sur la note d’évolution — un **rappel**
   encadré les remplace (voir ci-dessous).
-- **Référentiels faisant foi** : les caractéristiques d’un acte CCAM (plateau technique lourd,
-  acte marqueur HDJ, réalisation en externe) et le classement d’un médicament (réserve
-  hospitalière, surveillance renforcée) sont **repris du référentiel** et affichés. Ils ne sont
-  **jamais redemandés** à l’utilisateur.
+- **Référentiels faisant foi** : le **verdict d’éligibilité HDJ** d’un acte (issu du croisement
+  avec le Manuel des GHM : acte classant, éligibilité à trois états, motif), ses indicateurs de
+  nomenclature CCAM (plateau technique lourd, acte marqueur HDJ, réalisation en externe) et le
+  classement d’un médicament (réserve hospitalière, surveillance renforcée) sont **repris du
+  référentiel** et affichés. Ils ne sont **jamais redemandés** à l’utilisateur. Chaque écran
+  CCAM affiche le verdict **en tête**, puis les indicateurs en complément : un acte **lourd**
+  n’est pas nécessairement un acte **recevable en HDJ**.
 - **Actes : recherche *et* arborescence sur l’écran de saisie** : à l’étape « actes », l’acte se
   cherche par code ou mots-clés — ou se **parcourt par arborescence** (thématique → site
   anatomique → acte), dépliée à la demande. Une fois l’acte trouvé, un bouton **« Ajouter au
@@ -249,8 +252,9 @@ Projet Supabase `Hdjverif` — deux tables publiques en lecture seule :
 
 Dans l’assistant :
 
-- l’utilisateur **recherche un acte** (par code ou par mots-clés) : le code, le libellé et les
-  trois indicateurs sont repris du référentiel et affichés, sans ressaisie ;
+- l’utilisateur **recherche un acte** (par code ou par mots-clés) : le code, le libellé, le
+  **verdict d’éligibilité HDJ** et les trois indicateurs de nomenclature sont repris du
+  référentiel et affichés, sans ressaisie ;
 - l’utilisateur **recherche un médicament** (nom ou DCI) : l’assistant affiche s’il s’agit d’un
   **produit de la réserve hospitalière** — ce qui suffit à valider le pilier « soins » ;
 - la recherche est **insensible à la casse et aux accents** (fonctions RPC `unaccent`) ;
@@ -282,7 +286,7 @@ qu’« endoscopie œsogastroduodénale ». Deux dispositifs complètent donc la
    `chapitres_ccam()`, `sous_chapitres_ccam(chapitre)` et `actes_par_theme(chapitre, sous-thème)`.
 
    Cette arborescence est **la même dans les deux contextes** : la consultation autonome du
-   référentiel (lecture seule, où l’acte est qualifié « soin lourd / non lourd ») et **l’étape
+   référentiel (lecture seule, où l’acte reçoit son **verdict d’éligibilité HDJ**) et **l’étape
    « actes » du questionnaire**, où elle se déplie à la demande et où chaque acte trouvé porte un
    bouton **« Ajouter au dossier »** : l’acte rejoint la saisie sans quitter le parcours, puis
    l’étape suivante se poursuit. Une fois retenu, il est signalé « Ajouté au dossier » et son
@@ -386,15 +390,69 @@ les **1 969 actes tarifés en libéral**. Deux manques en découlaient, tous deu
    → `01K06`).
 
 > **Ce que l’ajout change — et ce qu’il ne change pas.** Les actes nouvellement importés n’ont
-> **aucun mode d’accès CCAM** : leurs indicateurs restent *absents* tant que le croisement GHM
-> ne les renseigne pas. C’est le cas du plateau technique lourd, déduit du **Groupe
-> chirurgical** de la racine (un séjour qui y est groupé suppose un bloc opératoire) ; hors de
-> ce cas la valeur reste absente, jamais convertie en « non ». Les **1 969 actes déjà connus ne
-> changent pas d’une ligne** : c’est ce que vérifie un test, acte par acte.
+> **aucun mode d’accès CCAM** : le croisement avec le Manuel des GHM comble ce que la
+> nomenclature ne dit pas, **sans jamais transformer une absence en « non »** :
+>
+> | Indicateur | Source de la valeur définitive | Valeur pour les 6 090 actes hors périmètre libéral |
+> |---|---|---|
+> | `acte_marqueur_hdj` | **Manuel des GHM** | **toujours renseigné** : l’acte peut-il valider un GHS d’HDJ ? |
+> | `necessite_plateau_lourd` | CCAM, puis **groupe de la racine de GHM** | *oui* (groupe chirurgical, ou acte classant non opératoire donc lourd), *non* (acte mineur reclassant), sinon **absent** (hors des listes) |
+> | `exclusif_externe` | CCAM, puis **croisement** | *non* dès que l’acte est **classant** (il ouvre un GHS) ; sinon **absent** (hors des listes) |
+>
+> Les **1 969 actes déjà connus** conservent leur libellé et leur plateau technique : c’est ce
+> que vérifie un test, acte par acte. Seul `acte_marqueur_hdj` y est **redéfini** — il devient le
+> verdict d’éligibilité, et non un doublon du plateau (voir le contrôle DIM ci-dessous).
 
 **Sur la nomenclature complète, le croisement donne :** 5 486 actes classants sur 8 059,
 **4 254 éligibles à l’HDJ** (GHM ambulatoire strict), **4 377** de type « interventionnel
 classant », 901 « lourd non opératoire », 214 reclassant en GHM médical et 2 573 non classants.
+
+### Contrôle DIM : 1 000 actes tirés au hasard
+
+> **Contrôle du 25/09/2026, en position de responsable du DIM.** Un tirage aléatoire reproductible
+> (graine `20260925`) de **1 000 actes** parmi les 4 730 dont une racine de GHM admet un séjour de
+> 0 nuit — la population « qui aurait pu être utilisée en HDJ » — a été passé au crible des
+> colonnes réellement servies à l’utilisateur. Constat : la base **ne répondait pas** à la
+> question posée, et l’écran renvoyait l’image d’un référentiel mal renseigné.
+
+Deux défauts de la construction, tous deux corrigés depuis :
+
+1. **`acte_marqueur_hdj` était vide pour 79 % des actes HDJ** (789 sur 1 000, `NULL` — affiché
+   « Non déterminé » ; seuls 5 portaient « Non »). La colonne n’était dérivée que du **mode
+   d’accès CCAM** : les 6 090 actes hors périmètre libéral n’en avaient pas. Pire, sur les
+   1 969 actes qui en avaient une, le marqueur **contredisait l’éligibilité** : **645 actes**
+   affichaient « acte marqueur HDJ : oui » alors qu’ils ne peuvent pas valider une HDJ
+   (une craniotomie est lourde *et* exige une nuitée). Le marqueur confondait **« acte lourd »**
+   et **« acte recevable en HDJ »**.
+2. **Le verdict d’éligibilité n’était pas exposé à l’application.** Les colonnes
+   `eligibilite_hdj`, `acte_classant`, `type_acte` et `motif_eligibilite_hdj` — complètes, elles,
+   à 100 % — n’étaient renvoyées par aucune fonction RPC : l’écran ne pouvait donc afficher que
+   les trois drapeaux de nomenclature. La vue `base_hdj_actes` rendait en outre toute absence de
+   plateau comme un « non » **établi** (`coalesce`), contre la doctrine du projet.
+
+**Correction apportée.** Le marqueur est **redéfini** par le croisement GHM — « l’acte peut
+ouvrir un GHS d’HDJ », donc **défini pour les 8 059 actes** (4 517 oui / 3 542 non, plus aucun
+`NULL`) —, le plateau technique lourd et la réalisation en externe sont complétés par la
+classification, le verdict est **exposé aux trois fonctions RPC** et **affiché en tête de chaque
+fiche** (badge vert / orange / rouge + motif), les trois indicateurs passant en complément avec
+la mention explicite « non renseigné » (jamais « Non déterminé »). Pour les 52 actes classants
+dont la racine n’a pas de catégorie publiée et les 1 688 actes non classants hors CCAM, la
+valeur reste **absente** — mais elle porte désormais sur des actes **non éligibles**, et la fiche
+le dit.
+
+**Mesure du contrôle après correction** (même tirage, reproductible) :
+
+| Colonne | Avant | Après |
+|---|---|---|
+| `acte_marqueur_hdj` renseigné | 211 / 1 000 (789 « Non déterminé », 5 « Non ») | **1 000 / 1 000** |
+| `eligibilite_hdj` renseigné | 1 000 / 1 000 mais **non exposé à l’écran** | **1 000 / 1 000, affiché en tête de fiche** |
+| `necessite_plateau_lourd` renseigné | 859 / 1 000 | **1 000 / 1 000** |
+| `exclusif_externe` renseigné | 211 / 1 000 | **1 000 / 1 000** |
+
+Les valeurs encore absentes en base (1 740 plateaux, 1 688 réalisations en externe) ne portent
+que sur des **actes non classants hors nomenclature libérale** : aucun n’entre dans la
+population HDJ, et leur fiche affiche le verdict « Non recevable en HDJ sur cet acte seul ».
+Le tableau à six colonnes (`node scripts/base-hdj.mjs`) suit la même doctrine de tri-état.
 
 ### Extraction des PDF officiels (`scripts/extraire-referentiel-atih.py`)
 
@@ -478,10 +536,17 @@ présume rien.
 - `est_reserve_hospitaliere` et `surveillance_particuliere` peuvent valoir `NULL` : c’est une
   **valeur absente**, affichée comme telle. Une **validation par la pharmacie à usage
   intérieur** reste nécessaire.
-- `acte_marqueur_hdj` / `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode
-  d’accès** de la nomenclature CCAM (un acte en « abord ouvert » ou « accès transpariétal »
-  nécessite un plateau lourd ; une imagerie « sans accès » est réalisable en externe), corrigés
-  par `data/ccam-overlay.csv` pour les cas connus (ECG `DEQP003`, etc.).
+- `acte_marqueur_hdj` : **différent du plateau technique**. Il dit « l’acte peut ouvrir un GHS
+  d’hospitalisation de jour » et vient du **croisement avec le Manuel des GHM** (acte classant et
+  séjour de 0 nuit possible). Il est **défini pour les 8 059 actes** — ne plus le lire comme un
+  synonyme d’« acte lourd » (une craniotomie est lourde et n’est pas recevable en HDJ).
+- `necessite_plateau_lourd` / `exclusif_externe` : dérivés du **mode d’accès** de la nomenclature
+  CCAM (un acte en « abord ouvert » ou « accès transpariétal » nécessite un plateau lourd ; une
+  imagerie « sans accès » est réalisable en externe), corrigés par `data/ccam-overlay.csv` pour
+  les cas connus (ECG `DEQP003`, etc.). Quand la CCAM est muette, le **groupe de la racine de
+  GHM** tranche (chirurgical ou non opératoire → plateau lourd ; acte classant → non réalisable
+  en externe) ; hors de ces cas la valeur reste **absente** (`NULL`), jamais convertie en « non »,
+  et l’écran l’affiche « non renseigné ».
 
 ### Sécurité
 
@@ -590,8 +655,8 @@ jamais journalisée). Journal des exécutions : `.cache/maj-referentiels.log`.
 
 ```bash
 npm install
-npm test              # 124 tests : moteur, portes, assistant (référentiel simulé),
-                      #             lecture des référentiels officiels
+npm test              # 155 tests : moteur, portes, assistant (référentiel simulé),
+                      #             lecture des référentiels officiels et croisement GHM
 npm run test:coverage # couverture du moteur (~99 %)
 npm run typecheck     # TypeScript strict
 npm run dev           # serveur de développement

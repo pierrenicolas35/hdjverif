@@ -803,9 +803,29 @@ button {
   background: #fff;
 }
 
+/* Verdict d'éligibilité à l'HDJ — la couleur porte le verdict du référentiel. */
+.acte-ligne.hdj-oui {
+  border-left-color: var(--vert);
+  background: var(--vert-clair);
+}
+
+.acte-ligne.hdj-sous-condition {
+  border-left-color: var(--orange);
+  background: var(--orange-clair);
+}
+
+.acte-ligne.hdj-non {
+  border-left-color: var(--bordure-forte);
+}
+
+/* Ligne de médicament : la teinte porte le classement au référentiel. */
 .acte-ligne.lourd {
   border-left-color: var(--orange);
   background: var(--orange-clair);
+}
+
+.acte-ligne.lourd .acte-verdict {
+  color: var(--orange);
 }
 
 .acte-tete {
@@ -841,17 +861,33 @@ button {
 }
 
 .acte-verdict {
-  margin-top: 7px;
+  margin: 7px 0 0;
   font-size: 0.8rem;
   font-weight: 600;
+  color: var(--texte-doux);
 }
 
-.acte-ligne.lourd .acte-verdict {
+.acte-verdict strong {
+  font-weight: 700;
+}
+
+.acte-verdict.hdj-oui strong {
+  color: var(--vert-fonce);
+}
+
+.acte-verdict.hdj-sous-condition strong {
   color: var(--orange);
 }
 
-.acte-ligne.leger .acte-verdict {
-  color: var(--texte-doux);
+.acte-verdict.hdj-non strong {
+  color: var(--rouge);
+}
+
+/* Valeur absente du référentiel : nommée comme telle, jamais convertie en « non ». */
+.drapeau.absent {
+  color: var(--texte-faible);
+  background: transparent;
+  border: 1px dashed var(--bordure-forte);
 }
 
 /* =====================================================================

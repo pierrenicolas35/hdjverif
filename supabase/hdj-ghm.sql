@@ -82,6 +82,16 @@ comment on column public.referentiel_ccam.environnement_requis is
 comment on column public.referentiel_ccam.commentaire_pmsi is
   'Règles de traçabilité PMSI opposables au dossier en cas de contrôle T2A.';
 
+-- `acte_marqueur_hdj` et `exclusif_externe` naissent de la nomenclature CCAM ; le croisement
+-- avec le Manuel des GHM en donne la valeur **définitive** pour les actes hors jeu libéral.
+-- Un acte marqueur d'HDJ n'est pas un « acte lourd » : c'est un acte qui **peut ouvrir un GHS
+-- d'hospitalisation de jour**. La confusion entre les deux faisait afficher « acte marqueur
+-- HDJ : oui » sur des actes qui ne peuvent pas valider une HDJ (contrôle DIM du 25/09/2026).
+comment on column public.referentiel_ccam.acte_marqueur_hdj is
+  'Acte marqueur d''hospitalisation de jour : l''acte est classant et admet un séjour de 0 nuit (éligibilité « oui » ou « sous condition »). Valeur définie pour tous les actes, issue du Manuel des GHM.';
+comment on column public.referentiel_ccam.exclusif_externe is
+  'Acte réalisable en externe (mode d''accès CCAM « sans accès », corrigé par ccam-overlay). Faux dès que l''acte est classant ; absent (NULL) hors de ce cas — l''absence n''est jamais convertie en « non ».';
+
 -- ---------------------------------------------------------------------
 -- 2. Index : sélection des actes classants et de ceux éligibles à l'HDJ
 -- ---------------------------------------------------------------------
@@ -94,11 +104,22 @@ create index if not exists idx_ccam_eligible_hdj
   where eligible_hdj;
 
 -- ---------------------------------------------------------------------
--- 3. Vue de restitution à six colonnes
+-- 3. Vue de restitution
 --    [Code CCAM] | [Libellé] | [Racine GHM / Type d'acte] | [Éligibilité HDJ]
---    | [Plateau technique lourd requis] | [Commentaires / traçabilité PMSI]
+--    | [Acte marqueur HDJ] | [Plateau technique lourd requis]
+--    | [Réalisable en externe] | [Motif] | [Commentaires / traçabilité PMSI]
+--
+--    Les trois indicateurs binaires sont rendus à **trois états** : « oui », « non » et
+--    « non renseigné » lorsque la source est muette. Aucune valeur absente n'est convertie
+--    en « non » (l'ancienne vue le faisait pour le plateau technique, et affichait donc un
+--    refus là où le référentiel ne disait rien).
+--
+--    La vue est **supprimée puis recréée** : `create or replace view` ne sait ni renommer ni
+--    réordonner une colonne, et la nouvelle restitution ajoute l'acte marqueur d'HDJ.
 -- ---------------------------------------------------------------------
-create or replace view public.base_hdj_actes as
+drop view if exists public.base_hdj_actes;
+
+create view public.base_hdj_actes as
 select
   a.code                                                        as code_ccam,
   a.libelle                                                     as libelle,
@@ -107,11 +128,20 @@ select
     else a.racines_ghm || ' — ' || a.type_acte
   end                                                           as racine_ghm_type_acte,
   coalesce(a.eligibilite_hdj, 'non')                            as eligible_hdj,
-  case when a.necessite_plateau_lourd then 'oui' else 'non' end as plateau_technique_lourd_requis,
+  case when a.acte_marqueur_hdj then 'oui' else 'non' end       as acte_marqueur_hdj,
+  case
+    when a.necessite_plateau_lourd is null then 'non renseigné'
+    when a.necessite_plateau_lourd then 'oui' else 'non'
+  end                                                           as plateau_technique_lourd_requis,
+  case
+    when a.exclusif_externe is null then 'non renseigné'
+    when a.exclusif_externe then 'oui' else 'non'
+  end                                                           as realisable_en_externe,
+  a.motif_eligibilite_hdj                                       as motif_eligibilite_hdj,
   a.commentaire_pmsi                                            as commentaire_pmsi
 from public.referentiel_ccam a;
 
 comment on view public.base_hdj_actes is
-  'Base des actes techniques valorisables en HDJ : nomenclature CCAM croisée au Manuel des GHM MCO 2025 (ATIH).';
+  'Base des actes techniques valorisables en HDJ : nomenclature CCAM croisée au Manuel des GHM MCO 2025 (ATIH). Les indicateurs binaires sont rendus à trois états (oui / non / non renseigné).';
 
 grant select on public.base_hdj_actes to anon, authenticated;

@@ -54,6 +54,18 @@ export function enrichirActesAvecGhm(actes, { racines, actesClassants }) {
       // Le plateau technique lourd déduit de la classification en GHM remplace la valeur
       // absente laissée par la nomenclature CCAM (voir `classerActeHdj`).
       necessite_plateau_lourd: c.plateauTechniqueLourdRequis,
+      // `acte_marqueur_hdj` ne dit pas « acte lourd » : il dit **l'acte peut ouvrir un GHS
+      // d'hospitalisation de jour**. La nomenclature CCAM ne le portait pas (elle n'a qu'un
+      // mode d'accès) : le croisement avec le Manuel des GHM qui suit en donne la valeur
+      // définitive — `true` si l'acte est classant et admet un séjour de 0 nuit (éligibilité
+      // « oui » ou « sous condition »), `false` sinon. La valeur est donc **toujours
+      // renseignée**, jamais « non déterminée ».
+      acte_marqueur_hdj: c.eligibleHdj !== ELIGIBILITE.NON,
+      // `exclusif_externe` reste ce que la CCAM en dit (un acte « sans accès » est réalisable
+      // en externe). Quand la CCAM est muette, la classification tranche : un acte **classant**
+      // ouvre un GHS, il n'est donc pas réalisable en externe ; hors de ce cas la valeur reste
+      // absente, jamais convertie en « non ».
+      exclusif_externe: acte.exclusif_externe ?? (c.acteClassant ? false : null),
       acte_classant: c.acteClassant,
       racines_ghm: c.racinesGhm.join(' ') || null,
       cmd_classantes: c.cmdClassantes.join(' ') || null,
@@ -78,6 +90,36 @@ export function enrichirActesAvecGhm(actes, { racines, actesClassants }) {
 export const CATEGORIE_CHIRURGICALE = 'Groupes chirurgicaux';
 export const CATEGORIE_NON_OPERATOIRE = 'Groupes avec acte classant non opératoire';
 export const CATEGORIE_MEDICALE = 'Groupes "médicaux"';
+
+/**
+ * Catégories majeures qui supposent un plateau technique lourd.
+ *
+ *   • « Groupes chirurgicaux » — un séjour qui y est groupé passe au bloc opératoire ;
+ *   • « Groupes avec acte classant non opératoire » — acte lourd guidé par l'image ou
+ *     réalisé en salle interventionnelle (endoscopie thérapeutique, radiologie
+ *     interventionnelle…), sans bloc.
+ *
+ * Ces deux catégories viennent de l'annexe 2 : aucune n'est déduite d'une appréciation.
+ */
+const CATEGORIES_PLATEAU_LOURD = new Set([CATEGORIE_CHIRURGICALE, CATEGORIE_NON_OPERATOIRE]);
+
+/**
+ * Plateau technique lourd déduit du croisement en GHM, quand la CCAM est muette.
+ *
+ *   • acte mineur reclassant dans un GHM « médical » (annexe 11) → pas de plateau lourd ;
+ *   • racine d'un groupe chirurgical ou à acte classant non opératoire → plateau lourd ;
+ *   • racine d'un groupe « médical » → aucun plateau lourd mobilisé ;
+ *   • hors des listes du Manuel des GHM, ou catégorie absente → `null` : la source ne
+ *     tranche pas, la valeur reste absente et n'est **jamais** convertie en « non ».
+ *
+ * @returns {boolean|null}
+ */
+function plateauDepuisGhm(details, reclassantMedical) {
+  if (reclassantMedical) return false;
+  if (details.some((r) => CATEGORIES_PLATEAU_LOURD.has(r.categorieMajeure))) return true;
+  if (details.some((r) => r.categorieMajeure === CATEGORIE_MEDICALE)) return false;
+  return null;
+}
 
 /* ------------------------------------------------------------------ *
  * Lecture des fichiers de référence
@@ -246,11 +288,13 @@ export function classerActeHdj(acte, { actesClassants, racines }) {
 
   // Le mode d'accès de la CCAM n'est pas connu des actes absents du jeu de données libéral
   // (chapitre 18, actes hospitaliers, forfaits du chapitre 19) : c'est alors la classification
-  // en GHM qui tranche — un séjour groupé dans un « Groupe chirurgical » suppose un bloc
-  // opératoire. Hors de ce cas, la valeur reste **absente** (`null`) plutôt que convertie en
-  // « non » : même doctrine que pour la réserve hospitalière.
-  const plateauLourd = acte.necessite_plateau_lourd
-    ?? (typeActe === TYPE_ACTE.OPERATOIRE ? true : null);
+  // en GHM qui tranche — un séjour groupé dans un « Groupe chirurgical » (bloc opératoire) ou
+  // dans un groupe à « acte classant non opératoire » (acte lourd) mobilise un plateau
+  // technique ; un groupe « médical » n'en mobilise aucun. Hors de ces cas, la valeur reste
+  // **absente** (`null`) plutôt que convertie en « non » : même doctrine que pour la réserve
+  // hospitalière.
+  const plateauLourd =
+    acte.necessite_plateau_lourd ?? plateauDepuisGhm(details, reclassantMedical);
 
   let eligibleHdj;
   let motifEligibilite;

@@ -242,11 +242,16 @@ describe('classement HDJ d’un acte', () => {
     expect(c.environnementRequis).toContain('Anesthésie');
   });
 
-  it('déduit le plateau technique lourd du groupe chirurgical quand la CCAM est muette', () => {
-    // Acte sans mode d'accès connu (chapitre 18, hôpital) : la racine fait foi.
+  it('déduit le plateau technique lourd du groupe de la racine quand la CCAM est muette', () => {
+    // Acte sans mode d'accès connu (chapitre 18, hôpital) : la classification fait foi.
+    //  • groupe chirurgical → bloc opératoire ;
     expect(classer('AHPA009', null).plateauTechniqueLourdRequis).toBe(true);
-    // Hors de ce cas, la valeur reste absente — jamais convertie en « non ».
-    expect(classer('HHFE002', null).plateauTechniqueLourdRequis).toBeNull();
+    //  • acte classant non opératoire → acte lourd (salle interventionnelle) ;
+    expect(classer('HHFE002', null).plateauTechniqueLourdRequis).toBe(true);
+    //  • acte mineur reclassant dans un GHM médical (annexe 11) → aucun plateau lourd ;
+    expect(classer('DELA001', null).plateauTechniqueLourdRequis).toBe(false);
+    //  • hors des listes du Manuel des GHM → la valeur reste absente, jamais convertie en « non ».
+    expect(classer('DEQP003', null).plateauTechniqueLourdRequis).toBeNull();
     // Valeur CCAM connue : elle prime, y compris quand elle dit « non ».
     expect(classer('AHPA009', false).plateauTechniqueLourdRequis).toBe(false);
   });
@@ -319,6 +324,40 @@ describe('référentiel livré (data/atih et data/ccam-complete-2025.csv)', () =
       expect(a.necessite_plateau_lourd).not.toBeNull();
     }
   });
+
+  it('renseigne l’acte marqueur d’HDJ pour tous les actes, jamais « non déterminé »', () => {
+    // `acte_marqueur_hdj` dit « l’acte peut ouvrir un GHS d’HDJ », et non « acte lourd » :
+    // il suit le verdict d’éligibilité et n’est jamais absent (défaut constaté au contrôle DIM).
+    for (const a of enrichis) {
+      expect(typeof a.acte_marqueur_hdj).toBe('boolean');
+      expect(a.acte_marqueur_hdj).toBe(a.eligibilite_hdj !== ELIGIBILITE.NON);
+    }
+    expect(enrichis.filter((a) => a.acte_marqueur_hdj)).toHaveLength(4517);
+  });
+
+  it('ne confond plus « acte lourd » et « acte marqueur d’HDJ »', () => {
+    const par = new Map(enrichis.map((a) => [a.code, a]));
+    // Craniotomie : plateau technique lourd, mais aucune racine de 0 nuit → pas un marqueur.
+    expect(par.get('AAFA002')).toMatchObject({
+      necessite_plateau_lourd: true,
+      eligibilite_hdj: ELIGIBILITE.NON,
+      acte_marqueur_hdj: false,
+    });
+    // Endoscopie digestive : acte lourd non opératoire, classant en GHM ambulatoire strict.
+    expect(par.get('HEQE001')).toMatchObject({
+      necessite_plateau_lourd: true,
+      eligibilite_hdj: ELIGIBILITE.OUI,
+      acte_marqueur_hdj: true,
+    });
+  });
+
+  it('renseigne la réalisation en externe dès que l’acte est classant', () => {
+    for (const a of enrichis) {
+      if (a.acte_classant) expect(a.exclusif_externe).not.toBeNull();
+    }
+    // Un acte classant n’est jamais « réalisable en externe ».
+    expect(enrichis.filter((a) => a.acte_classant && a.exclusif_externe === true)).toHaveLength(0);
+  });
 });
 
 /* ------------------------------------------------------------------ *
@@ -346,16 +385,32 @@ describe.skipIf(!CACHE_PRESENT)('source libérale CCAM Ameli (.cache/)', () => {
   };
   const donnees = () => (memo ??= calculer());
 
-  it('n’altère pas les 1 969 actes déjà connus : libellé et indicateurs identiques', () => {
+  it('n’altère pas les 1 969 actes déjà connus : libellé, plateau et externe identiques', () => {
     const { ameliSeul, par } = donnees();
     expect(ameliSeul).toHaveLength(1969);
     for (const a of ameliSeul) {
+      // `acte_marqueur_hdj` fait exception : il est redéfini par le croisement GHM (voir le
+      // test suivant), les deux autres indicateurs CCAM sont repris tels quels.
       expect(par.get(a.code)).toMatchObject({
         libelle: a.libelle,
         necessite_plateau_lourd: a.necessite_plateau_lourd,
         exclusif_externe: a.exclusif_externe,
       });
     }
+  });
+
+  it('redéfinit l’acte marqueur d’HDJ d’après la classification, et non d’après le mode d’accès', () => {
+    const { ameliSeul, par } = donnees();
+    for (const a of ameliSeul) {
+      const enrichi = par.get(a.code)!;
+      expect(enrichi.acte_marqueur_hdj).toBe(enrichi.eligibilite_hdj !== ELIGIBILITE.NON);
+    }
+    // La correction est réelle : des actes « lourds » au sens de la CCAM ne peuvent pas valider
+    // une HDJ (ils affichaient « acte marqueur HDJ : oui » avant le contrôle DIM).
+    const corriges = ameliSeul.filter(
+      (a) => a.acte_marqueur_hdj === true && par.get(a.code)?.acte_marqueur_hdj === false,
+    );
+    expect(corriges.length).toBeGreaterThan(0);
   });
 
   it('retrouve les proportions du périmètre libéral', () => {

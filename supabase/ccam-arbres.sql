@@ -52,8 +52,13 @@ create index if not exists idx_ccam_sous_chapitre
 
 -- ---------------------------------------------------------------------
 -- 3. Recherche élargie (code, libellé, mots-clés)
+--
+--    La fiche renvoyée porte le verdict de codage HDJ (acte classant, éligibilité,
+--    motif, racines de GHM), défini pour tous les actes — voir rpc-recherche.sql.
 -- ---------------------------------------------------------------------
-create or replace function public.rechercher_ccam(
+drop function if exists public.rechercher_ccam(text, integer);
+
+create function public.rechercher_ccam(
   p_terme  text,
   p_limite integer default 12
 )
@@ -62,7 +67,12 @@ returns table (
   libelle                 text,
   acte_marqueur_hdj       boolean,
   exclusif_externe        boolean,
-  necessite_plateau_lourd boolean
+  necessite_plateau_lourd boolean,
+  acte_classant           boolean,
+  eligibilite_hdj         text,
+  motif_eligibilite_hdj   text,
+  type_acte               text,
+  racines_ghm             text
 )
 language sql
 stable
@@ -77,7 +87,12 @@ as $$
     a.libelle,
     a.acte_marqueur_hdj,
     a.exclusif_externe,
-    a.necessite_plateau_lourd
+    a.necessite_plateau_lourd,
+    a.acte_classant,
+    a.eligibilite_hdj,
+    a.motif_eligibilite_hdj,
+    a.type_acte,
+    a.racines_ghm
   from public.referentiel_ccam a, cible
   where cible.t is not null
     and (
@@ -155,7 +170,12 @@ returns table (
   libelle                 text,
   acte_marqueur_hdj       boolean,
   exclusif_externe        boolean,
-  necessite_plateau_lourd boolean
+  necessite_plateau_lourd boolean,
+  acte_classant           boolean,
+  eligibilite_hdj         text,
+  motif_eligibilite_hdj   text,
+  type_acte               text,
+  racines_ghm             text
 )
 language sql
 stable
@@ -167,7 +187,12 @@ as $$
     a.libelle,
     a.acte_marqueur_hdj,
     a.exclusif_externe,
-    a.necessite_plateau_lourd
+    a.necessite_plateau_lourd,
+    a.acte_classant,
+    a.eligibilite_hdj,
+    a.motif_eligibilite_hdj,
+    a.type_acte,
+    a.racines_ghm
   from public.referentiel_ccam a
   where a.chapitre_code = btrim(coalesce(p_chapitre, ''))
     and (
@@ -181,7 +206,11 @@ $$;
 -- ---------------------------------------------------------------------
 -- 5. Vue de lecture (colonnes d'arborescence incluses)
 -- ---------------------------------------------------------------------
-create or replace view public.v_ccam_hdj
+-- La vue est supprimée puis recréée : `create or replace view` ne sait pas réordonner
+-- les colonnes, et la restitution ajoute le verdict de codage HDJ.
+drop view if exists public.v_ccam_hdj;
+
+create view public.v_ccam_hdj
 with (security_invoker = true) as
 select
   code,
@@ -189,6 +218,11 @@ select
   acte_marqueur_hdj,
   exclusif_externe,
   necessite_plateau_lourd,
+  acte_classant,
+  eligibilite_hdj,
+  motif_eligibilite_hdj,
+  type_acte,
+  racines_ghm,
   chapitre_code,
   chapitre_libelle,
   sous_chapitre_code,
@@ -208,3 +242,8 @@ revoke all on function public.actes_par_theme(text, text, integer) from public;
 grant execute on function public.chapitres_ccam() to anon, authenticated;
 grant execute on function public.sous_chapitres_ccam(text) to anon, authenticated;
 grant execute on function public.actes_par_theme(text, text, integer) to anon, authenticated;
+
+-- `rechercher_ccam` est recréée ici (nouvelle signature) : les privilèges posés par
+-- `rpc-recherche.sql` sont repris, sinon la fonction retomberait sur le droit PUBLIC par défaut.
+revoke all on function public.rechercher_ccam(text, integer) from public;
+grant execute on function public.rechercher_ccam(text, integer) to anon, authenticated;

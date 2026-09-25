@@ -362,6 +362,7 @@ async function principal() {
         'type_acte',
         'eligible_hdj',
         'eligibilite_hdj',
+        'motif_eligibilite_hdj',
         'environnement_requis',
       ],
       'referentiel_ccam.csv',

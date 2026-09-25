@@ -73,12 +73,19 @@ $$;
 -- ---------------------------------------------------------------------
 -- Recherche d'actes CCAM (par code ou par libellé)
 --
+-- La fiche renvoyée porte, outre les trois indicateurs CCAM (historiques), le
+-- **verdict de codage HDJ** issu du croisement avec le Manuel des GHM : l'application
+-- répond « cet acte peut-il valider une hospitalisation de jour ? » sur une donnée
+-- **définie pour tous les actes**, et non sur une colonne vide hors jeu libéral.
+--
 -- NB : `supabase/ccam-arbres.sql` REDÉFINIT cette fonction pour y ajouter la
 --      recherche par mots-clés (§ « grand public ») et l'arborescence. Le
 --      présent fichier reste la version de base ; en cas d'installation neuve,
 --      appliquer `ccam-arbres.sql` APRÈS celui-ci.
 -- ---------------------------------------------------------------------
-create or replace function public.rechercher_ccam(
+drop function if exists public.rechercher_ccam(text, integer);
+
+create function public.rechercher_ccam(
   p_terme  text,
   p_limite integer default 12
 )
@@ -87,7 +94,12 @@ returns table (
   libelle                text,
   acte_marqueur_hdj      boolean,
   exclusif_externe       boolean,
-  necessite_plateau_lourd boolean
+  necessite_plateau_lourd boolean,
+  acte_classant          boolean,
+  eligibilite_hdj        text,
+  motif_eligibilite_hdj  text,
+  type_acte              text,
+  racines_ghm            text
 )
 language sql
 stable
@@ -102,7 +114,12 @@ as $$
     a.libelle,
     a.acte_marqueur_hdj,
     a.exclusif_externe,
-    a.necessite_plateau_lourd
+    a.necessite_plateau_lourd,
+    a.acte_classant,
+    a.eligibilite_hdj,
+    a.motif_eligibilite_hdj,
+    a.type_acte,
+    a.racines_ghm
   from public.referentiel_ccam a, cible
   where cible.t is not null
     and (
@@ -123,20 +140,28 @@ $$;
 -- ---------------------------------------------------------------------
 -- Lookup unitaires (saisie d'un code connu)
 -- ---------------------------------------------------------------------
-create or replace function public.acte_ccam(p_code text)
+drop function if exists public.acte_ccam(text);
+
+create function public.acte_ccam(p_code text)
 returns table (
   code                   varchar(255),
   libelle                text,
   acte_marqueur_hdj      boolean,
   exclusif_externe       boolean,
-  necessite_plateau_lourd boolean
+  necessite_plateau_lourd boolean,
+  acte_classant          boolean,
+  eligibilite_hdj        text,
+  motif_eligibilite_hdj  text,
+  type_acte              text,
+  racines_ghm            text
 )
 language sql
 stable
 security invoker
 set search_path = public, pg_catalog
 as $$
-  select a.code, a.libelle, a.acte_marqueur_hdj, a.exclusif_externe, a.necessite_plateau_lourd
+  select a.code, a.libelle, a.acte_marqueur_hdj, a.exclusif_externe, a.necessite_plateau_lourd,
+         a.acte_classant, a.eligibilite_hdj, a.motif_eligibilite_hdj, a.type_acte, a.racines_ghm
   from public.referentiel_ccam a
   where lower(a.code) = lower(btrim(coalesce(p_code, '')))
   limit 1;

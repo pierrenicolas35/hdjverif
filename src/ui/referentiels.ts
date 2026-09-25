@@ -33,13 +33,32 @@ export interface MedicamentRef {
   readonly surveillance_renforcee: boolean | null;
 }
 
+/** Verdict d'éligibilité d'un acte au codage en hospitalisation de jour. */
+export type EligibiliteHdj = 'oui' | 'sous condition' | 'non';
+
 /** Acte de la nomenclature CCAM. */
 export interface ActeRef {
   readonly code: string;
   readonly libelle: string;
+  /**
+   * Acte marqueur d'hospitalisation de jour : l'acte est classant et admet un séjour de
+   * 0 nuit. Issu du croisement avec le Manuel des GHM — défini pour tous les actes.
+   */
   readonly acte_marqueur_hdj: boolean | null;
+  /** Acte réalisable en externe (mode d'accès CCAM) ; `null` = non renseigné. */
   readonly exclusif_externe: boolean | null;
+  /** Plateau technique lourd ; `null` = non renseigné (hors jeu de données libéral). */
   readonly necessite_plateau_lourd: boolean | null;
+  /** L'acte ouvre un GHS à lui seul (Manuel des GHM, annexes 8 et volume 2). */
+  readonly acte_classant?: boolean | null;
+  /** Verdict d'éligibilité au codage HDJ, défini pour tous les actes. */
+  readonly eligibilite_hdj?: EligibiliteHdj | null;
+  /** Motivation du verdict, reprise telle quelle du référentiel. */
+  readonly motif_eligibilite_hdj?: string | null;
+  /** Catégorie majeure de GHM (acte interventionnel, lourd non opératoire, reclassant…). */
+  readonly type_acte?: string | null;
+  /** Racines de GHM dans lesquelles l'acte classe. */
+  readonly racines_ghm?: string | null;
   /** Chapitre d'arborescence (facultatif : renseigné par le référentiel). */
   readonly chapitre_code?: string | null;
   readonly chapitre_libelle?: string | null;
@@ -372,6 +391,12 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: false,
     exclusif_externe: true,
     necessite_plateau_lourd: false,
+    acte_classant: false,
+    eligibilite_hdj: 'non',
+    motif_eligibilite_hdj:
+      'non — acte non classant : il n’ouvre pas de GHS à lui seul (ACE ou forfait de séance)',
+    type_acte: 'Acte non classant',
+    racines_ghm: null,
     chapitre_code: '04',
     chapitre_libelle: 'appareil circulatoire',
     sous_chapitre_code: 'CV',
@@ -384,6 +409,12 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: true,
     exclusif_externe: false,
     necessite_plateau_lourd: true,
+    acte_classant: true,
+    eligibilite_hdj: 'oui',
+    motif_eligibilite_hdj:
+      'oui — GHM ambulatoire strict (0 nuit) : l’acte peut valider un GHS d’HDJ à lui seul',
+    type_acte: 'Acte lourd non opératoire',
+    racines_ghm: '06K04 06K05',
     chapitre_code: '07',
     chapitre_libelle: 'appareil digestif',
     sous_chapitre_code: 'DG',
@@ -393,9 +424,15 @@ const ACTES_SECOURS: readonly ActeRef[] = [
   {
     code: 'AAFA002',
     libelle: 'exérèse de tumeur intraparenchymateuse du cerveau, par craniotomie',
-    acte_marqueur_hdj: true,
+    acte_marqueur_hdj: false,
     exclusif_externe: false,
     necessite_plateau_lourd: true,
+    acte_classant: true,
+    eligibilite_hdj: 'non',
+    motif_eligibilite_hdj:
+      'non — aucune racine de cet acte ne décrit de séjour de 0 nuit : au moins une nuitée requise',
+    type_acte: 'Acte interventionnel classant',
+    racines_ghm: '01C03 01C04 01C11 01C12 17C06',
     chapitre_code: '01',
     chapitre_libelle: 'système nerveux central, périphérique et autonome',
     sous_chapitre_code: 'AA',
@@ -408,6 +445,12 @@ const ACTES_SECOURS: readonly ActeRef[] = [
     acte_marqueur_hdj: false,
     exclusif_externe: true,
     necessite_plateau_lourd: false,
+    acte_classant: false,
+    eligibilite_hdj: 'non',
+    motif_eligibilite_hdj:
+      'non — acte non classant : il n’ouvre pas de GHS à lui seul (ACE ou forfait de séance)',
+    type_acte: 'Acte non classant',
+    racines_ghm: null,
     chapitre_code: '01',
     chapitre_libelle: 'système nerveux central, périphérique et autonome',
     sous_chapitre_code: 'AA',

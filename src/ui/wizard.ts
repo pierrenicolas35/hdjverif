@@ -12,9 +12,11 @@
  *     « actes », la nomenclature CCAM se parcourt aussi par arborescence
  *     (thématique → sous-thème → actes) et chaque acte trouvé s'ajoute au dossier
  *     d'un clic, avant de poursuivre le questionnaire ;
- *   • **Référentiel des actes techniques (CCAM)** — interroger la base pour
- *     savoir si un acte mobilise un soin lourd (recherche par mots-clés ou par
- *     arborescence : thématique → sous-thème → actes) ;
+ *   • **Référentiel des actes techniques (CCAM)** — interroger la base pour savoir si
+ *     un acte peut valider une hospitalisation de jour (verdict de codage HDJ issu du
+ *     Manuel des GHM, puis plateau technique lourd et réalisation en externe de la CCAM
+ *     en complément ; recherche par mots-clés ou par arborescence : thématique →
+ *     sous-thème → actes) ;
  *   • **Médicaments de la réserve hospitalière** — recherche par nom ou DCI.
  *
  * L'UI ne décide rien : chaque réponse alimente `EtatAssistant`, converti en
@@ -510,8 +512,8 @@ class Assistant {
           <span class="btn-accueil-icone" aria-hidden="true">🔎</span>
           <span class="btn-accueil-texte">
             <strong>Référentiel des actes techniques (CCAM)</strong>
-            <span>Un acte mobilise-t-il un soin lourd ? Recherche par mots-clés, par code ou par
-              thématique.</span>
+            <span>Cet acte peut-il valider une hospitalisation de jour ? Verdict de codage HDJ,
+              recherche par mots-clés, par code ou par thématique.</span>
           </span>
         </button>
         <button type="button" class="btn-accueil" data-action="ouvrir-medicaments">
@@ -928,10 +930,12 @@ class Assistant {
   private rendreConsultationActes(): void {
     this.racine.innerHTML = `
       <span class="etape-numero">Référentiel CCAM</span>
-      <h2 class="question">Cet acte technique mobilise-t-il un soin lourd ?</h2>
+      <h2 class="question">Cet acte peut-il valider une hospitalisation de jour ?</h2>
       <p class="sous-question">
         Interrogez la nomenclature par mots-clés ou par code, ou parcourez-la par thématique.
-        Les caractéristiques affichées proviennent du référentiel, elles ne sont jamais saisies.
+        Chaque fiche donne le <strong>verdict de codage HDJ</strong> issu du Manuel des GHM
+        (acte classant, éligibilité, motif) et, en complément, les indicateurs de la
+        nomenclature CCAM (plateau technique lourd, réalisation en externe). Rien n’est saisi.
       </p>
       <div class="recherche">
         <input type="text" id="champ-recherche" data-recherche="actes" autocomplete="off"
@@ -1033,16 +1037,88 @@ class Assistant {
         .join('')}</ul>`;
   }
 
-  /** Ligne d'un acte CCAM : code, libellé et lecture « soin lourd / non lourd ». */
+  /**
+   * Verdict d'éligibilité à l'HDJ d'un acte, tel que le référentiel le porte.
+   *
+   * Le verdict vient du croisement avec le Manuel des GHM et **ne dépend pas** du plateau
+   * technique : un acte lourd peut ne pas valider une HDJ (une craniotomie exige une nuitée),
+   * un acte léger peut la valider. L'écran ne doit donc pas confondre « soin lourd » et
+   * « acte marqueur d'HDJ ».
+   */
+  private verdictHdj(acte: ActeRef): {
+    readonly classe: 'hdj-oui' | 'hdj-sous-condition' | 'hdj-non';
+    readonly titre: string;
+    readonly explication: string;
+  } {
+    const motif = (acte.motif_eligibilite_hdj ?? '').replace(
+      /^(oui|non|sous condition)\s*—\s*/i,
+      '',
+    );
+    switch (acte.eligibilite_hdj) {
+      case 'oui':
+        return {
+          classe: 'hdj-oui',
+          titre: 'Éligible à une HDJ',
+          explication: motif || 'l’acte peut valider un GHS d’hospitalisation de jour à lui seul.',
+        };
+      case 'sous condition':
+        return {
+          classe: 'hdj-sous-condition',
+          titre: 'Éligible sous condition',
+          explication: motif || 'la recevabilité dépend du diagnostic principal.',
+        };
+      case 'non':
+        return {
+          classe: 'hdj-non',
+          titre: 'Non recevable en HDJ sur cet acte seul',
+          explication: motif || 'l’acte n’ouvre pas de GHS d’hospitalisation de jour à lui seul.',
+        };
+      default:
+        return {
+          classe: 'hdj-non',
+          titre: 'Éligibilité non renseignée',
+          explication: 'le référentiel ne tranche pas pour cet acte.',
+        };
+    }
+  }
+
+  /** Indicateur du référentiel à trois états ; l'absence est nommée, jamais convertie en « non ». */
+  private etatCourt(valeur: boolean | null | undefined): string {
+    if (valeur === true) return 'oui';
+    if (valeur === false) return 'non';
+    return 'non renseigné';
+  }
+
+  /** Indicateur du référentiel à trois états, avec l'explication de l'absence en infobulle. */
+  private drapeau(libelle: string, valeur: boolean | null | undefined): string {
+    const etat = this.etatCourt(valeur);
+    if (valeur === null || valeur === undefined) {
+      return (
+        `<span class="drapeau absent" title="Non renseigné par la nomenclature CCAM : l’acte ` +
+        'n’appartient pas au jeu de données libéral. Une valeur absente n’est jamais interprétée ' +
+        `comme « non ».">${libelle} : ${etat}</span>`
+      );
+    }
+    return `<span class="drapeau">${libelle} : ${etat}</span>`;
+  }
+
+  /** Raccourci textuel du verdict d'éligibilité, pour les listes de suggestions. */
+  private resumeEligibilite(acte: ActeRef): string {
+    switch (acte.eligibilite_hdj) {
+      case 'oui':
+        return 'HDJ possible';
+      case 'sous condition':
+        return 'HDJ possible sous condition';
+      case 'non':
+        return 'HDJ non recevable sur cet acte seul';
+      default:
+        return 'éligibilité HDJ non renseignée';
+    }
+  }
+
+  /** Ligne d'un acte CCAM : code, libellé et verdict d'éligibilité à l'HDJ. */
   private ligneActe(acte: ActeRef, avecAjout = false): string {
-    const lourd = acte.necessite_plateau_lourd === true || acte.acte_marqueur_hdj === true;
-    const conclusion = acte.necessite_plateau_lourd === true
-      ? 'Soin lourd : plateau technique mobilisé'
-      : acte.acte_marqueur_hdj === true
-        ? 'Soin lourd : acte marqueur d’hospitalisation de jour'
-        : acte.exclusif_externe === true
-          ? 'Soin non lourd : acte réalisable en externe'
-          : 'Soin non lourd en l’état';
+    const verdict = this.verdictHdj(acte);
     const dejaChoisi = this.etat.actes.some((a) => a.acte.code === acte.code);
     const action = avecAjout
       ? `<div class="acte-action">
@@ -1053,29 +1129,19 @@ class Assistant {
         </div>`
       : '';
     return `
-      <li class="acte-ligne ${lourd ? 'lourd' : 'leger'}">
+      <li class="acte-ligne ${verdict.classe}">
         <div class="acte-tete">
           <code>${esc(acte.code)}</code>
           <span class="acte-libelle">${esc(acte.libelle)}</span>
         </div>
+        <p class="acte-verdict ${verdict.classe}">
+          <strong>${esc(verdict.titre)}</strong> — ${esc(verdict.explication)}
+        </p>
         <div class="acte-drapeaux">
-          <span class="drapeau">Plateau technique lourd : ${libelleBooleen(
-            acte.necessite_plateau_lourd,
-            'oui',
-            'non',
-          )}</span>
-          <span class="drapeau">Acte marqueur HDJ : ${libelleBooleen(
-            acte.acte_marqueur_hdj,
-            'oui',
-            'non',
-          )}</span>
-          <span class="drapeau">Réalisable en externe : ${libelleBooleen(
-            acte.exclusif_externe,
-            'oui',
-            'non',
-          )}</span>
+          ${this.drapeau('Acte marqueur HDJ', acte.acte_marqueur_hdj)}
+          ${this.drapeau('Plateau technique lourd', acte.necessite_plateau_lourd)}
+          ${this.drapeau('Réalisable en externe', acte.exclusif_externe)}
         </div>
-        <div class="acte-verdict">${esc(conclusion)}</div>
         ${action}
       </li>`;
   }
@@ -1205,12 +1271,22 @@ class Assistant {
           À l’inverse, un plateau technique lourd ou des actes coordonnés caractérisent la
           densité de la prise en charge.
         </p>
+        <p>
+          Le <strong>verdict affiché</strong> ne dit pas « soin lourd » : il dit si l’acte
+          <strong>peut valider une hospitalisation de jour</strong>. Il vient du croisement avec
+          le Manuel des GHM MCO (l’acte est-il classant ? une de ses racines de GHM admet-elle un
+          séjour de 0 nuit ?). Le plateau technique lourd et la réalisation en externe, eux, sont
+          repris de la nomenclature CCAM et n’ont d’incidence que sur la densité de la prise en
+          charge, jamais sur l’éligibilité de l’acte.
+        </p>
       </section>
       <section>
         <h3>Règle applicable</h3>
         <p class="regle">
           Annexe 4, points 2.b.i et 2.b.iii : acte classant → GHS plein ; deux actes CCAM de
           techniques différentes sont dénombrables ; l’ECG DEQP003 ne peut être dénombré.
+          Manuel des GHM MCO 2025, annexes 2, 3, 8 et 11 : actes classants, racines de GHM et
+          marqueur d’hospitalisation de jour.
         </p>
       </section>
       <section>
@@ -1645,10 +1721,9 @@ class Assistant {
                 (a) => `<li><button type="button" data-action="suggestion-acte"
                 data-valeur="${esc(a.code)}">
                 <span class="titre-ligne">${esc(a.code)} — ${esc(a.libelle)}</span>
-                <span class="detail-ligne">plateau technique lourd :
-                  ${libelleBooleen(a.necessite_plateau_lourd, 'oui', 'non')} · acte marqueur HDJ :
-                  ${libelleBooleen(a.acte_marqueur_hdj, 'oui', 'non')} · réalisable en externe :
-                  ${libelleBooleen(a.exclusif_externe, 'oui', 'non')}</span>
+                <span class="detail-ligne">${esc(this.resumeEligibilite(a))} · plateau technique
+                  lourd : ${this.etatCourt(a.necessite_plateau_lourd)} · réalisable en externe :
+                  ${this.etatCourt(a.exclusif_externe)}</span>
               </button></li>`,
               )
               .join('');

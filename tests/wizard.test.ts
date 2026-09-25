@@ -28,6 +28,12 @@ const ACTE_ECG = {
   acte_marqueur_hdj: false,
   exclusif_externe: false,
   necessite_plateau_lourd: false,
+  acte_classant: false,
+  eligibilite_hdj: 'non',
+  motif_eligibilite_hdj:
+    'non — acte non classant : il n’ouvre pas de GHS à lui seul (ACE ou forfait de séance)',
+  type_acte: 'Acte non classant',
+  racines_ghm: null,
 };
 
 const ACTE_LOURD = {
@@ -36,6 +42,12 @@ const ACTE_LOURD = {
   acte_marqueur_hdj: true,
   exclusif_externe: false,
   necessite_plateau_lourd: true,
+  acte_classant: true,
+  eligibilite_hdj: 'oui',
+  motif_eligibilite_hdj:
+    'oui — GHM ambulatoire strict (0 nuit) : l’acte peut valider un GHS d’HDJ à lui seul',
+  type_acte: 'Acte lourd non opératoire',
+  racines_ghm: '06K04 06K05',
 };
 
 const ACTES: Record<string, unknown> = {
@@ -46,6 +58,12 @@ const ACTES: Record<string, unknown> = {
     acte_marqueur_hdj: false,
     exclusif_externe: true,
     necessite_plateau_lourd: false,
+    acte_classant: false,
+    eligibilite_hdj: 'non',
+    motif_eligibilite_hdj:
+      'non — acte non classant : il n’ouvre pas de GHS à lui seul (ACE ou forfait de séance)',
+    type_acte: 'Acte non classant',
+    racines_ghm: null,
   },
   HEQE001: ACTE_LOURD,
 };
@@ -591,16 +609,16 @@ describe('Contexte patient — situations de vulnérabilité', () => {
  * Consultation du référentiel CCAM
  * ------------------------------------------------------------------ */
 
-describe('Référentiel CCAM — soin lourd et arborescence', () => {
+describe('Référentiel CCAM — éligibilité HDJ et arborescence', () => {
   it('ouvre la consultation depuis l’accueil', async () => {
     allerAccueil();
     cliquer('[data-action="ouvrir-ccam"]');
-    expect(questionCourante()).toContain('soin lourd');
+    expect(questionCourante()).toContain('hospitalisation de jour');
     await attendre(60);
     expect(texte('#arbre-ccam')).toContain('Parcourir par thématique');
   });
 
-  it('cherche par mots-clés et qualifie le soin', async () => {
+  it('cherche par mots-clés et rend le verdict d’éligibilité HDJ', async () => {
     allerAccueil();
     cliquer('[data-action="ouvrir-ccam"]');
     await rechercher('exploration');
@@ -608,8 +626,10 @@ describe('Référentiel CCAM — soin lourd et arborescence', () => {
     const ligne = document.querySelector('#zone-suggestions .acte-ligne');
     expect(ligne).not.toBeNull();
     expect(ligne?.textContent).toContain('ZZQL002');
-    expect(ligne?.textContent).toContain('Plateau technique lourd');
-    expect(ligne?.textContent).toContain('Soin non lourd');
+    // Le verdict porte sur l'HDJ, pas sur la lourdeur de l'acte.
+    expect(ligne?.textContent).toContain('Non recevable en HDJ sur cet acte seul');
+    expect(ligne?.textContent).toContain('Acte marqueur HDJ : non');
+    expect(ligne?.textContent).toContain('Plateau technique lourd : non');
   });
 
   it('parcourt l’arborescence chapitre → sous-thème → actes', async () => {
@@ -630,7 +650,8 @@ describe('Référentiel CCAM — soin lourd et arborescence', () => {
     await attendre(60);
     const acte = document.querySelector('#arbre-ccam .acte-ligne');
     expect(acte?.textContent).toContain('HEQE001');
-    expect(acte?.textContent).toContain('Soin lourd : plateau technique mobilisé');
+    expect(acte?.textContent).toContain('Éligible à une HDJ');
+    expect(acte?.textContent).toContain('Acte marqueur HDJ : oui');
 
     // Retour par le fil d'Ariane
     cliquer('[data-action="arbre-racine"]');
