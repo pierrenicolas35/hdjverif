@@ -329,12 +329,16 @@ button {
 /* ---------------------------------------------------------------------
    Modale « mise à jour des référentiels »
    --------------------------------------------------------------------- */
-/* Le bouton d'ouverture du workflow est un lien : il garde l'apparence d'un bouton. */
-a.btn-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
+/* Repli sans service de mise à jour : une explication, pas un lien — l'application ne renvoie
+   jamais l'utilisateur vers le dépôt du projet. */
+.maj-note {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  color: var(--texte-doux);
+  background: var(--surface-douce);
+  border: 1px solid var(--bordure);
 }
 
 .maj-etat {

@@ -21,7 +21,6 @@ import {
 
 import {
   DELAI_REQUETE_MS,
-  MAJ_ACTIONS_URL,
   MAJ_SERVICE_URL,
   SUPABASE_ANON_KEY,
   SUPABASE_URL,
@@ -399,37 +398,43 @@ export function libellePeremption(peremption: PeremptionReferentiel): string {
 export interface DeclenchementMaj {
   /** Vrai si la mise à jour a réellement été déclenchée. */
   readonly ok: boolean;
-  /** `service` : déclenchée depuis l'application ; `actions` : à lancer par un humain. */
-  readonly mode: 'service' | 'actions';
+  /** `service` : déclenchée depuis l'application ; `indisponible` : rien à déclencher ici. */
+  readonly mode: 'service' | 'indisponible';
   readonly message: string;
-  /** Page à ouvrir quand la mise à jour n'a pas pu être déclenchée d'ici. */
-  readonly lien: string;
 }
 
-const REFUS_ACTIONS: DeclenchementMaj = {
+/**
+ * Pas de service de mise à jour sur cette installation : l'application le dit et s'arrête là.
+ *
+ * Elle ne renvoie **nulle part** — en particulier pas vers le dépôt du projet : un utilisateur
+ * du référentiel n'a pas à atterrir sur le dépôt de son auteur. Le contrôle automatique
+ * (mensuel, côté serveur) reste le chemin normal ; le besoin immédiat passe par le référent DIM.
+ */
+const SANS_SERVICE: DeclenchementMaj = {
   ok: false,
-  mode: 'actions',
+  mode: 'indisponible',
   message:
-    'La mise à jour se lance depuis la page du workflow GitHub Actions (bouton « Run workflow ») : ' +
-    'elle télécharge les sources officielles et n’écrit en base que si elles ont changé.',
-  lien: MAJ_ACTIONS_URL,
+    'Le déclenchement depuis l’application n’est pas activé sur cette installation. ' +
+    'Les sources officielles sont contrôlées automatiquement chaque mois ; pour une mise à ' +
+    'jour immédiate, adressez-vous au référent DIM.',
 };
 
 /**
  * Demande une mise à jour des référentiels.
  *
- * Deux chemins, dans cet ordre :
- *   1. **service** (`MAJ_SERVICE_URL`, fonction Edge) : appel direct, sans secret dans le
- *      navigateur — la clé d'écriture reste côté serveur. Le `code` éventuel est un secret
- *      partagé stocké dans les secrets de la fonction ;
- *   2. **repli** : l'application renvoie vers le workflow GitHub Actions, où l'exécution
- *      est authentifiée par GitHub lui-même.
+ * Un seul chemin : le **service** (`MAJ_SERVICE_URL`, fonction Edge), appelé directement sans
+ * secret dans le navigateur — la clé d'écriture reste côté serveur. Le `code` éventuel est un
+ * secret partagé stocké dans les secrets de la fonction.
+ *
+ * Sans service configuré, l'application ne propose aucune redirection : elle explique que le
+ * contrôle est automatique et renvoie vers le référent (voir `SANS_SERVICE`). Aucun message,
+ * aucun lien ne désigne le dépôt du projet.
  *
  * Dans tous les cas l'écriture en base n'est jamais faite depuis le navigateur : la clé
  * `anon` y est refusée (Row Level Security en lecture seule).
  */
 export async function declencherMajReferentiels(code = ''): Promise<DeclenchementMaj> {
-  if (!MAJ_SERVICE_URL) return REFUS_ACTIONS;
+  if (!MAJ_SERVICE_URL) return SANS_SERVICE;
 
   const controleur = new AbortController();
   const minuteur = setTimeout(() => controleur.abort(), 30000);
@@ -441,14 +446,13 @@ export async function declencherMajReferentiels(code = ''): Promise<Declenchemen
       signal: controleur.signal,
     });
     if (reponse.status === 404) {
-      return { ...REFUS_ACTIONS, message: 'Service de mise à jour non déployé : à lancer depuis GitHub Actions.' };
+      return { ...SANS_SERVICE, mode: 'service', message: 'Service de mise à jour non déployé.' };
     }
     if (reponse.status === 401 || reponse.status === 403) {
       return {
         ok: false,
         mode: 'service',
-        message: 'Code de service refusé : vérifiez le code de mise à jour, ou passez par GitHub Actions.',
-        lien: MAJ_ACTIONS_URL,
+        message: 'Code de service refusé : vérifiez le code de mise à jour.',
       };
     }
     if (reponse.status === 429) {
@@ -456,7 +460,6 @@ export async function declencherMajReferentiels(code = ''): Promise<Declenchemen
         ok: false,
         mode: 'service',
         message: 'Une mise à jour vient d’être demandée : inutile de la relancer maintenant.',
-        lien: MAJ_ACTIONS_URL,
       };
     }
     if (!reponse.ok) {
@@ -464,10 +467,12 @@ export async function declencherMajReferentiels(code = ''): Promise<Declenchemen
         ok: false,
         mode: 'service',
         message: `Le service de mise à jour a répondu HTTP ${reponse.status}.`,
-        lien: MAJ_ACTIONS_URL,
       };
     }
-    const corps = (await reponse.json().catch(() => ({}))) as { message?: string; run?: string };
+    // Le `run` renvoyé par la fonction est une page GitHub : l'application ne le relaie pas,
+    // pour qu'aucun utilisateur ne se retrouve sur le dépôt. Le suivi se lit dans
+    // l'application elle-même (dates d'import et du dernier contrôle).
+    const corps = (await reponse.json().catch(() => ({}))) as { message?: string };
     return {
       ok: true,
       mode: 'service',
@@ -475,14 +480,12 @@ export async function declencherMajReferentiels(code = ''): Promise<Declenchemen
         corps.message ??
         'Mise à jour lancée : les sources officielles sont retéléchargées et comparées ; ' +
           'rien n’est écrit si elles n’ont pas changé.',
-      lien: corps.run ?? MAJ_ACTIONS_URL,
     };
   } catch {
     return {
       ok: false,
       mode: 'service',
-      message: 'Service de mise à jour injoignable : à lancer depuis GitHub Actions.',
-      lien: MAJ_ACTIONS_URL,
+      message: 'Service de mise à jour injoignable.',
     };
   } finally {
     clearTimeout(minuteur);

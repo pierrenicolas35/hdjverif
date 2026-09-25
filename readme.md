@@ -724,7 +724,7 @@ hasard :
 |---|---|---|---|
 | **Cron du serveur** | `crontab` de la machine | 1ᵉʳ du mois, 05:17 UTC (07:17 à Paris) | le contrôle de proximité, sans dépendance à GitHub |
 | **GitHub Actions** | `.github/workflows/maj-referentiels.yml` | 1ᵉʳ du mois, 05:47 UTC + `workflow_dispatch` | le contrôle a lieu **même serveur éteint** ; en cas d'échec, GitHub prévient le propriétaire du dépôt |
-| **Bouton de l'application** | en-tête → « Mettre à jour le référentiel » | à la demande | le référent DIM n'attend pas le 1ᵉʳ du mois |
+| **Bouton de l'application** | en-tête → « Mettre à jour le référentiel » | à la demande | le référent DIM n'attend pas le 1ᵉʳ du mois (nécessite le service de mise à jour, cf. plus bas) |
 
 **Cron installé sur le serveur** (1ᵉʳ du mois, 05:17 UTC, soit 07:17 à Paris) :
 
@@ -782,18 +782,21 @@ revérifiée après mise à jour — les règles, elles, ne dépendent pas des s
 
 Le même engin sert au bouton **« Mettre à jour le référentiel »** (le voyant du référentiel y
 mène aussi) : la modale montre pour chaque table la date d'import, la date du dernier contrôle
-et le nombre de lignes, puis propose le déclenchement.
+et le nombre de lignes, puis propose le déclenchement — si l'installation dispose du service de
+mise à jour ; sinon elle explique le contrôle mensuel automatique, sans renvoyer ailleurs.
 
 #### Déclencher la mise à jour depuis l'application
 
 L'application est une page statique : elle ne détient que la clé `anon`, que Row Level Security
 refuse en écriture. Deux façons de déclencher, sans jamais mettre la clé d'écriture dans le
-navigateur :
+navigateur — et **sans jamais envoyer l'utilisateur sur le dépôt du projet**, qui n'a pas à être
+exposé aux utilisateurs du référentiel :
 
-1. **Sans rien déployer** (par défaut) — le bouton ouvre la page GitHub Actions du workflow
-   (*Run workflow*) : c'est GitHub qui authentifie l'opérateur. Rien à configurer, mais il faut
-   l'accès au dépôt ;
-2. **Un clic dans l'application** (facultatif) — la fonction Edge
+1. **Rien de déployé** (par défaut) — la modale explique que les sources sont contrôlées
+   automatiquement chaque mois et invite à passer par le référent DIM. Aucun bouton, aucun lien :
+   le déclenchement à la demande n'existe pas dans cette configuration, mais l'application ne
+   renvoie nulle part ;
+2. **Un clic dans l'application** (recommandé en production) — la fonction Edge
    `supabase/functions/maj-referentiels/index.ts` garde le jeton GitHub côté serveur et ne fait
    qu'un appel : *exécute le workflow*. Il faut la déployer et renseigner ses secrets :
 
@@ -808,7 +811,16 @@ Le jeton GitHub demandé est un **jeton finement porté**, limité au dépôt, a
 permission « Actions : read and write » ; il ne peut pas modifier le code. `CODE_MAJ` est un
 code partagé (demandé par la modale, mémorisé localement) qui évite qu'un tiers fasse
 télécharger 8 Mo à GitHub en boucle ; la fonction refuse aussi deux déclenchements à moins de
-30 minutes d'intervalle. Sans `VITE_MAJ_SERVICE_URL`, le bouton reste sur l'option 1.
+30 minutes d'intervalle.
+
+La page de l'exécution (`run`) est renvoyée par la fonction pour l'**exploitant** (journaux,
+courriel d'échec de GitHub) : l'application ne la relaie pas. Le suivi se lit dans l'application
+elle-même — dates d'import, date et résultat du dernier contrôle. Deux tests verrouillent ce
+comportement : la modale ne contient aucun lien sortant, et aucun fichier de `src/` ne cite
+`github.com`.
+
+Sans `VITE_MAJ_SERVICE_URL`, l'application reste sur l'option 1 : elle ne propose aucun
+déclenchement à la demande, et n'expose aucune adresse du dépôt.
 
 > **Où trouver la clé d’écriture.** Le jeton **Management API** du projet
 > (`SUPABASE_ACCESS_TOKEN`, préfixe `sbp_`) suffit : il permet de récupérer la clé

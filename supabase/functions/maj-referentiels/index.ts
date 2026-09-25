@@ -8,9 +8,10 @@
  * demander à GitHub d'exécuter le workflow `maj-referentiels.yml`, qui télécharge les sources
  * officielles, compare les empreintes et n'écrit en base que si elles ont changé.
  *
- * Cette fonction est **facultative** : sans elle, le bouton de l'application ouvre la page
- * GitHub Actions du workflow, où l'exécution est authentifiée par GitHub lui-même. Elle sert
- * à supprimer cette étape manuelle pour un référent DIM qui n'a pas de compte GitHub.
+ * Cette fonction est **facultative** : sans elle, l'application n'offre aucun déclenchement à
+ * la demande et se contente d'indiquer que les sources sont contrôlées automatiquement chaque
+ * mois (aucun lien vers le dépôt n'est publié dans l'interface). Elle sert à donner un
+ * déclenchement « un clic » à un référent DIM qui n'a pas de compte GitHub.
  *
  * Déploiement
  * -----------
@@ -89,8 +90,8 @@ Deno.serve(async (requete) => {
       {
         ok: false,
         message:
-          'Aucun jeton GitHub configuré sur cette fonction : lancer la mise à jour depuis ' +
-          'la page GitHub Actions.',
+          'Mise à jour indisponible : le service n’est pas configuré sur cette installation. ' +
+          'Adressez-vous au référent DIM.',
       },
       503,
     );
@@ -142,8 +143,11 @@ Deno.serve(async (requete) => {
   return json({
     ok: true,
     message:
-      'Mise à jour lancée sur GitHub : les sources officielles sont retéléchargées et ' +
-      'comparées, et rien n’est écrit en base si elles n’ont pas changé.',
+      'Mise à jour lancée : les sources officielles sont retéléchargées et comparées, et ' +
+      'rien n’est écrit en base si elles n’ont pas changé.',
+    // Le suivi de l'exécution est renvoyé pour l'exploitant (journaux, courriel d'échec de
+    // GitHub) : l'application ne le relaie pas, pour qu'aucun utilisateur n'atterrisse sur
+    // le dépôt du projet.
     run: pageActions,
   });
 });

@@ -10,7 +10,7 @@
  * en langage courant restituée par le moteur.
  */
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 import { DISCIPLINES } from '../src/ui/pedagogie.js';
 import { detailMaj, libelleMaj } from '../src/ui/referentiels.js';
@@ -1007,6 +1007,23 @@ describe('En-tête — alerte de fraîcheur du référentiel', () => {
     expect(texte('.modale-carte')).toContain('Mettre à jour le référentiel officiel');
   });
 
+  it('n’envoie l’utilisateur nulle part : la modale ne désigne pas le dépôt du projet', () => {
+    allerAccueil();
+    cliquer('#voyant-referentiel');
+
+    const modale = document.querySelector('.modale-carte');
+    expect(modale).not.toBeNull();
+    // Aucun lien sortant : ni vers GitHub, ni vers le dépôt, ni dans un nouvel onglet.
+    expect(modale?.querySelectorAll('a[href]').length).toBe(0);
+    expect(document.body.innerHTML).not.toContain('github');
+    expect(document.body.innerHTML).not.toContain('target="_blank"');
+    // Sans service configuré, l'application dit simplement ce qui se passe et qui solliciter.
+    expect(texte('.modale-carte')).toContain('contrôlées automatiquement chaque mois');
+    expect(texte('.modale-carte')).toContain('référent DIM');
+    // Aucun bouton de déclenchement non plus : il n'y a rien à déclencher d'ici.
+    expect(modale?.querySelector('[data-action="lancer-maj"]')).toBeNull();
+  });
+
   it('rappelle la fraîcheur au moment de conclure, sans invalider la décision', () => {
     atteindreActes();
     suivant(); // médicaments
@@ -1036,5 +1053,36 @@ describe('Disciplines — jeu proposé dans le menu déroulant', () => {
   it('les trie par ordre alphabétique', () => {
     const libelles = DISCIPLINES.map((d) => d.libelle);
     expect(libelles).toEqual([...libelles].sort((a, b) => a.localeCompare(b, 'fr')));
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Interface — le dépôt du projet ne doit jamais être exposé
+ * ------------------------------------------------------------------ */
+
+describe('Interface — aucun lien vers le dépôt du projet', () => {
+  /** Tous les fichiers de l'interface (sources TypeScript et feuille de style). */
+  const fichiersInterface = (): readonly string[] => {
+    const racine = resolve(process.cwd(), 'src');
+    const parcourir = (dossier: string): string[] =>
+      readdirSync(dossier, { withFileTypes: true }).flatMap((entree) => {
+        const chemin = resolve(dossier, entree.name);
+        return entree.isDirectory() ? parcourir(chemin) : [chemin];
+      });
+    return parcourir(racine).filter((chemin) => /\.(ts|css|html)$/.test(chemin));
+  };
+
+  it('ne publie aucune adresse de dépôt dans l’interface', () => {
+    const coupables = fichiersInterface().filter((chemin) =>
+      /github\.com/i.test(readFileSync(chemin, 'utf8')),
+    );
+    expect(coupables).toEqual([]);
+  });
+
+  it('ne contient plus de repli nommé d’après GitHub Actions', () => {
+    const coupables = fichiersInterface().filter((chemin) =>
+      /MAJ_ACTIONS_URL|Ouvrir la mise à jour/.test(readFileSync(chemin, 'utf8')),
+    );
+    expect(coupables).toEqual([]);
   });
 });

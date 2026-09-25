@@ -84,7 +84,7 @@ import {
   type SynonymeRef,
   type ThemeRef,
 } from './referentiels.js';
-import { MAJ_ACTIONS_URL, MAJ_SERVICE_URL } from '../config.js';
+import { MAJ_SERVICE_URL } from '../config.js';
 
 /* ================================================================== *
  * Définition des étapes
@@ -453,8 +453,8 @@ class Assistant {
         )}</p>`
       : '';
 
-    // Le code de service n'est demandé que si l'instance dispose d'un service dédié : sans
-    // lui, la mise à jour se lance depuis GitHub Actions, qui authentifie déjà l'opérateur.
+    // Le code de service n'est demandé que si l'instance dispose d'un service dédié : sans lui,
+    // il n'y a rien à déclencher d'ici, et l'application le dit sans renvoyer nulle part.
     const code = MAJ_SERVICE_URL
       ? `<label class="maj-code">
           <span>Code de service (si l’instance en exige un) :</span>
@@ -464,14 +464,18 @@ class Assistant {
         </label>`
       : '';
 
-    const lien = this.majResultat?.lien ?? MAJ_ACTIONS_URL;
+    // Sans service, aucun bouton et aucun lien : l'application n'a pas à envoyer un utilisateur
+    // vers le dépôt du projet. Le contrôle mensuel automatique reste le chemin normal, et le
+    // besoin immédiat passe par le référent DIM.
     const actions = MAJ_SERVICE_URL
       ? `<button type="button" class="btn-action principal" data-action="lancer-maj" ${
           this.majEnCours ? 'disabled' : ''
         }>${this.majEnCours ? 'Mise à jour en cours…' : '↻ Lancer la mise à jour'}</button>`
-      : `<a class="btn-action principal" href="${esc(lien)}" target="_blank" rel="noopener">
-          ↻ Ouvrir la mise à jour
-        </a>`;
+      : `<p class="maj-note">
+          Le déclenchement depuis l’application n’est pas activé sur cette installation : les
+          sources officielles sont contrôlées automatiquement chaque mois. Pour une mise à jour
+          immédiate, adressez-vous au référent DIM.
+        </p>`;
 
     return `
       <div class="modale-voile" data-action="fermer-modale"></div>

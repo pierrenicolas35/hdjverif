@@ -18,17 +18,15 @@ export const SUPABASE_URL: string =
 /**
  * Service de mise à jour « un clic » (fonction Edge, voir `supabase/functions/`).
  *
- * Vide par défaut : le bouton de mise à jour renvoie alors vers le workflow GitHub
- * Actions, qui ne demande aucun secret à l'application. Renseigner
- * `VITE_MAJ_SERVICE_URL=https://<ref>.supabase.co/functions/v1/maj-referentiels`
- * au build active le déclenchement direct.
+ * Renseigner `VITE_MAJ_SERVICE_URL=https://<ref>.supabase.co/functions/v1/maj-referentiels`
+ * au build active le déclenchement direct depuis l'application : la fonction garde le
+ * jeton d'exécution côté serveur, et l'utilisateur n'a rien à ouvrir ailleurs.
+ *
+ * Vide par défaut, l'application **ne renvoie nulle part** : elle indique simplement que
+ * les sources sont contrôlées automatiquement chaque mois et invite à passer par le
+ * référent DIM. Aucun lien vers le dépôt du projet n'est publié dans l'interface.
  */
 export const MAJ_SERVICE_URL: string = env['VITE_MAJ_SERVICE_URL'] ?? '';
-
-/** Page du workflow GitHub Actions de mise à jour des référentiels (repli). */
-export const MAJ_ACTIONS_URL: string =
-  env['VITE_MAJ_ACTIONS_URL'] ??
-  'https://github.com/pierrenicolas35/hdjverif/actions/workflows/maj-referentiels.yml';
 
 export const SUPABASE_ANON_KEY: string =
   env['VITE_SUPABASE_ANON_KEY'] ??
